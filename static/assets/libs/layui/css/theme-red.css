@@ -1,0 +1,532 @@
+/* logo */
+.theme-red .layui-layout-admin .layui-header .layui-logo {
+    color: #ffffff !important;
+    font-size: 20px ;
+    background-color: rgb(27,46,129)!important;
+
+}
+
+/* header */
+
+
+.theme-red .layui-layout-admin .layui-header {
+    background-color: rgb(27,46,129)!important;
+}
+
+.theme-red .layui-layout-admin .layui-header a {
+    color: #ffffff;
+}
+
+.theme-red .layui-layout-admin .layui-header a:hover {
+    color: #ffffff;
+}
+
+.theme-red .layui-layout-admin .layui-header .layui-nav-child a {
+    color: #595959;
+}
+
+.theme-red .layui-layout-admin .layui-header .layui-nav .layui-nav-more {
+    border-color: #ffffff transparent transparent;
+}
+
+.theme-red .layui-layout-admin .layui-header .layui-nav .layui-nav-mored {
+    border-color: transparent transparent #ffffff;
+}
+
+.theme-red .layui-layout-admin .layui-header .layui-nav .layui-this:after,
+.theme-red .layui-layout-admin .layui-header .layui-nav-bar {
+    background-color: #191a23;
+}
+
+
+/* header height */
+.theme-red .layui-header {
+    height: 90px  !important;
+}
+
+.theme-red .layui-header .layui-logo,
+.theme-red .layui-header .layui-nav .layui-nav-item {
+    line-height: 90px  !important;
+}
+
+.theme-red .layui-body,
+.theme-red .layui-side {
+    top: 90px  !important;
+}
+
+
+/* side */
+.theme-red .layui-layout-admin .layui-side {
+    background-color: #fefbfa !important;
+
+}
+
+
+.theme-red .layui-side .layui-nav .layui-nav-item a {
+    color: #595959;
+}
+
+.theme-red .layui-side .layui-nav .layui-nav-item a:hover {
+    color:  rgb(27,46,129);
+}
+
+.theme-red .layui-side .layui-nav-itemed > a,
+.theme-red .layui-side .layui-nav-tree .layui-nav-title a,
+.theme-red .layui-side .layui-nav-tree .layui-nav-title a:hover {
+    color: #595959 !important;
+}
+
+.theme-red .layui-side .layui-nav-itemed > a:hover {
+    color:  rgb(27,46,129) !important;
+}
+
+.theme-red .layui-side .layui-nav-tree .layui-nav-child dd.layui-this a,
+.theme-red .layui-side .layui-nav-tree .layui-this > a,
+.theme-red .layui-side .layui-nav-tree .layui-this > a:hover {
+    color:  rgb(27,46,129);
+    background: rgba(204,0,0,.07);
+    border-right: 2px solid rgb(27,46,129);
+}
+
+.theme-red .layui-side .layui-nav-tree .layui-nav-item .layui-nav-child {
+    background-color: transparent !important;
+}
+
+@media screen and (min-width: 769px) {
+    .theme-red .layui-layout-admin.admin-nav-mini .layui-side .layui-nav li.layui-nav-itemed > a {
+        background: rgba(204,0,0,.07);
+        color:  rgb(27,46,129) !important;
+    }
+}
+
+.theme-red .layui-nav-tree > .layui-nav-item > a:before {
+    display: none;
+}
+
+/* side arrow */
+.theme-red .layui-side .layui-nav .layui-nav-more {
+    border-color: rgba(89, 89, 89, .7) transparent transparent;
+}
+
+.theme-red .layui-side .layui-nav .layui-nav-mored,
+.theme-red .layui-side .layui-nav-itemed > a .layui-nav-more {
+    border-color: transparent transparent rgba(89, 89, 89, .7);
+}
+
+.theme-red .layui-side .layui-nav-tree.arrow3 .layui-nav-itemed > a > .layui-nav-more:before {
+    background-color: rgba(89, 89, 89, .7);
+}
+
+@media screen and (min-width: 769px) {
+    .theme-red .layui-layout-admin.admin-nav-mini .layui-side .layui-nav .admin-nav-hover > .layui-nav-child > dd > a .layui-nav-more {
+        border-color: transparent transparent transparent rgba(89, 89, 89, .7);
+    }
+}
+
+
+.theme-red .layui-layout-admin.admin-nav-mini .layui-side .layui-nav .admin-nav-hover > .layui-nav-child:before {
+    background: #fefbfa !important;
+}
+
+
+
+
+/* side icon */
+/*.theme-red .layui-side .layui-nav-item > a > .layui-icon {*/
+/*    color: #fff;*/
+/*    width: 28px;*/
+/*    height: 28px;*/
+/*    font-size: 12px !important;*/
+/*    line-height: 28px;*/
+/*    text-align: center;*/
+/*    border-radius: 50%;*/
+/*    display: inline-block;*/
+/*    vertical-align: middle;*/
+/*    background-color:rgb(226, 2, 18) ;*/
+/*}*/
+
+/*.theme-red .layui-side .layui-nav-item:nth-child(even) > a > .layui-icon {*/
+/*    background-color: rgb(226, 2, 18);*/
+/*}*/
+
+/*.theme-red .layui-side .layui-nav-item:nth-child(3) > a > .layui-icon {*/
+/*    background-color: rgb(226, 2, 18);*/
+/*}*/
+
+/*.theme-red .layui-side .layui-nav-item:nth-child(4) > a > .layui-icon {*/
+/*    background-color: rgb(226, 2, 18);*/
+/*}*/
+
+/*.theme-red .layui-side .layui-nav-item:nth-child(5) > a > .layui-icon {*/
+/*    background-color: rgb(226, 2, 18);*/
+/*}*/
+
+@media screen and (min-width: 768px) {
+    .theme-red .admin-nav-mini .layui-side .layui-nav-item > a {
+        padding-left: 16px;
+    }
+}
+
+.theme-red .layui-layout-admin .layui-side .layui-nav .layui-nav-item .layui-nav-child a {
+    padding-left: 63px;
+}
+
+.theme-red .layui-layout-admin .layui-side .layui-nav .layui-nav-item .layui-nav-child .layui-nav-child a {
+    padding-left: 83px;
+}
+
+.theme-red .layui-layout-admin .layui-side .layui-nav .layui-nav-item .layui-nav-child .layui-nav-child .layui-nav-child a {
+    padding-left: 103px;
+}
+
+.theme-red .layui-layout-admin .layui-side .layui-nav .layui-nav-item .layui-nav-child .layui-nav-child .layui-nav-child .layui-nav-child a {
+    padding-left: 123px;
+}
+
+.theme-red .layui-side .layui-nav .layui-nav-item a cite {
+    vertical-align: middle;
+}
+
+
+/* body tab */
+
+.theme-red .layui-layout-admin .layui-body > .layui-tab > .layui-tab-title {
+    top: 8px;
+    right: 8px;
+    height: 32px;
+    line-height: 32px;
+    box-sizing: border-box;
+    background-color: transparent;
+    box-shadow: -4px 4px 0 #f5f7f9;
+    padding-right: 70px;
+}
+
+.theme-red .layui-layout-admin .layui-body > .layui-tab > .layui-tab-content {
+    top: 40px;
+}
+
+.theme-red .layui-layout-admin .layui-body > .layui-tab > .layui-tab-title li {
+    border: none;
+    margin-right: 6px;
+    border-radius: 4px;
+    background-color: #fff;
+    line-height: 32px;
+    height: 32px;
+}
+
+.theme-red .layui-layout-admin .layui-body > .layui-tab > .layui-tab-title li.layui-this {
+    color: rgb(27,46,129);
+    background-color: #fff;
+}
+
+.theme-red .layui-layout-admin .layui-body > .layui-tab > .layui-tab-title li:hover {
+    background-color: #fff;
+}
+
+.theme-red .layui-layout-admin .layui-body > .layui-tab > .layui-tab-title li.layui-this:after {
+    display: none;
+}
+
+.theme-red .layui-layout-admin .layui-body > .layui-tab > .layui-tab-title li .layui-tab-close,
+.theme-red .layui-layout-admin .layui-body > .layui-tab > .layui-tab-title li .layui-tab-close:hover {
+    top: 8px;
+    color: #8c8c8c;
+    background-color: transparent;
+}
+
+.theme-red .layui-layout-admin .layui-body .admin-tabs-control,
+.theme-red .layui-layout-admin .layui-body .admin-tabs-control:hover {
+    top: 8px;
+    height: 32px;
+    line-height: 32px;
+    background-color: #f5f7f9;
+    border: none;
+}
+
+.theme-red .layui-layout-admin .layui-body .admin-tabs-control.layui-icon-down {
+    border-radius: 4px;
+    background-color: #fff;
+    width: 32px;
+    right: 8px;
+}
+
+.theme-red .admin-tabs-control > .layui-nav .layui-nav-item {
+    line-height: 32px;
+}
+
+.theme-red .admin-tabs-control > .layui-nav .layui-nav-item > a {
+    height: 32px;
+    width: 32px;
+    padding: 0;
+}
+
+.theme-red .admin-tabs-control > .layui-nav .layui-nav-child {
+    top: 36px;
+    border: none;
+    border-radius: 4px;
+    box-shadow: 0 1px 6px rgba(0, 0, 0, .2);
+}
+
+.theme-red .layui-layout-admin .layui-body .admin-tabs-control.layui-icon-prev:before {
+    content: "\e603";
+}
+
+.theme-red .layui-layout-admin .layui-body .admin-tabs-control.layui-icon-next:before {
+    content: "\e602";
+}
+
+
+/* body title */
+.theme-red .layui-body-header-title {
+    border-left-color:rgb(226, 2, 18);
+}
+
+
+
+/* admin dialog */
+.theme-red .layui-layer.layui-layer-admin .layui-layer-title {
+    color: #ffffff;
+    background-color:rgb(226, 2, 18);
+
+
+}
+
+
+
+.theme-red .layui-layer.layui-layer-admin .layui-layer-btn .layui-layer-btn0 {
+    border-color: rgb(226, 2, 18);
+    background-color: rgb(226, 2, 18);
+}
+
+
+
+
+
+/* other */
+.theme-red .more-theme-item:hover,
+.theme-red .more-theme-item.active {
+    border-color:  rgb(226, 2, 18);
+}
+
+.theme-red .btn-circle {
+    background:  rgb(226, 2, 18);
+}
+
+.theme-red .ball-loader > span,
+.theme-red .signal-loader > span {
+    background-color:  rgb(226, 2, 18);
+}
+
+.theme-red .text-primary,
+.theme-red .layui-link {
+    color: rgb(226, 2, 18) !important;;
+}
+
+
+.theme-red .layui-card {
+    border-radius: 4px;
+    box-shadow: none;
+}
+
+.theme-red .layui-fluid {
+    padding-top: 10px;
+}
+
+
+/* button */
+.theme-red .layui-btn {
+    background-color:  rgb(226, 2, 18);
+
+}
+
+
+
+
+
+/* switch */
+.theme-red .layui-form-onswitch {
+    border-color: rgb(226, 2, 18);
+    background-color:  rgb(226, 2, 18);
+}
+
+/* radio */
+.theme-red .layui-form-radio > i:hover,
+.theme-red .layui-form-radioed > i,
+.theme-red .layui-form-checked i,
+.theme-red .layui-form-checked:hover i {
+    color:  rgb(226, 2, 18);
+}
+
+/* checkbox */
+.theme-red .layui-form-checked[lay-skin=primary] i,
+.theme-red .layui-form-checked span,
+.theme-red .layui-form-checked:hover span {
+    border-color: rgb(226, 2, 18) !important;
+    background-color:  rgb(226, 2, 18);
+}
+
+.theme-red .layui-form-checkbox[lay-skin=primary] i:hover,
+.theme-red .layui-form-checkbox[lay-skin=primary]:hover i {
+    border-color:  rgb(226, 2, 18);
+}
+
+/* select */
+.theme-red .layui-form-select dl dd.layui-this {
+    background-color:  rgb(226, 2, 18);
+}
+
+/* laypage */
+.theme-red .layui-laypage .layui-laypage-curr .layui-laypage-em {
+    background-color:  rgb(226, 2, 18);
+}
+
+.theme-red .layui-laypage input:focus,
+.theme-red select:focus {
+    border-color:  rgb(226, 2, 18) !important;
+}
+
+.theme-red .layui-laypage a:hover {
+    color: rgb(226, 2, 18);
+}
+
+/* tab */
+.theme-red .layui-tab-brief > .layui-tab-title .layui-this {
+    color:  rgb(226, 2, 18);
+}
+
+.theme-red .layui-tab-brief > .layui-tab-more li.layui-this:after,
+.theme-red .layui-tab-brief > .layui-tab-title .layui-this:after {
+    border-color:  rgb(226, 2, 18) !important;
+}
+
+.theme-red .layui-tab.layui-tab-vertical > .layui-tab-title > li.layui-this {
+    border-color:  rgb(226, 2, 18);
+    color:  rgb(226, 2, 18);
+}
+
+/* breadcrumb */
+.theme-red .layui-breadcrumb a:hover {
+    color:  rgb(226, 2, 18) !important;
+}
+
+/* laydate */
+.theme-red .layui-laydate-footer span:hover,
+.theme-red .layui-laydate-header i:hover,
+.theme-red .layui-laydate-header span:hover {
+    color:  rgb(226, 2, 18);
+}
+
+.theme-red .layui-laydate .layui-this {
+    background-color:  rgb(226, 2, 18) !important;
+}
+
+.theme-red .layui-laydate-content td.laydate-selected {
+    background-color: rgba(204,0,0,.1);
+}
+
+.theme-red .laydate-selected:hover {
+    background-color: rgba(204,0,0,.1) !important;
+}
+
+/* timeline */
+.theme-red .layui-timeline-axis {
+    color:  rgb(226, 2, 18);
+}
+
+/* transfer */
+.theme-red .layui-transfer-active .layui-btn {
+    background-color:  rgb(226, 2, 18) !important;
+    border-color: rgb(226, 2, 18) !important;
+}
+
+/* progress-bar */
+.theme-red .layui-progress-bar {
+    background-color:  rgb(226, 2, 18);
+}
+
+/* slider */
+.theme-red .layui-slider-bar {
+    background-color:  rgb(226, 2, 18) !important;
+}
+
+.theme-colorful .layui-slider-wrap-btn {
+    border-color:  rgb(226, 2, 18) !important;
+}
+
+/* steps */
+.theme-red .layui-tab.layui-steps > .layui-tab-title > li > .layui-icon {
+    color:  rgb(226, 2, 18);
+}
+
+.theme-red .layui-tab.layui-steps > .layui-tab-title > li > .layui-icon.layui-icon-ok,
+.theme-red .layui-elem-quote {
+    border-color: rgb(226, 2, 18);
+}
+
+.theme-red .layui-tab.layui-steps > .layui-tab-title > li:before,
+.theme-red .layui-tab.layui-steps > .layui-tab-title > li.layui-this > .layui-icon.layui-icon-ok {
+    background-color:  rgb(226, 2, 18);
+}
+
+.theme-red .layui-tab.layui-steps.layui-steps-simple > .layui-tab-title > li {
+    background-color: rgba(204,0,0,.5);
+}
+
+.theme-red .layui-tab.layui-steps.layui-steps-simple > .layui-tab-title > li.layui-this {
+    background-color:  rgb(226, 2, 18);
+}
+
+.theme-red .layui-tab.layui-steps.layui-steps-simple > .layui-tab-title > li:after {
+    border-left-color: rgba(204,0,0,.5) !important;
+}
+
+.theme-red .layui-tab.layui-steps.layui-steps-simple > .layui-tab-title > li.layui-this + li:after {
+    border-left-color: rgb(226, 2, 18) !important;
+}
+
+/* xmSelect */
+.theme-red xm-select .xm-body .xm-option .xm-option-icon {
+    border-color:  rgb(226, 2, 18) !important;
+}
+
+.theme-red xm-select .xm-body .xm-option.selected .xm-option-icon,
+.theme-red xm-select > .xm-body .xm-toolbar .toolbar-tag:hover,
+.theme-red .ew-xmselect-tree xm-select .xm-body .xm-option.selected .xm-option-content {
+    color:  rgb(226, 2, 18) !important;
+}
+
+.theme-red xm-select .xm-label .xm-label-block,
+.theme-red xm-select > .xm-body .xm-option.hide-icon.selected {
+    background-color: rgb(226, 2, 18) !important;
+}
+
+/* tagsinput */
+.theme-red div.tagsinput span.tag {
+    background:  rgb(226, 2, 18);
+}
+
+/* cascader */
+.theme-red .ew-cascader-dropdown-list-item.active,
+.theme-red .ew-cascader-dropdown-list-item.active .ew-icon-right {
+    color:  rgb(226, 2, 18);
+}
+
+/* city-select */
+.theme-red .city-select a.active {
+    color: #fff !important;
+    background-color:  rgb(226, 2, 18) !important;
+}
+
+.theme-red .city-select a:hover,
+.theme-red .city-select a:focus {
+    background-color: rgba(204,0,0,.07);
+    color:  rgb(226, 2, 18);
+}
+
+.theme-red .city-picker-span > .title > span:hover {
+    background-color: rgba(204,0,0,.07);
+}
+
+.theme-red .city-select-tab > a.active {
+    color: rgb(226, 2, 18);
+}

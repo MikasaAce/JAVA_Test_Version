@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>首页</title>
+
+  <link rel="stylesheet" href="../../../../assets/libs/element/index.css">
+  <link rel="stylesheet" href="MainPage.css">
+</head>
+<body>
+  <div id="app" v-cloak>
+    <el-row :gutter="10" style="margin: 10px">
+      <el-col :span="24">
+        <el-card class="box-card">
+          <el-descriptions class="margin-top" title="" :column="3" border>
+            <el-descriptions-item><template slot="label"><i class="el-icon-user"></i>项目总数</template>{{projectNum}}</el-descriptions-item>
+            <el-descriptions-item><template slot="label"><i class="el-icon-mobile-phone"></i>漏洞总数</template>{{loopholeNum}}</el-descriptions-item>
+            <el-descriptions-item><template slot="label"><i class="el-icon-document"></i>导出报告数</template>{{filenum}}</el-descriptions-item>
+            <el-descriptions-item><template slot="label"><i class="el-icon-tickets"></i>高危漏洞</template>{{highNum}}</el-descriptions-item>
+            <el-descriptions-item><template slot="label"><i class="el-icon-document-copy"></i>中危漏洞</template>{{mediumNun}}</el-descriptions-item>
+            <el-descriptions-item><template slot="label"><i class="el-icon-document-remove"></i>低危漏洞</template>{{lowNum}}</el-descriptions-item>
+          </el-descriptions>
+        </el-card>
+      </el-col>
+    </el-row>
+
+
+    <el-row  style="margin: 10px">
+      <el-col :span="12">
+        <el-card class="box-card">
+          <div slot="header" class="clearfix">
+            <span class="el-card__header_span" >安全漏洞信息统计</span>
+          </div>
+          <div ref="SecurityMessageCensus" id="SecurityMessageCensus" class="text item" style="width: 600px;height:400px;"></div>
+
+        </el-card>
+      </el-col>
+
+      <el-col :span="12">
+        <el-card class="box-card">
+          <div slot="header" class="clearfix">
+            <span class="el-card__header_span" >项目漏洞检出量排行(TOP 5)</span>
+          </div>
+          <div ref="SecurityBugsNumCensus" id="SecurityBugsNumCensus" class="text item" style="width: 600px;height:400px;"></div>
+
+        </el-card>
+      </el-col>
+
+    </el-row>
+
+
+  </div>
+  <script src="../../../../assets/libs/vue/vue.js"></script>
+  <script src="../../../../assets/libs/element/index.js"></script>
+  <script src="../../../../assets/libs/echarts/echarts.min.js"></script>
+  <script src="../../../../assets/libs/jquery-1.11.3.min.js"></script>
+  <script src="../../../../assets/js/mainData.js"></script>
+  <script src="MainPage.js"></script>
+</body>
+</html>

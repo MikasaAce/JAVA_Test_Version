@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <!--<link rel="stylesheet" href="../../../js/element/index.css">-->
+    <link rel="stylesheet" href="../../../../assets/libs/element/index.css">
+
+    <title>任务详情</title>
+    <style>
+        body{
+
+        }
+        .box-card {
+            /*width: 800px;*/
+            margin: 10px;
+        }
+        .clearfix:before,
+        .clearfix:after {
+            display: table;
+            content: "";
+        }
+        .clearfix:after {
+            clear: both
+        }
+
+
+    </style>
+</head>
+<!--{% raw %}-->
+<body>
+
+<div id="app">
+    <el-row :gutter="20">
+        <el-col :span="12">
+            <el-card style="height: 700px;width: 100%">
+                <div slot="header" class="clearfix" style="display: flex;">
+                    <div style="width: 90%">
+<!--                        <el-button  icon="el-icon-arrow-left" @click="goback()"></el-button>-->
+                        <span style="font-size: 20px;font-weight: bolder;">{{taskname}}</span>
+                    </div>
+                    <div style="width: 10%">
+<!--                        <el-button type="text" @click="result()">结果审核</el-button>-->
+<!--                        <el-button type="text" @click="exportReport()">生成报告</el-button>-->
+                        <el-button type="text" @click="exportPDF()">导出PDF</el-button>
+                    </div>
+                </div>
+                <el-container>
+                    <el-descriptions :column="2" >
+                        <el-descriptions-item label="项目名称">{{itemname}}</el-descriptions-item>
+                        <el-descriptions-item label="检测对象">源代码</el-descriptions-item>
+                        <el-descriptions-item label="代码语言">{{language}}</el-descriptions-item>
+                        <el-descriptions-item label="代码来源">{{source}}</el-descriptions-item>
+<!--                        <el-descriptions-item label="扫描策略">{{type}}</el-descriptions-item>-->
+                        <el-descriptions-item label="文件个数">{{file_num}}</el-descriptions-item>
+                        <el-descriptions-item label="文件大小">{{file_size}}</el-descriptions-item>
+                        <el-descriptions-item label="创建人员">{{creator}}</el-descriptions-item>
+                        <el-descriptions-item label="代码行数">{{code_size}}</el-descriptions-item>
+                        <el-descriptions-item label="创建时间">{{startTime}}</el-descriptions-item>
+                        <el-descriptions-item label="检测时长">{{lasttime}}</el-descriptions-item>
+<!--                        <el-descriptions-item label="代码地址">{{url}}</el-descriptions-item>-->
+                        <el-descriptions-item label="审核状态">{{review_status}}</el-descriptions-item>
+                    </el-descriptions>
+                </el-container>
+            </el-card>
+        </el-col>
+        <el-col :span="12">
+            <el-card style="height: 340px;width: 100%">
+                <div slot="header" class="clearfix" style="display: flex">
+                    <span style="font-size: 20px;font-weight: bolder;">代码漏洞等级分布</span>
+                </div>
+                <el-container>
+                    <div id="echarts1" style="width: 100%;height: 300px;"></div>
+                </el-container>
+            </el-card>
+            <el-card style="height: 340px;width: 100%;margin-top: 20px">
+                <div slot="header" class="clearfix" style="display: flex">
+                    <span style="font-size: 20px;font-weight: bolder;">漏洞信息统计</span>
+                </div>
+                <el-container>
+                    <div id="echarts2" style="width: 100%;height: 290px;"></div>
+                </el-container>
+            </el-card>
+        </el-col>
+    </el-row>
+</div>
+
+<script src="../../../../assets/libs/vue/vue.js"></script>
+<script src="../../../../assets/libs/element/index.js"></script>
+<script src="../../../../assets/libs/echarts/echarts.min.js"></script>
+<script src="../../../../assets/libs/jquery-1.11.3.min.js"></script>
+<script src="../../../../assets/js/mainData.js"></script>
+<script src="ProjectDetail.js" ></script>
+
+
+</body>
+<!--{% endraw %}-->
+</html>

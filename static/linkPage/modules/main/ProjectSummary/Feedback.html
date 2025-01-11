@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport"
+        content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <!--<link rel="stylesheet" href="../../../js/element/index.css">-->
+  <link rel="stylesheet" href="../../../../assets/libs/element/index.css">
+  <link rel="stylesheet" href="ProjectSummary.css">
+
+  <title>问题反馈</title>
+  <style>
+
+  </style>
+</head>
+<!--{% raw %}-->
+<body>
+
+<div id="app">
+  <el-row :gutter="20" style="margin: 20px">
+    <el-col :span="2">
+      <el-button type="danger" @click="goback()">返回</el-button>
+    </el-col>
+
+    <el-col :span="21">
+      <div class="slecet" style="margin-right:20px;margin-bottom: 15px; ">
+        <el-form :inline="true" :model="query" class="demo-form-inline" method="post" >
+          <el-form-item label="项目名称：">
+            <el-input v-model="query.project_name" placeholder="请输入关键字"></el-input>
+          </el-form-item>
+          <el-form-item>
+            <el-button type="primary" @click="checkFormData()">查询</el-button>
+          </el-form-item>
+        </el-form>
+      </div>
+    </el-col>
+    <el-col :span="1">
+      <el-button  circle @click="reload()">
+        <svg t="1703055399666" class="icon" viewBox="0 0 1029 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="4461" width="16" height="16"><path d="M1007.2 262.4c-12.8-6.4-32 0-38.4 19.2l-25.6 70.4C904.8 256 847.2 179.2 757.6 128c-108.8-64-230.4-89.6-352-57.6C232.8 108.8 104.8 236.8 60 409.6 53.6 428.8 66.4 441.6 79.2 448 98.4 448 111.2 441.6 117.6 422.4c38.4-153.6 153.6-268.8 307.2-300.8 108.8-25.6 217.6-6.4 307.2 51.2 76.8 44.8 134.4 115.2 166.4 198.4l-76.8-32c-12.8-6.4-32 0-38.4 19.2-6.4 12.8 0 32 12.8 38.4l128 51.2c6.4 6.4 12.8 6.4 19.2 6.4 0 0 6.4 0 6.4 0 0 0 0 0 0 0 0 0 0 0 6.4 0 6.4 0 12.8-6.4 12.8-12.8L1026.4 294.4C1032.8 281.6 1020 268.8 1007.2 262.4zM949.6 576c-12.8-6.4-32 6.4-32 19.2-38.4 153.6-153.6 268.8-307.2 300.8-108.8 25.6-217.6 6.4-307.2-51.2-76.8-44.8-134.4-115.2-166.4-198.4l76.8 32c12.8 6.4 32 0 38.4-19.2 6.4-12.8 0-32-12.8-38.4L104.8 576C98.4 576 92 569.6 85.6 569.6c0 0-6.4 0-6.4 0 0 0 0 0 0 0 0 0 0 0-6.4 0C66.4 576 60 582.4 60 588.8L2.4 729.6c-6.4 12.8 0 32 19.2 38.4 12.8 6.4 32 0 38.4-19.2l25.6-70.4C124 768 181.6 844.8 271.2 896c108.8 64 230.4 89.6 352 57.6 172.8-38.4 307.2-172.8 345.6-345.6C975.2 595.2 962.4 582.4 949.6 576z" fill="#d81e06" p-id="4462"></path></svg>
+      </el-button>
+    </el-col>
+  </el-row>
+
+    <template v-loading="loading"  element-loading-spinner="el-icon-loading" element-loading-background="rgba(0, 0, 0, 0.8)">
+      <el-card class="box-card" style="margin: 20px">
+        <div slot="header" class="clearfix" style="display: flex">
+          <span style="font-size: 20px;font-weight: bolder;">问题反馈</span>
+          <div style="margin-left: 20px">
+            <el-button type="text" @click="opentable1">误报反馈</el-button>
+            <el-button type="text" @click="opentable2">漏报反馈</el-button>
+          </div>
+        </div>
+        <el-container>
+          <el-main>
+            <el-table :data="tableList_feedback">
+              <el-table-column label="反馈类型" prop="feedType" width="100">
+                <template slot-scope="scope">
+                  <span v-if="scope.row.feedType==='0'">漏报反馈</span>
+                  <span v-else-if="scope.row.feedType==='1'">误报反馈</span>
+                </template>
+              </el-table-column>
+              <el-table-column label="文件名称" prop="fileName" width="250"></el-table-column>
+              <el-table-column label="所属类型" prop="vulType"></el-table-column>
+              <el-table-column label="评价" prop="comment" width="100">
+                <template v-slot="scope">
+                  <el-button v-if="scope.row.reason == '1'"  circle disabled> <img src="./img/点赞2.png"/></el-button>
+                  <el-button v-else-if="scope.row.reason == '0'"  circle disabled> <img src="./img/点赞4.png"/></el-button>
+                </template>
+              </el-table-column>
+              <el-table-column label="您提交的漏洞类型" prop="newType"></el-table-column>
+              <el-table-column  fixed='right' label="操作" width="75">
+                <template v-slot="scope">
+                  <el-row style="text-align: left">
+                    <el-col :span="24">
+                      <el-button size="mini" type="danger" @click="delopen(scope.row)">删除</el-button>
+                    </el-col>
+                  </el-row>
+                </template>
+              </el-table-column>
+            </el-table>
+            <el-pagination
+                background
+                layout="total, sizes, prev, pager, next, jumper"
+                :total="count3"
+                @current-change="handleCurrentChange3"
+                @size-change="handleSizeChange3"
+                :page-sizes="[5,10,20]"
+                :current-page="currentPage3"
+                :page-size="pageSize3"
+                style="text-align: center">
+            </el-pagination>
+          </el-main>
+        </el-container>
+      </el-card>
+      <el-dialog title="误报反馈" :visible.sync="dialogTableVisible1" width="60%">
+        <el-form :inline="true" :model="query1" class="demo-form-inline" method="post" >
+          <el-form-item label="项目名称：">
+            <el-input v-model="query1.project_name" placeholder="请输入关键字"></el-input>
+          </el-form-item>
+          <el-form-item>
+            <el-button type="primary" @click="checkFormData1()">查询</el-button>
+            <el-button type="primary" @click="onsubmit1()" style="margin-right: -10px">提交反馈</el-button>
+          </el-form-item>
+        </el-form>
+
+        <el-table ref="gridData1" :data="gridData1"  @current-change="onchange1" @select="select1" highlight-current-row>
+          <el-table-column type="selection" width="55"></el-table-column>
+          <el-table-column label="文件名称" prop="vulFileName" width="300"></el-table-column>
+          <el-table-column label="所属类型" prop="vulType"></el-table-column>
+          <el-table-column label="评价" prop="comment" width="150" fixed='right'>
+            <template v-slot="scope">
+              <el-button v-if="scope.row.data1 == ''" @click="insertAttr1(scope.row)" circle :disabled="scope.row.data2 == '1'"> <img src="./img/点赞1.png"/></el-button>
+              <el-button v-else-if="scope.row.data1 == '1'" @click="insertAttr1(scope.row)" circle> <img src="./img/点赞2.png"/></el-button>
+              <el-button v-if="scope.row.data2 == ''" @click="insertAttr2(scope.row)" circle :disabled="scope.row.data1 == '1'"> <img src="./img/点赞3.png"/></el-button>
+              <el-button v-else-if="scope.row.data2 == '1'" @click="insertAttr2(scope.row)" circle> <img src="./img/点赞4.png"/></el-button>
+            </template>
+          </el-table-column>
+          <el-table-column  fixed='right' label="您认为所属漏洞类型:" width="200px">
+            <template v-slot="scope">
+              <el-row style="text-align: center">
+                <el-select v-model="scope.row.data3" placeholder="请选择漏洞类型" style="width: 100%"  :disabled="scope.row.data1 == '1'" @change="cwechange1(scope.row)">
+                  <el-option v-for="item in vueList" :key="item.id" :label="item.name" :value="item.id">
+                  </el-option>
+                </el-select>
+              </el-row>
+            </template>
+          </el-table-column>
+        </el-table>
+
+        <el-pagination
+            background
+            layout="total, sizes, prev, pager, next, jumper"
+            :total="count1"
+            @current-change="handleCurrentChange1"
+            @size-change="handleSizeChange1"
+            :page-sizes="[5,10]"
+            :current-page="currentPage1"
+            :page-size="pageSize1"
+            style="text-align: center">
+        </el-pagination>
+      </el-dialog>
+
+      <el-dialog title="漏报反馈" :visible.sync="dialogTableVisible2" width="60%">
+        <el-form :inline="true" :model="query2" class="demo-form-inline" method="post" >
+          <el-form-item label="项目名称：">
+            <el-input v-model="query2.project_name" placeholder="请输入关键字"></el-input>
+          </el-form-item>
+          <el-form-item>
+            <el-button type="primary" @click="checkFormData2()">查询</el-button>
+            <el-button type="primary" @click="onsubmit2()" style="margin-right: -10px">提交反馈</el-button>
+          </el-form-item>
+        </el-form>
+
+        <el-table ref="gridData2" :data="gridData2"  @current-change="onchange2"  @select="select2"  highlight-current-row>
+          <el-table-column type="selection" width="55"></el-table-column>
+          <el-table-column label="文件名称" prop="vulFileName" width="400"></el-table-column>
+          <el-table-column label="评价" prop="comment" width="150" fixed='right'>
+            <template v-slot="scope">
+              <el-button v-if="scope.row.data1 == ''" @click="insertAttr3(scope.row)" circle :disabled="scope.row.data2 == '1'"> <img src="./img/点赞1.png"/></el-button>
+              <el-button v-else-if="scope.row.data1 == '1'" @click="insertAttr3(scope.row)" circle> <img src="./img/点赞2.png"/></el-button>
+              <el-button v-if="scope.row.data2 == ''" @click="insertAttr4(scope.row)" circle :disabled="scope.row.data1 == '1'"> <img src="./img/点赞3.png"/></el-button>
+              <el-button v-else-if="scope.row.data2 == '1'" @click="insertAttr4(scope.row)" circle> <img src="./img/点赞4.png"/></el-button>
+            </template>
+          </el-table-column>
+          <el-table-column  fixed='right' label="你认为所属漏洞类型:" width="200px">
+            <template v-slot="scope">
+              <el-row style="text-align: center">
+                <el-select v-model="scope.row.data3" placeholder="请选择漏洞类型" style="width: 100%" :disabled="scope.row.data1 == '1'" @change="cwechange2(scope.row)">
+                  <el-option v-for="item in vueList" :key="item.id" :label="item.name" :value="item.id">
+                  </el-option>
+                </el-select>
+              </el-row>
+            </template>
+          </el-table-column>
+        </el-table>
+
+        <el-pagination
+            background
+            layout="total, sizes, prev, pager, next, jumper"
+            :total="count2"
+            @current-change="handleCurrentChange2"
+            @size-change="handleSizeChange2"
+            :page-sizes="[5,10]"
+            :current-page="currentPage2"
+            :page-size="pageSize2"
+            style="text-align: center">
+        </el-pagination>
+      </el-dialog>
+    </template>
+
+
+</div>
+
+<script src="../../../../assets/libs/vue/vue.js"></script>
+<script src="../../../../assets/libs/element/index.js"></script>
+<script src="../../../../assets/libs/jquery-1.11.3.min.js"></script>
+<script src="../../../../assets/js/mainData.js"></script>
+<script src="Feedback.js" ></script>
+
+
+</body>
+<!--{% endraw %}-->
+</html>

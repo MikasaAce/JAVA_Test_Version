@@ -1,0 +1,752 @@
+漏洞ID,漏洞名称,漏洞等级,漏洞描述,代码示例,修复方案
+cwe787,越界读取，,"中危,,，",软件将数据写入预期缓冲区的末尾或开始之前。通常，这可能导致数据损坏、崩溃或代码执行。该软件可以修改索引或执行指针算术，该指针算法引用缓冲区边界之外的内存位置。然后，后续的写入操作将产生未定义或意外的结果。,"下面的代码尝试将四个不同的标识号保存到数组中。（C语言）
+int id_sequence[3];
+
+/ Populate the id array. /
+
+id_sequence[0] = 123;
+id_sequence[1] = 234;
+id_sequence[2] = 345;
+id_sequence[3] = 456;","1.使用不允许发生此弱点的语言，或提供使此弱点更容易避免的构造。例如，许多执行自己的内存管理的语言（如 Java 和 Perl）都不会受到缓冲区溢出的影响。其他语言（如 Ada 和 C#）通常提供溢出保护，但程序员可以禁用该保护。请注意，即使语言本身在理论上是安全的，语言与本机代码的接口仍可能被溢出。
+2.使用不允许发生此弱点的经过审查的库或框架，或者提供使此弱点更容易避免的构造。例子包括Messier和Viega [REF-57]的安全C字符串库（SafeStr），以及Microsoft的Strsafe.h库。这些库提供容易溢出的字符串处理函数的更安全版本。
+3.使用自动提供保护机制的功能或扩展来运行或编译软件，以缓解或消除缓冲区溢出。例如，某些编译器和扩展提供内置于已编译代码中的自动缓冲区溢出检测机制。"
+cwe79,在网页生成过程中对输入的处理不当（跨站脚本攻击）,高危,"XSS全称为Cross Site Scripting，为了和CSS分开简写为XSS，中?名为跨站脚本。该漏洞发?在?户端，是指恶意攻击者往Web站点?插?恶意脚本代码，当?户浏览该?站时，嵌?其??的脚本代码会被执?，从?达到恶意?户的特殊?的。?插?恶意脚本代码，当?户浏览该?站时，嵌?其??的脚本代码会被执?，从?达到恶意?户的特殊?的。根据是否写?数据看来分类主要有反射性和存储型两?类。
+· 反射型跨站脚本（Reflected XSS）
+· 储存型跨站脚本（Persistent XSS）
+区别：存储型XSS的恶意代码存在数据库?，反射型XSS的恶意代码存在URL?。","此示例展示反射型 XSS（类型 1）方案。
+以下 JSP 代码段从 HTTP 请求中读取员工 ID eid，并将其显示给用户。
+<% String eid = request.getParameter(""eid""); %>
+...
+Employee ID: <%= eid %>
+以下 ASP.NET 代码段从 HTTP 请求读取员工 ID 号并将其显示给用户。
+<%
+protected System.Web.UI.WebControls.TextBox Login;
+protected System.Web.UI.WebControls.Label EmployeeID;
+...
+EmployeeID.Text = Login.Text;
+%>
+
+<p><asp:label id=""EmployeeID"" runat=""server"" /></p>
+如果 Employee ID 变量仅包含标准字母数字文本，则此示例中的代码可以正常运行。如果它的值包含元字符或源代码，则代码将由 Web 浏览器在显示 HTTP 响应时执行。","1.在服务端进?输?验证（输?验证）
+服务器后端进?输?验证，包括输?的数据类型、数据长度、数据格式、特殊字符等进?验证。
+2.数据输出实体编码（输出编码）
+输出编码?段主要有3种编码：URL编码、HTML编码和JavaScript编码。
+JAVA：开源的ESAPI library；框架（Spring：HtmlUtils.htmlEscape） PHP：使?htmlspecialchars等函数进?过滤输出
+"
+cwe125,越界读取,中危,"软件读取数据超过预期缓冲区的末尾或开始之前。
+通常，这可能允许攻击者从其他内存位置读取敏感信息或导致崩溃。当代码读取可变数量的数据并假定存在一个哨兵来停止读取操作（如字符串中的 NUL）时，可能会发生崩溃。预期的哨兵可能不在越界内存中，从而导致读取过多的数据，从而导致分段错误或缓冲区溢出。该软件可以修改索引或执行指针算术，该指针算法引用缓冲区边界之外的内存位置。然后，后续读取操作将产生未定义或意外的结果。","在下面的代码中，该方法从特定数组索引位置的数组中检索一个值，该值作为方法的输入参数提供（有问题的代码）
+int getValueFromArray(int *array, int len, int index) {
+int value;
+// check that the array index is less than the maximum
+
+// length of the array
+if (index < len) {
+
+// get the value at the specified index of the array
+value = array[index];
+}
+// if array index is invalid then output error message
+
+// and return value indicating error
+else {
+printf(""Value is: %d\n"", array[index]);
+value = -1;
+}
+return value;
+}
+但是，此方法仅验证给定的数组索引是否小于数组的最大长度，而不检查最小值 （CWE-839）。这将允许接受负值作为输入数组索引，这将导致越界读取（CWE-125），并可能允许访问敏感内存。应检查输入数组索引以验证其是否在数组 （CWE-129） 所需的最大和最小范围内。在此示例中，应修改 if 语句以包括最小范围检查，如下所示。（改进之后的代码）
+...
+// check that the array index is within the correct
+
+// range of values for the array
+if (index >= 0 && index < len) {
+...","1.?输入验证：假设所有输入都是恶意的。使用“接受已知良好”的输入验证策略，即使用严格符合规范的可接受输入的白名单。拒绝任何不完全符合规范的输入，或将其转换为符合规范的内容。执行输入验证时，请考虑所有可能相关的属性，包括长度、输入类型、可接受值的完整范围、缺失或额外的输入、语法、相关字段之间的一致性以及是否符合业务规则。作为业务规则逻辑的一个示例，“boat”在语法上可能是有效的，因为它只包含字母数字字符，但如果输入只期望包含“红色”或“蓝色”等颜色，则它无效。不要完全依赖查找恶意或格式错误的输入（即，不要依赖黑名单）。黑名单可能会错过至少一个不需要的输入，尤其是在代码的环境发生变化时。这可以为攻击者提供足够的空间来绕过预期的验证。但是，黑名单可用于检测潜在攻击或确定哪些输入的格式非常错误，应将其彻底拒绝。若要降低引入越界读取的可能性，请确保验证并确保对任何长度参数、缓冲区大小计算或偏移进行正确的计算。特别要小心，不要在不受信任的输入中依赖哨兵（即特殊字符，如 NUL）。
+2.语言选择：使用提供适当内存抽象的语言。"
+cwe20,输入验证不当,高危,"产品不会验证或错误地验证可能影响程序的控制流或数据流的输入。当软件未正确验证输入时，攻击者能够以应用程序其余部分未预料到的形式手工创建输入。这将导致系统的某些部分收到意外的输入，这可能导致控制流更改、对资源的任意控制或任意代码执行。
+
+","此示例要求用户提供最大尺寸为 100 个正方形的 m X n 游戏板的高度和宽度。
+#define MAX_DIM 100
+/ board dimensions /
+int m,n, error;
+board_square_t board;
+printf(""Please specify the board height: \n"");
+error = scanf(""%d"", &m);
+if ( EOF == error ){
+die(""No integer passed: Die evil hacker!\n"");
+}
+printf(""Please specify the board width: \n"");
+error = scanf(""%d"", &n);
+if ( EOF == error ){
+die(""No integer passed: Die evil hacker!\n"");
+}
+if ( m > MAX_DIM || n > MAX_DIM ) {
+die(""Value too large: Die evil hacker!\n"");
+}
+board = (board_square_t) malloc( m * n * sizeof(board_square_t));
+虽然此代码进行检查以确保用户无法指定较大的正整数并消耗太多内存，但它不会检查用户提供的负值。因此，攻击者可以通过指定两个不会溢出的大型负值来对此程序执行资源消耗 （CWE-400） 攻击，从而导致非常大的内存分配 （CWE-789） 并可能导致系统崩溃。或者，攻击者可以提供非常大的负值，这将导致整数溢出 （CWE-190），并且根据程序其余部分的值的处理方式，将出现意外行为。","1.使用输入验证框架，如 Struts 或 OWASP ESAPI Validation API。
+2.了解不受信任的输入可以进入软件的所有潜在区域：参数或参数、Cookie、从网络读取的任何内容、环境变量、反向 DNS 查找、查询结果、请求标头、URL 组件、电子邮件、文件、文件名、数据库以及向应用程序提供数据的任何外部系统。
+3.当应用程序合并来自多个源的数据时，请在合并源后执行验证。单个数据元素可能通过验证步骤，但在组合后违反了预期的限制。
+4.在调用跨语言边界的代码（例如从解释型语言到本机代码）时，请特别小心验证所有输入。这可能会在语言边界之间产生意外的交互。确保您没有违反与之接口的语言的任何期望。例如，即使 Java 可能不容易受到缓冲区溢出的影响，在调用本机代码时提供较大的参数也可能会触发溢出。"
+cwe78,多OS命令中使用的特殊元素处理不当（OS命令注入）,高危,"命令执?/注?漏洞通常因为应?在服务器上拼接系统命令?造成的漏洞。攻击者通过提交恶意构造的参数破坏命令语句结构，从?达到执?恶意命令的?的。
+","此示例代码打算采用用户的名称并列出该用户主目录的内容。它受操作系统命令注入的第一个变体的约束。
+$userName = $_POST[""user""];
+$command = 'ls -l /home/' . $userName;
+system($command);
+不会检查$userName变量是否存在恶意输入。攻击者可以将$userName变量设置为任意 OS 命令，例如：
+;rm -rf /
+这将导致$command是：
+ls -l /home/;rm -rf /
+由于分号是Unix中的命令分隔符，因此操作系统将首先执行ls命令，然后执行rm命令，删除整个文件系统。
+另请注意，此示例代码容易受到路径遍历 （CWE-22） 和不受信任的搜索路径 （CWE-426） 攻击。
+
+命令执?/注?漏洞通常出现在调?外部程序完成?些功能的情景下。
+· 管理界?的配置主机名/IP/掩码/?关、查看系统信息等功能处
+· 关闭、重启等功能处
+· ping、nslookup等验证主机等功能处
+· 提供发送邮件、转换图?等功能处
+","1. 在代码级调?shell时，对命令?中的特殊字符（?如|、&、；等）进?转义，防?执?其他?法命令。
+2. 根据业务逻辑进??名单?式校验或使?正则表达式进?过滤。
+3. PHP中可使?escapeshellarg、escapeshellcmd来转义对应敏感字符。
+4. 对于相关敏感的命令执?函数，做好参数校验和合法性验证，或者直接在配置?件中禁?该函数，不要让?户可以直接控制eval、system、exec、shell_exec等函数的参数 。
+"
+cwe89,对SQL命令中使用的特殊元素处理不当(SQL注入),高危,SQL注?漏洞产?的原因是?站应?程序在编写时未对?户提交?服务器的数据进?合法性校验（类型、长度、业务参数合法性等），同时没有对?户输?数据进?有效地特殊字符过滤，使得?户的输?直接带?数据库执?，超出了SQL语句原来设计的预期结果，导致了SQL注?漏洞。,"下面的代码动态构造并执行一个 SQL 查询，该查询搜索与指定名称匹配的项。该查询将显示的项目限制为所有者与当前经过身份验证的用户的用户名匹配的项目。
+string userName = ctx.getAuthenticatedUserName();
+string query = ""SELECT * FROM items WHERE owner = '"" + userName + ""' AND itemname = '"" + ItemName.Text + ""'"";
+sda = new SqlDataAdapter(query, conn);
+DataTable dt = new DataTable();
+sda.Fill(dt);
+此代码打算执行的查询如下所示：
+SELECT * FROM items WHERE owner = <userName> AND itemname = <itemName>;
+但是，由于查询是通过连接常量基查询字符串和用户输入字符串来动态构造的，因此，仅当 itemName 不包含单引号字符时，查询才会正常运行。如果用户名为 wiley 的攻击者输入了以下字符串：
+name' OR 'a'='a
+对于 itemName，则查询将变为以下内容：
+SELECT * FROM items WHERE owner = 'wiley' AND itemname = 'name' OR 'a'='a';
+添加OR 'a'='a条件导致 WHERE 子句的计算结果始终为 true，因此查询在逻辑上等效于更简单的查询：
+SELECT * FROM items;
+这种查询的简化允许攻击者绕过查询仅返回经过身份验证的用户拥有的项目的要求。查询现在返回存储在 items 表中的所有条目，而不考虑其指定的所有者。","1.输?验证
+类型判断：字符型、整型；
+长度判断：设置最?长度值；
+业务参数合法性判断：?如?付?额不可能为负值这种；
+特殊字符过滤：?如’，""，\，<，>，&，*，;，#，select，from，where，sub，if，union，sleep，and，or等；
+验证所有的输?点，包括UA、Cookie以及其他HTTP头；
+2.预编译处理&参数化查询
+所有与数据库交互的业务接?均采?参数化查询，参数化的语句使?参数?不是将?户输?变量嵌?到SQL语句中，参数化查询是防御SQL
+注?的最佳?法，?如：Java中的PreparedStatement，PHP中的PDO等。
+3.使用最?权限原则
+4.禁?敏感函数
+5.进行权限控制
+6.编码统一"
+cwe416,释放后使用,中危,"在释放内存后引用内存可能会导致程序崩溃、使用意外值或执行代码。
+使用先前释放的内存可能会产生许多不良后果，从有效数据的损坏到任意代码的执行，具体取决于缺陷的实例化和时间。可能发生数据损坏的最简单方法涉及系统重用释放的内存。无用后使用错误有两个常见且有时重叠的原因：
+在这种情况下，有问题的内存在释放后的某个时间点有效地分配给另一个指针。指向释放的内存的原始指针将再次使用，并指向新分配中的某个位置。当数据被更改时，它会损坏有效使用的内存;这会在过程中诱发未定义的行为。
+如果新分配的数据有机会容纳一个类，例如在C++中，各种函数指针可能分散在堆数据中。如果这些函数指针之一被有效外壳代码的地址覆盖，则可以实现任意代码的执行。","下面的示例演示了该漏洞。
+#include <stdio.h>
+#include <unistd.h>
+#define BUFSIZER1 512
+#define BUFSIZER2 ((BUFSIZER1/2) - 8)
+int main(int argc, char argv) {
+char buf1R1;
+char buf2R1;
+char buf2R2;
+char buf3R2;
+buf1R1 = (char ) malloc(BUFSIZER1);
+buf2R1 = (char ) malloc(BUFSIZER1);
+free(buf2R1);
+buf2R2 = (char ) malloc(BUFSIZER2);
+buf3R2 = (char ) malloc(BUFSIZER2);
+strncpy(buf2R1, argv[1], BUFSIZER1-1);
+free(buf1R1);
+free(buf2R2);
+free(buf3R2);
+}","1.选择提供自动内存管理的语言。
+2.释放指针时，请确保在释放指针后将其设置为 NULL。但是，使用多个或复杂的数据结构可能会降低此策略的有用性。"
+cwe22,对受限制目录的路径名的不当限制（“路径遍历”）,高危,路径遍历是指应用程序接收了未经合理校验的用户参数用于进行与文件读取查看相关操作，而该参数包含了特殊的字符(例如“..”和“/”)，使用了这类特殊字符可以摆脱受保护的限制，越权访问一些受保护的文件、目录或者覆盖敏感数据。,"以下代码可能适用于社交网络应用程序，其中每个用户的配置文件信息都存储在单独的文件中。所有文件都存储在单个目录中。
+my $dataPath = ""/users/cwe/profiles"";
+my $username = param(""user"");
+my $profilePath = $dataPath . ""/"" . $username;
+
+open(my $fh, ""<$profilePath"") || ExitError(""profile read error: $profilePath"");
+print ""<ul>\n"";
+while (<$fh>) {
+print ""<li>$_</li>\n"";
+}
+print ""</ul>\n"";
+虽然程序员打算访问诸如“/users/cwe/profiles/alice”或“/users/cwe/profiles/bob”之类的文件，但没有对传入的用户参数进行验证。攻击者可以提供字符串，例如：
+../../../etc/passwd
+该程序将生成一个配置文件路径名，如下所示：
+/users/cwe/profiles/../../../etc/passwd
+打开该文件时，操作系统将解析 “../“ 在路径规范化期间，并实际访问此文件：
+/etc/passwd
+因此，攻击者可以读取密码文件的整个文本。
+请注意，如果用户参数未生成存在的文件，则此代码还包含错误消息信息泄漏 （CWE-209）：提供完整路径名。由于缺少检索到的文件的输出编码，如果配置文件包含任何 HTML，则还可能存在跨站点脚本问题 （CWE-79），但需要检查其他代码。","1.程序对非受信的用户输入数据净化，对网站用户提交过来的文件名进行硬编码或者统一编码，过滤非法字符。
+2.对文件后缀进行白名单控制，对包含了恶意的符号或者空字节进行拒绝。
+3.合理配置 web 服务器的目录权限。"
+cwe352,跨站点请求伪造（CSRF）,中危,CSRF（Cross-site request forgery）跨站请求伪造，也被称为“One Click Attack”或者Session Riding，通常缩写为CSRF，是?种对?站的恶意利?。尽管听起来像跨站脚本（XSS），但它与XSS?常不同，XSS利?站点内的信任?户，?CSRF则通过伪装来?受信任?户的请求来利?受信任的?站。攻击者通过伪造来?受信任?户的请求，达到增加、删除、篡改?站内容的?的。,"此示例 PHP 代码尝试通过验证提交表单的用户是否具有有效的会话来保护表单提交过程。此对策无法阻止 CSRF 攻击，因为攻击者通过用户的 Web 浏览器发出请求，而该浏览器已经存在有效的会话。
+以下 HTML 旨在允许用户更新配置文件。
+<form action=""/url/profile.php"" method=""post"">
+<input type=""text"" name=""firstname""/>
+<input type=""text"" name=""lastname""/>
+<br/>
+<input type=""text"" name=""email""/>
+<input type=""submit"" name=""submit"" value=""Update""/>
+</form>
+profile.php包含以下代码。
+// initiate the session in order to validate sessions
+session_start();
+//if the session is registered to a valid user then allow update
+if (! session_is_registered(""username"")) {
+echo ""invalid session detected!"";
+// Redirect user to login page
+[...]
+exit;
+}
+// The user session is valid, so process the request
+// and update the information
+update_profile();
+function update_profile {
+// read in the data from $POST and send an update
+// to the database
+SendUpdateToDatabase($_SESSION['username'], $_POST['email']);
+[...]
+echo ""Your profile has been successfully updated."";
+}
+此代码可能看起来受到保护，因为它会检查有效的会话。但是，CSRF攻击几乎可以从任何标记或HTML构造中暂存，包括图像标记，链接，嵌入或对象标记，或加载背景图像的其他属性。
+然后，攻击者可以托管代码，该代码将以静默方式更改访问该页面的任何用户的用户名和电子邮件地址，同时保持登录到目标 Web 应用程序。该代码可能是一个看起来无辜的网页，例如：
+攻击 HTML
+<SCRIPT>
+function SendAttack （） {
+form.email = “attacker@example.com”;
+// 发送到 profile.php
+form.submit（）;
+}
+</SCRIPT>
+<BODY onload=“javascript：SendAttack（）;”
+>
+<form action=“http://victim.example.com/profile.php” id=“form” method=“post”>
+<input type=“hidden” name=“firstname” value=“Funny”>
+<input type=“hidden” name=“lastname” value=“Joke”>
+<br/>
+<input type=“hidden” name=“email”>
+</form>
+请注意表单如何包含隐藏字段，因此当它加载到浏览器中时，用户不会注意到它。由于 SendAttack（） 是在正文的 onload 属性中定义的，因此当受害者加载网页时，它将自动调用。
+假设用户已登录到 victim.example.com，profile.php将看到已建立有效的用户会话，然后将电子邮件地址更新为攻击者自己的地址。在此阶段，用户的身份已泄露，通过此配置文件发送的消息可能会发送到攻击者的地址。","1.验证HTTP Referer字段；
+2. 关键业务操作使?图形验证码进??次确认验，只接受 POST 请求，GET请求应只浏览?不改变服务器端资源；
+3. 过滤?户输?，不允许发布含有站内操作URL的链接；
+4. 增加csrftoken验证，csrftoken可以在?户登陆后产?并放于 session 之中，然后在每次请求时把csrftoken从 session 中拿出，
+与请求中的csrftoken进??对。对于GET请求，csrftoken将附在请求地址之后，对于POST请求来说，要在form的最后加上 ；
+5. 在 HTTP 头中?定义属性并验证，该?法同csrftoken，同为随机值校验，但是这?并不是把csrftoken以参数的形式置于HTTP请求
+之中，?是把它放到 HTTP头中?定义的属性?；
+6. 在浏览其它站点前登出站点或者在浏览器会话结束后清理浏览器的cookie。
+"
+cwe434,危险类型文件的不加限制上传,高危,软件允许攻击者上传或传输可在产品环境中自动处理的危险类型的文件。,"下面的代码旨在允许用户将图片上载到 Web 服务器。在用户端驱动表单的 HTML 代码具有类型为“file”的输入字段。（没有问题的HTML代码）
+<form action=""upload_picture.php"" method=""post"" enctype=""multipart/form-data"">
+Choose a file to upload:
+<input type=""file"" name=""filename""/>
+<br/>
+<input type=""submit"" name=""submit"" value=""Submit""/>
+</form>
+提交后，上面的表单会将文件发送到 Web 服务器上的upload_picture.php。PHP 将文件存储在临时位置，直到服务器端代码检索（或丢弃）该文件。在此示例中，文件被移动到更永久的图片/目录。（有问题的HTML代码）
+// Define the target location where the picture being
+// uploaded is going to be saved.
+$target = ""pictures/"" . basename($_FILES['uploadedfile']['name']);
+
+// Move the uploaded file to the new location.
+if(move_uploaded_file($_FILES['uploadedfile']['tmp_name'], $target))
+{
+echo ""The picture has been successfully uploaded."";
+}
+else
+{
+echo ""There was an error uploading the picture, please try again."";
+}
+上述代码的问题在于没有检查正在上传的文件类型。假设 pictures/ 在 Web 文档根目录中可用，攻击者可以上传一个名为：
+malicious.php
+由于此文件名以“.php”结尾，因此可以由Web服务器执行。在此上传文件的内容中，攻击者可以使用：
+<？php
+system（$_GET['cmd']）;
+?>
+安装此文件后，攻击者可以使用 URL 输入任意命令来执行，例如：
+http://server.example.com/upload_dir/malicious.php?cmd=ls%20-l
+它运行“ls -l”命令 - 或攻击者想要指定的任何其他类型的命令。","1.为上传的文件生成新的唯一文件名，而不是使用用户提供的文件名，以便从根本上不使用外部输入。
+2.当可接受的对象集（如文件名或 URL）受到限制或已知时，请创建从一组固定输入值（如数字 ID）到实际文件名或 URL 的映射，并拒绝所有其他输入。
+3.考虑将上载的文件完全存储在 Web 文档根目录之外。然后，使用其他机制动态传递文件。
+4.定义一组非常有限的允许扩展名，并且仅生成以这些扩展名结尾的文件名。
+5.确保文件名中仅使用一个扩展名。一些Web服务器，包括某些版本的Apache，可能会根据内部扩展名处理文件，以便将“文件名.php.gif”提供给PHP解释器。"
+cwe306,关键功能的认证机制缺失,高危,软件不对需要证明的用户身份或消耗大量资源的功能执行任何身份验证。,"在下面的 Java 示例中，方法 createBankAccount 用于为银行管理应用程序创建 BankAccount 对象。（有问题的代码）
+public BankAccount createBankAccount(String accountNumber, String accountType,
+String accountName, String accountSSN, double balance) {
+BankAccount account = new BankAccount();
+account.setAccountNumber(accountNumber);
+account.setAccountType(accountType);
+account.setAccountOwnerName(accountName);
+account.setAccountOwnerSSN(accountSSN);
+account.setBalance(balance);
+return account;
+}
+但是，没有身份验证机制来确保创建此银行帐户对象的用户有权创建新的银行帐户。应使用某些身份验证机制来验证用户是否有权创建银行帐户对象。
+
+以下 Java 代码包含用于对用户进行身份验证的布尔变量和方法。如果用户尚未通过身份验证，则创建银行帐户将不会创建银行帐户对象。（没有问题的代码）
+private boolean isUserAuthentic = false;
+// authenticate user,
+// if user is authenticated then set variable to true
+// otherwise set variable to false
+public boolean authenticateUser(String username, String password) {
+...
+}
+public BankAccount createNewBankAccount(String accountNumber, String accountType,
+String accountName, String accountSSN, double balance) {
+BankAccount account = null;
+if (isUserAuthentic) {
+account = new BankAccount();
+account.setAccountNumber(accountNumber);
+account.setAccountType(accountType);
+account.setAccountOwnerName(accountName);
+account.setAccountOwnerSSN(accountSSN);
+account.setBalance(balance);
+}
+return account;
+}","1.将软件划分为匿名、普通、特权和管理区域。确定哪些区域需要经过验证的用户身份，并使用集中式身份验证功能。识别所有潜在的通信通道或与软件交互的其他方式，以确保所有通道都得到适当的保护。开发人员有时会在主通道上执行身份验证，但会打开假定为专用的辅助通道。例如，登录机制可能侦听一个网络端口，但在身份验证成功后，它可能会打开第二个端口，在其中等待连接，但会避免身份验证，因为它假定只有经过身份验证的参与方才会连接到该端口。通常，如果软件或协议允许单个会话或用户状态在多个连接或通道中持久存在，则需要在整个过程中使用身份验证和适当的凭据管理。
+2.对于在客户端执行的任何安全检查，请确保在服务器端重复这些检查。攻击者可以通过在执行检查后修改值或更改客户端以完全删除客户端检查来绕过客户端检查。然后，这些修改后的值将提交到服务器。
+3.请避免实现自定义身份验证例程，并考虑使用周围框架、操作系统或环境提供的身份验证功能。这样可以更轻松地在身份验证任务和授权任务之间提供明确的分离。在万维网等环境中，身份验证和授权之间的界限有时模糊不清。如果需要自定义身份验证例程而不是服务器提供的例程，则必须将这些例程应用于每个页面，因为可以直接请求这些页面。
+4.使用不允许发生此弱点的经过审查的库或框架，或者提供使此弱点更容易避免的构造。"
+cwe190,整数溢出或回绕,中危,当逻辑假定结果值将始终大于原始值时，软件执行可以生成整数溢出或环绕的计算。当计算用于资源管理或执行控制时，这可能会引入其他弱点。当整数值递增到太大而无法存储在关联表示中的值时，会发生整数溢出或换行。发生这种情况时，该值可能会换行为非常小或负数。虽然在依赖于包装的情况下，这可能是预期的行为，但如果包装是意外的，则可能会产生安全后果。如果可以使用用户提供的输入触发整数溢出，则尤其如此。当结果用于控制循环、做出安全决策或确定内存分配、复制、串联等行为中的偏移量或大小时，这就变得安全至关重要。,"以下图像处理代码为图像分配一个表。
+img_t table_ptr; /struct containing img data, 10kB each/
+int num_imgs;
+...
+num_imgs = get_num_imgs();
+table_ptr = (img_t)malloc(sizeof(img_t)num_imgs);
+...
+此代码打算分配一个num_imgs大小的表，但是随着num_imgs越来越大，确定列表大小的计算最终将溢出 （CWE-190）。这将导致要分配的列表非常小，如果后续代码在列表上运行，会认为列表和num_imgs一样长，则可能会导致许多类型的越界问题 （CWE-119）。","1.确保严格定义所有协议，以便可以简单地识别所有越界行为，并要求严格遵守协议。
+2.使用语言不允许发生此弱点，或提供使此弱点更容易避免的构造，选择执行自动边界检查的语言或编译器。
+3.使用不允许发生此弱点的经过审查的库或框架，或者提供使此弱点更容易避免的构造。使用库或框架，可以更轻松地处理数字，而不会产生意外后果。示例包括安全整数处理包，如 SafeInt （C++） 或 IntegerLib （C 或 C++）。
+4.通过确保任何数字输入在预期范围内，对任何数字输入执行输入验证。强制输入同时满足预期范围的最低和最高要求。尽可能使用无符号整数。这样可以更轻松地对整数溢出执行健全性检查。当需要有符号整数时，请确保范围检查包括最小值和最大值。"
+cwe502,不受信任的数据的反序列化,中危,"应用程序在不充分验证生成的数据是否有效的情况下反序列化不受信任的数据。
+序列化对象以进行通信或保存它们以供以后使用通常很方便。但是，如果反序列化的数据或代码不使用加密来保护自身，则通常可以在不使用提供的访问器函数的情况下对其进行修改。此外，任何加密仍然是客户端安全性 - 这是一个危险的安全假设。
+不受信任的数据不能被信任为格式良好。
+当开发人员对“小工具链”或一系列可以在反序列化过程中（即在对象返回给调用方之前）自我执行的实例和方法调用没有限制时，攻击者有时可能会利用它们来执行未经授权的操作，例如生成shell。","此代码段从文件中反序列化对象，并将其用作 UI 按钮：
+try {
+File file = new File(""object.obj"");
+ObjectInputStream in = new ObjectInputStream(new FileInputStream(file));
+javax.swing.JButton button = (javax.swing.JButton) in.readObject();
+in.close();
+}
+此代码在反序列化文件之前不会尝试验证文件的源或内容。攻击者可能能够将预期的文件替换为包含任意恶意代码的文件，该代码将在按下按钮时执行。
+
+要缓解此问题，请显式定义 final readObject（） 以防止反序列化。这方面的一个例子是：
+private final void readObject(ObjectInputStream in) throws java.io.IOException {
+throw new java.io.IOException(""Cannot be deserialized""); }","1.请使用编程语言的签名/密封功能来确保反序列化的数据未被污染。例如，基于哈希的消息身份验证代码 （HMAC） 可用于确保数据未被修改。
+2.反序列化数据时，请填充新对象，而不仅仅是反序列化。结果是数据流经安全输入验证，并且函数是安全的。
+3.显式定义最终对象（）以防止反序列化。
+4.使字段瞬态化以保护它们免受反序列化。尝试序列化然后反序列化包含瞬态字段的类将导致 NUL 位于瞬态数据应位于的位置。这是防止时间、基于环境或敏感的变量被过度传递和使用不当的绝佳方法。
+5.避免使用不必要的类型或小工具，这些类型或小工具可用于恶意目的。这限制了攻击者利用意外或未经授权的类型和小工具的可能性。将可接受的类列入白名单。"
+cwe287,对超出界限的内存访问限制不当,高危,身份验证不正确,2009 年 1 月，攻击者能够获得管理员对 Twitter 服务器的访问权限，因为该服务器没有限制登录尝试的次数。攻击者以Twitter支持团队的一名成员为目标，并能够使用具有大量常用词的蛮力成功猜出该成员的密码。在作为支持人员成员获得访问权限后，攻击者使用管理员面板访问属于名人和政客的33个帐户。最终，发送了虚假的Twitter消息，这些消息似乎来自受感染的帐户。,使用身份验证框架或库，如 OWASP ESAPI 身份验证功能。
+cwe476,空指针解引用,中危,如果一个指针变量的值为NULL，解引用这个指针时，会导致程序崩溃,"此示例从用户处获取 IP 地址，验证其格式是否正确，然后查找主机名并将其复制到缓冲区中。（C）
+void host_lookup(char user_supplied_addr){
+struct hostent hp;
+in_addr_t addr;
+char hostname[64];
+in_addr_t inet_addr(const char cp);
+
+/routine that ensures user_supplied_addr is in the right format for conversion /
+
+validate_addr_form(user_supplied_addr);
+addr = inet_addr(user_supplied_addr);
+hp = gethostbyaddr( addr, sizeof(struct in_addr), AF_INET);
+strcpy(hostname, hp->h_name);
+}
+如果攻击者提供的地址看起来格式正确，但该地址未解析为主机名，则对 gethostbyaddr（） 的调用将返回 NULL。由于代码不检查来自 gethostbyaddr （CWE-252） 的返回值，因此在对 strcpy（） 的调用中将发生 NULL 指针取消引用。",基本思路是在解引用指针前，先判断是否为NULL，如果是NULL则不要解引用。但是C语言程序中，指针的使用非常多，在每次解引用之前都做判断是非常低效、不可行的。通常只在解引用没有把握的指针前，先做判断。比如其它模块传入的函数参数、函数返回值，特别的要注意判断malloc()、calloc()的返回值，防止在内存分配失败时，仍然解引用指针。
+cwe798,使用硬编码凭据,高危,"软件包含硬编码的凭据，例如密码或加密密钥，它将其用于自己的入站身份验证，与外部组件的出站通信或内部数据加密。
+硬编码的凭据通常会创建一个重要漏洞，使攻击者能够绕过软件管理员配置的身份验证。系统管理员可能难以检测到此漏洞。即使检测到，也可能难以修复，因此管理员可能会被迫完全禁用该产品。有两种主要变体：
+1.在入站变体中，将创建一个默认管理帐户，并将简单密码硬编码到产品中并与该帐户关联。此硬编码密码对于产品的每次安装都是相同的，如果不手动修改程序或以其他方式修补软件，系统管理员通常无法更改或禁用它。如果密码被发现或发布（互联网上很常见），那么任何知道这个密码的人都可以访问该产品。最后，由于该软件的所有安装都将具有相同的密码，即使在不同的组织中也是如此，因此可以发生诸如蠕虫之类的大规模攻击。
+2.出站变体适用于使用后端服务进行身份验证的前端系统。后端服务可能需要一个可以轻松发现的固定密码。程序员可以简单地将这些后端凭据硬编码到前端软件中。该程序的任何用户都可以提取密码。具有硬编码密码的客户端系统构成了更大的威胁，因为从二进制文件中提取密码通常非常简单。","下面的代码使用硬编码的密码连接到数据库：
+DriverManager.getConnection(url, ""scott"", ""tiger"");
+这是连接客户端上的外部硬编码密码的示例。此代码将成功运行，但有权访问它的任何人都可以访问密码。程序发布后，除非对程序进行修补，否则不会从数据库用户“scott”返回密码“tiger”。有权访问此信息的狡猾员工可以使用它来闯入系统。更糟糕的是，如果攻击者可以访问应用程序的字节码，他们可以使用javap -c命令访问反汇编的代码，该代码将包含所用密码的值。对于上面的示例，此操作的结果可能如下所示：
+
+javap -c ConnMngr.class
+22: ldc #36; //String jdbc:mysql://ixne.com/rxsql
+24: ldc #38; //String scott
+26: ldc #17; //String tiger","1.对于出站身份验证：将代码外部的密码、密钥和其他凭据存储在受强保护的加密配置文件或数据库中，该文件或数据库受所有外部人员（包括同一系统上的其他本地用户）的访问。正确保护密钥 （CWE-320）。如果无法使用加密来保护文件，请确保权限尽可能严格 [REF-7]。在 Windows 环境中，加密文件系统 （EFS） 可能会提供一些保护。
+2.对于入站身份验证：使用“首次登录”模式（要求用户输入唯一的强密码或密钥），而不是在首次登录时使用默认用户名和密码、密钥或其他身份验证凭据进行硬编码。
+3.如果软件必须包含硬编码凭据或无法删除这些凭据，请执行访问控制检查并限制哪些实体可以访问需要硬编码凭据的功能。例如，某项功能可能只能通过系统控制台启用，而不是通过网络连接启用。
+4.对于使用密码的入站身份验证：将强单向哈希应用于密码，并将这些哈希存储在具有适当访问控制的配置文件或数据库中。这样，文件/数据库的盗窃仍然需要攻击者尝试破解密码。在身份验证期间处理传入密码时，请获取密码的哈希值并将其与保存的哈希值进行比较。对生成的每个单独哈希使用随机分配的盐。这增加了攻击者进行暴力攻击所需的计算量，可能会限制彩虹表方法的有效性。"
+cwe119,对超出界限的内存访问限制不当,中危,"软件对内存缓冲区执行操作，但它可以读取或写入缓冲区预期边界之外的内存位置。
+某些语言允许对内存位置进行直接寻址，并且不会自动确保这些位置对被引用的内存缓冲区有效。这可能导致在可能与其他变量、数据结构或内部程序数据关联的内存位置上执行读取或写入操作。
+
+因此，攻击者可能能够执行任意代码、更改预期的控制流、读取敏感信息或导致系统崩溃。","此示例从用户处获取 IP 地址，验证其格式是否正确，然后查找主机名并将其复制到缓冲区中。(C)
+void host_lookup(char user_supplied_addr){
+struct hostent hp;
+in_addr_t addr;
+char hostname[64];
+in_addr_t inet_addr(const char cp);
+
+/routine that ensures user_supplied_addr is in the right format for conversion /
+validate_addr_form(user_supplied_addr);
+addr = inet_addr(user_supplied_addr);
+hp = gethostbyaddr( addr, sizeof(struct in_addr), AF_INET);
+strcpy(hostname, hp->h_name);
+}
+此函数分配 64 字节的缓冲区来存储主机名，但不能保证主机名不会大于 64 字节。如果攻击者指定的地址解析为非常大的主机名，那么我们可能会覆盖敏感数据，甚至将控制流交给攻击者。
+此示例还包含一个未经检查的返回值 （CWE-252），该值可能导致 NULL 指针取消引用 （CWE-476）。","1.使用语言不允许发生此弱点，或提供使此弱点更容易避免的构造。例如，许多执行自己的内存管理的语言（如 Java 和 Perl）都不会受到缓冲区溢出的影响。其他语言（如 Ada 和 C#）通常提供溢出保护，但程序员可以禁用该保护。请注意，即使语言本身在理论上是安全的，语言与本机代码的接口仍可能被溢出。
+2.使用不允许发生此弱点的经过审查的库或框架，或者提供使此弱点更容易避免的构造。
+3.使用自动提供保护机制的功能或扩展来运行或编译软件，以缓解或消除缓冲区溢出。
+
+"
+cwe862,缺少授权,高危,"当参与者尝试访问资源或执行操作时，软件不会执行授权检查。
+假设用户具有给定标识，则授权是根据用户的权限以及适用于该资源的任何权限或其他访问控制规范来确定该用户是否可以访问给定资源的过程。
+如果未应用访问控制检查，则用户能够访问数据或执行不应允许他们执行的操作。这可能会导致各种各样的问题，包括信息泄露、拒绝服务和任意代码执行。","此函数对给定数据库运行任意 SQL 查询，并返回查询结果。（PHP）
+function runEmployeeQuery($dbName, $name){
+mysql_select_db($dbName,$globalDbHandle) or die(""Could not open Database"".$dbName);
+//Use a prepared statement to avoid CWE-89
+$preparedStatement = $globalDbHandle->prepare('SELECT * FROM employees WHERE name = :name');
+$preparedStatement->execute(array(':name' => $name));
+return $preparedStatement->fetchAll();
+}
+/.../
+
+$employeeRecord = runEmployeeQuery('EmployeeDB',$_GET['EmployeeName']);
+虽然此代码小心翼翼地避免 SQL 注入，但该函数不会确认发送查询的用户是否有权这样做。攻击者可能能够从数据库中获取敏感的员工信息。","1.将软件划分为匿名、普通、特权和管理区域。通过仔细地将角色与数据和功能对应起来减少攻击面。使用基于角色的访问控制 （RBAC）在适当的边界强制实施角色。请注意，此方法可能无法防止水平授权，即它不会保护用户免受具有相同角色的其他人的攻击。
+2.确保执行与业务逻辑相关的访问控制检查。这些检查可能与应用于更通用的资源（如文件、连接、进程、内存和数据库记录）的访问控制检查不同。例如，数据库可能将医疗记录的访问限制为特定的数据库用户，但每个记录可能仅供患者和患者的医生访问。
+3.使用不允许发生此弱点的经过审查的库或框架，或者提供使此弱点更容易避免的构造。例如，考虑使用授权框架，如 JAAS 授权框架和 OWASP ESAPI 访问控制功能。
+"
+cwe276,默认权限不正确,中危,软件在安装时会为对象设置不正确的权限，该对象会将其暴露给意外的参与者。,,"1.非常仔细地管理权限的设置、管理和处理。显式管理软件中的信任区域。
+2.划分系统，使其具有可以明确划定信任边界的“安全”区域。不要允许敏感数据超出信任边界，在与安全区域外的隔间连接时始终要小心。确保在系统设计中内置适当的划分，并确保划分用于允许并进一步加强权限分离功能。架构师和设计人员应依靠最小特权原则来决定何时适合使用和删除系统特权。"
+cwe200,将敏感信息暴露给未经授权的参与者,中危,指有意或无意地向未明确授权访问该信息的行为者披露信息。许多信息泄露是结果（例如.PHP脚本错误揭示了程序的完整路径），但它们也可能是主要的（例如，密码学中的时序差异）。有许多不同类型的问题涉及信息泄露。它们的严重性可能很大，具体取决于所揭示的信息类型。,"以下代码检查提供的用户名和密码的有效性，并通知用户登录成功或失败。
+my $username=param('username');
+my $password=param('password');
+
+if (IsValidUsername($username) == 1)
+{
+if (IsValidPassword($username, $password) == 1)
+{
+print ""Login Successful"";
+}
+else
+{
+print ""Login Failed - incorrect password"";
+}
+}
+else
+{
+print ""Login Failed - unknown username"";
+}
+在上面的代码中，当提供不正确的用户名时，与当用户名正确但密码错误时，有不同的消息。这种差异使潜在攻击者能够了解登录函数的状态，并可能允许攻击者通过尝试不同的值来发现有效的用户名，直到返回不正确的密码消息。从本质上讲，这使得攻击者更容易获得一半的必要身份验证凭据。
+虽然此类信息可能对用户有帮助，但对潜在攻击者也很有用。在上面的示例中，两种失败情况的消息应相同，例如：
+""Login Failed - incorrect username or password""",特权分离：划分系统，使其具有可以明确划定信任边界的“安全”区域。不要允许敏感数据超出信任边界，在与安全区域外的隔间连接时始终要小心。确保在系统设计中内置适当的划分，并确保划分用于允许并进一步加强权限分离功能。架构师和设计人员应依靠最小特权原则来决定何时适合使用和删除系统特权。
+cwe522,不充分的凭证保护机制,中危,当应用程序传输或存储身份验证凭据并使用容易受到未经授权的拦截和/或检索的不安全方法时，会产生此漏洞。,"此代码更改用户的密码。（PHP）
+$user = $_GET['user'];
+$pass = $_GET['pass'];
+$checkpass = $_GET['checkpass'];
+if ($pass == $checkpass) {
+SetUserPassword($user, $pass);
+}
+虽然代码确认请求用户键入了相同的新密码两次，但它不确认请求更改密码的用户是将更改其密码的同一用户。攻击者可以请求更改其他用户的密码并控制受害者的帐户。","1.使用适当的安全机制来保护凭据。
+2.适当使用加密来保护凭据。
+3.使用行业标准来保护凭据（例如 LDAP、密钥库等）。"
+cwe732,关键资源的权限分配不正确,高危,软件指定安全关键资源的权限的方式允许非预期的参与者读取或修改该资源。当为资源提供对比所需范围更广泛的参与者的访问权限的权限设置时，可能会导致敏感信息泄露或非预期方修改该资源。当资源与程序配置、执行或敏感用户数据相关时，这尤其危险。,"下面的代码将进程的掩码设置为 0，然后再创建文件并将“Hello world”写入该文件。（C语言）
+#define OUTFILE ""hello.out""
+
+umask(0);
+FILE out;
+/ Ignore CWE-59 (link following) for brevity */
+
+out = fopen(OUTFILE, ""w"");
+if (out) {
+fprintf(out, ""hello world!\n"");
+fclose(out);
+}
+在 UNIX 系统上运行此程序后，运行“ls -l”命令可能会返回以下输出：
+-rw-rw-rw- 1 username 13 Nov 24 17:58 hello.out
+“rw-rw-rw-”字符串指示所有者、组和世界（所有用户）可以读取文件并写入该文件。","1.使用关键资源（如配置文件）时，请检查该资源是否具有不安全的权限（例如，任何普通用户都可以修改），如果资源可能已被未经授权的一方修改，则生成错误甚至退出软件。
+2.将软件划分为匿名、普通、特权和管理区域。通过仔细定义不同的用户组、权限和/或角色来减少攻击面。将这些内容与数据、功能和相关资源进行映射。然后相应地设置权限。这将使您能够对资源保持更细粒度的控制。
+3.在“jail”或类似的沙盒环境中运行代码，该环境在进程和操作系统之间强制实施严格的边界。这可以有效地限制哪些文件可以在特定目录中访问，或者哪些命令可以由软件执行。
+4.在程序启动期间，将默认权限或掩码显式设置为最严格的设置。还要在程序安装过程中设置适当的权限。这将防止您从安装或运行该程序的任何用户那里继承不安全的权限。
+5.对于所有配置文件、可执行文件和库，请确保它们只能由软件管理员读取和写入。
+6.对于在客户端执行的任何安全检查，请确保在服务器端重复这些检查。攻击者可以通过在执行检查后修改值或更改客户端以完全删除客户端检查来绕过客户端检查。然后，这些修改后的值将提交到服务器。"
+cwe611,XML外部实体引用的不恰当限制（XXE）,中危,"软件处理可能包含 XML 实体的 XML 文档，这些 XML 实体具有 URI，这些 URI 解析为预期控制范围之外的文档，从而导致产品将不正确的文档嵌入到其输出中。
+XML 文档可以选择性地包含文档类型定义 （DTD），除其他功能外，该定义还支持 XML 实体的定义。可以通过以 URI 的形式提供替换字符串来定义实体。XML 分析器可以访问此 URI 的内容，并将这些内容嵌入回 XML 文档中以进行进一步处理。
+通过提交定义具有 file:// URI 的外部实体的 XML 文件，攻击者可以使处理应用程序读取本地文件的内容。例如，诸如“file:///c:/winnt/win.ini”之类的 URI 指定（在 Windows 中）文件 C：\Winnt\win.ini，或者 file:///etc/passwd 指定基于 Unix 的系统中的密码文件。将 URI 与其他方案（如 http://）结合使用，攻击者可以强制应用程序向攻击者无法直接访问的服务器发出传出请求，这可用于绕过防火墙限制或隐藏端口扫描等攻击源。
+读取 URI 的内容后，会将其反馈到正在处理 XML 的应用程序中。此应用程序可以回显数据（例如在错误消息中），从而公开文件内容。",,"1.可以将许多 XML 分析器和验证程序配置为禁用外部实体扩展。
+
+2.使?语?中推荐的禁?外部实体的?法
+PHP：
+libxml_disable_entity_loader(true);
+Java:
+DocumentBuilderFactory dbf =DocumentBuilderFactory.newInstance();
+dbf.setExpandEntityReferences(false);
+Python:
+from lxml import etree
+xmlData = etree.parse(xmlSource,etree.XMLParser(resolve_entities=False)
+3.?动?名单过滤
+过滤XML中的相关关键词，?如：<!DOCTYPE、<!ENTITY SYSTEM、PUBLIC等。
+"
+cwe918,服务器端请求伪造（SSRF）,中危,服务端请求伪造攻击(Server-side Request Forgery):很多web应?都提供了从其他的服务器上获取数据的功能。?如获取图?、下载?件、读取?件内容等。SSRF漏洞是?种由攻击者构造形成由服务端发起请求的?个安全漏洞。?般情况下，SSRF攻击的?标是从外??法访问的内部系统。正是因为它是由服务端发起的，所以它能够请求到与它相连?与外?隔离的内部系统。即：利??个可以发起?络请求的服务，当作跳板来攻击其他服务。,"SSRF场景应?场景为任意可以发起?络请求的地?，?如：
+· 下载图?、下载?件等下载处；
+· ?件预览、图?预览等获取图?、?件内容处；
+· 在线识图，在线?档翻译，分享，订阅等；
+· 根据远程URL上传，静态资源图?等；
+· 数据库的内置功能，?如mongodb的copyDatabase函数；
+· URL关键字中，?如：source，share，link，src，imageurl，target等
+","1.解析?标URL:获取scheme、host（推荐使?系统内置函数完成,避免??使?正则提取）
+2.校验scheme:检查 scheme 是否为合法 (如?特殊需求请只允许 http 和 https) 
+3. 获取解析IP:解析 host 获取 dns 解析后的 IP 地址
+4 .检测IP是否合法：检查解析后的IP地址是否为外?地址或者合法IP"
+cwe77,在命令中使用的特殊元素转义处理不恰当（命令注入）,高危,软件使用来自上游组件的受外部影响的输入来构造全部或者部分命令，但它不会中和或错误地中和特殊元素，这些元素在发送到下游组件时可能会修改预期命令。,"此代码在每次收到新连接时分配一个套接字和分叉。（C）
+sock=socket(AF_INET, SOCK_STREAM, 0);
+while (1) {
+newsock=accept(sock, ...);
+printf(""A connection has been accepted\n"");
+pid = fork();
+}
+该程序不跟踪已建立的连接数，也不限制连接数。由于分叉是一项相对昂贵的操作，因此攻击者可以通过建立大量连接来导致系统耗尽 CPU、进程或内存。或者，攻击者可以使用所有可用的连接，从而阻止其他人远程访问系统。
+","1.使用库调用而不是外部进程来重新创建所需的功能。
+2.请确保从程序调用的所有外部命令都是静态创建的。
+3.运行时策略实施可以以白名单方式使用，以防止使用任何未批准的命令。
+4.假设所有输入都是恶意的。使用“接受已知良好”的输入验证策略，即使用严格符合规范的可接受输入的白名单。拒绝任何不完全符合规范的输入，或将其转换为符合规范的内容。执行输入验证时，请考虑所有可能相关的属性，包括长度、输入类型、可接受值的完整范围、缺失或额外的输入、语法、相关字段之间的一致性以及是否符合业务规则。作为业务规则逻辑的一个示例，“boat”在语法上可能是有效的，因为它只包含字母数字字符，但如果输入只期望包含“红色”或“蓝色”等颜色，则它无效。不要完全依赖查找恶意或格式错误的输入（即，不要依赖黑名单）。黑名单可能会错过至少一个不需要的输入，尤其是在代码的环境发生变化时。这可以为攻击者提供足够的空间来绕过预期的验证。但是，黑名单可用于检测潜在攻击或确定哪些输入的格式非常错误，应将其彻底拒绝。"
+cwe295,不正确的证书验证,高危,软件不验证或错误地验证证书。当证书无效或恶意时，它可能允许攻击者通过使用中间人 （MITM） 攻击来欺骗受信任的实体。该软件可能会连接到恶意主机，同时认为它是受信任的主机，或者该软件可能会被欺骗接受看似来自受信任主机的欺骗性数据。,"此代码检查已连接对等体的证书。
+if ((cert = SSL_get_peer_certificate(ssl)) && host)
+foo=SSL_get_verify_result(ssl);
+
+if ((X509_V_OK==foo) || X509_V_ERR_SELF_SIGNED_CERT_IN_CHAIN==foo))
+
+// certificate looks good, host can be trusted
+在这种情况下，由于证书是自签名的，因此没有外部颁发机构可以证明主机的身份。该程序可能与欺骗主机的其他系统进行通信，例如，通过毒害DNS缓存或进行中间人攻击。","1.应仔细管理和检查证书，以确保使用预期所有者的公钥对数据进行加密。
+2.如果使用证书固定，请确保在固定证书之前完全验证证书的所有相关属性，包括主机名。"
+cwe400,未加控制的资源消耗（资源穷尽）,低危,软件不能正确控制有限资源的分配和维护，从而使参与者能够影响消耗的资源量，最终导致可用资源的耗尽。有限的资源包括内存、文件系统存储、数据库连接池条目和 CPU。如果攻击者可以触发这些有限资源的分配，但无法控制资源的数量或大小，则攻击者可能导致消耗所有可用资源的拒绝服务。这将阻止有效用户访问该软件，并且可能会对周围环境产生影响。例如，针对应用程序的内存耗尽攻击可能会降低应用程序及其主机操作系统的速度。,"此代码在每次收到新连接时分配一个套接字和分叉。
+sock=socket(AF_INET, SOCK_STREAM, 0);
+while (1) {
+newsock=accept(sock, ...);
+printf(""A connection has been accepted\n"");
+pid = fork();
+}
+该程序不跟踪已建立的连接数，也不限制连接数。由于分叉是一项相对昂贵的操作，因此攻击者可以通过建立大量连接来导致系统耗尽 CPU、进程或内存。或者，攻击者可以使用所有可用的连接，从而阻止其他人远程访问系统。","1.将限制机制设计到系统体系结构中。最好的保护是限制未经授权的用户可能导致消耗的资源量。强大的身份验证和访问控制模型将有助于从一开始就防止此类攻击的发生。应尽可能保护登录应用程序免受 DoS 攻击。限制数据库访问（可能通过缓存结果集）有助于最大限度地减少消耗的资源。为了进一步限制 DoS 攻击的可能性，请考虑跟踪从用户收到的请求速率，并阻止超过定义的速率阈值的请求。
+2.缓解资源耗尽攻击需要目标系统：这些解决方案中的第一个解决方案本身就是一个问题，因为它可能允许攻击者阻止特定有效用户使用系统。如果攻击者模拟有效用户，他们可能能够阻止用户访问有问题的服务器。第二种解决方案很难有效地建立 - 即使做得好，它也不能提供完整的解决方案。它只是使攻击需要攻击者的更多资源。
+3.确保协议具有特定的规模限制。
+4.确保资源分配中的所有故障都将系统置于安全状态。"
+cwe94,对生成代码的控制不恰当（代码注入）,高危,"软件使用来自上游组件的受外部影响的输入来构造全部或部分代码段，但它不会中和或错误地中和可能修改预期代码段的语法或行为的特殊元素。
+当软件允许用户的输入包含代码语法时，攻击者可能会以改变软件的预期控制流的方式手工制作代码。这种更改可能导致任意代码执行。
+注入问题包括各种各样的问题 - 所有这些都以非常不同的方式缓解。因此，讨论这些弱点的最有效方法是注意将它们归类为注射弱点的独特特征。需要注意的最重要问题是，所有注入问题都有一个共同点 - 即，它们允许将控制平面数据注入用户控制的数据平面。这意味着可以通过不使用其他机制的合法数据通道发送代码来更改过程的执行。虽然缓冲区溢出和许多其他缺陷涉及使用一些进一步的问题来获得执行，但注入问题只需要解析数据。这类弱点的最经典实例化是SQL注入和格式字符串漏洞。","本示例尝试将用户消息写入消息文件并允许用户查看它们。（PHP）
+$MessageFile = ""cwe-94/messages.out"";
+if ($_GET[""action""] == ""NewMessage"") {
+$name = $_GET[""name""];
+$message = $_GET[""message""];
+$handle = fopen($MessageFile, ""a+"");
+fwrite($handle, ""<b>$name</b> says '$message'<hr>\n"");
+fclose($handle);
+echo ""Message Saved!<p>\n"";
+}
+else if ($_GET[""action""] == ""ViewMessages"") {
+include($MessageFile);
+}
+虽然程序员希望 MessageFile 仅包含数据，但攻击者可以提供如下消息：
+name=h4x0r
+message=%3C?php%20system(%22/bin/ls%20-l%22);?%3E
+这将解码为以下内容：
+<?php system(""/bin/ls -l"");?>
+程序员以为他们只是包含常规数据文件的内容，但PHP解析了它并执行了代码。现在，只要人们查看消息，就会执行此代码。XSS （CWE-79） 在这种情况下也是可能的。","1.重构程序，以便不必动态生成代码。
+2.在“jail”或类似的沙盒环境中运行代码，该环境在进程和操作系统之间强制实施严格的边界。这可能会有效地限制您的软件可以执行哪些代码。例子包括Unix chroot jail和AppArmor。通常，托管代码可能会提供一些保护。这可能不是一个可行的解决方案，它只限制了对操作系统的影响;应用程序的其余部分可能仍会受到威胁。
+3.使用针对此类弱点的自动静态分析工具。许多现代技术使用数据流分析来最大程度地减少误报的数量。
+4.使用动态工具和技术，使用具有许多不同输入的大型测试套件与软件交互，例如模糊测试（模糊测试）、鲁棒性测试和故障注入。软件的操作可能会变慢，但不应变得不稳定、崩溃或生成不正确的结果。"
+cwe269,权限管理不当,中危,软件不会正确分配、修改、跟踪或检查执行组件的权限，从而为该执行组件创建意外的控制范围。,"此代码会临时提升程序的权限，以允许创建新的用户文件夹。
+def makeNewUserDir(username):
+if invalidUsername(username):
+
+#avoid CWE-22 and CWE-78
+print('Usernames cannot contain invalid characters')
+return False
+
+try:
+raisePrivileges()
+os.mkdir('/home/' + username)
+lowerPrivileges()
+
+except OSError:
+print('Unable to create new user directory for user:' + username)
+return False
+
+return True
+虽然程序仅提高其权限级别以创建文件夹并立即再次降低它，但如果对 os.mkdir（） 的调用引发异常，则不会发生对 lowerPrivileges（） 的调用。因此，程序在提升的特权状态下无限期地运行，可能允许进一步利用。","1.非常仔细地管理权限的设置、管理和处理。显式管理软件中的信任区域。
+2.在为软件系统中的实体分配访问权限时，请遵循最小特权原则。
+3.考虑遵循特权分离原则。在允许访问系统资源之前，需要满足多个条件。"
+cwe917,表达式语言语句中使用的特殊元素的不当中和（表达式语言注入）,中危,软件使用来自上游组件的受外部影响的输入在 Java Server 页面 （JSP） 中构造表达式语言 （EL） 语句的全部或部分内容，但它不会中和或错误地中和可能在执行预期 EL 语句之前修改该语句的特殊元素。,,将原来的 StandardEvaluationContext 方法换成 SimpleEvaluationContext 方法。
+cwe59,在文件访问前对链接解析不恰当（链接跟随）,低危,软件尝试根据文件名访问文件，但它不会正确阻止该文件名标识解析为非预期资源的链接或快捷方式。,,特权分离：在为软件系统中的实体分配访问权限时，请遵循最小特权原则。拒绝对文件的访问可以防止攻击者将该文件替换为指向敏感文件的链接。确保系统中的良好划分，以提供可信任的保护区。
+cwe401,在移除最后引用时对内存的释放不恰当（内存泄露）,低危,"软件在使用后没有充分跟踪和释放分配的内存，这会慢慢消耗剩余的内存。
+这通常是由不正确地处理格式数据或意外中断的会话触发的。在某些语言中，开发人员负责跟踪内存分配并释放内存。如果没有更多的指针或引用指向内存，则无法再跟踪和识别内存以进行释放。","如果对 read（） 的调用未返回预期的字节数，则以下 C 函数会泄漏分配的内存块：
+char getBlock(int fd) {
+char buf = (char*) malloc(BLOCK_SIZE);
+if (!buf) {
+return NULL;
+}
+if (read(fd, buf, BLOCK_SIZE) != BLOCK_SIZE) {
+
+return NULL;
+}
+return buf;
+}
+","1.选择提供自动内存管理的语言或工具，或使手动内存管理不那么容易出错的语言或工具。例如，Linux 中的 glibc 提供了针对无无效指针的保护。使用 Xcode 定位到 OS X 或 iOS 时，启用自动引用计数 （ARC）。
+2.使用抽象库来抽象出有风险的 API。
+3.Boehm-Demers-Weiser垃圾收集器或valgrind可用于检测代码中的泄漏。"
+cwe362,使用共享资源进行同步不正确的并发执行（争用条件）,低危,"程序包含一个可以与其他代码同时运行的代码序列，并且该代码序列需要对共享资源进行临时的独占访问，但存在一个计时窗口，在该窗口中，共享资源可以被同时运行的另一个代码序列修改。
+当预期的同步位于安全关键代码中时，这可能会产生安全隐患，例如记录用户是否经过身份验证或修改不应受外部人员影响的重要状态信息。
+
+争用条件发生在并发环境中，并且实际上是代码序列的属性。根据上下文的不同，代码序列可以采用函数调用，少量指令，一系列程序调用等形式。","以下函数尝试获取锁，以便对共享资源执行操作。
+void f(pthread_mutex_t mutex) {
+pthread_mutex_lock(mutex);
+/ access shared resource */
+pthread_mutex_unlock(mutex);
+}
+但是，代码不会检查 pthread_mutex_lock（） 返回的值是否存在错误。如果pthread_mutex_lock（） 由于任何原因无法获取互斥体，则该函数可能会在程序中引入争用条件并导致未定义的行为。
+为了避免数据争用，正确编写的程序必须检查线程同步函数的结果，并通过尝试从中恢复或将其报告给更高级别来适当地处理所有错误。
+int f(pthread_mutex_t mutex) {
+int result;
+result = pthread_mutex_lock(mutex);
+if (0 != result)
+return result;
+/ access shared resource */
+return pthread_mutex_unlock(mutex);
+}
+","1.在支持它的语言中，使用同步基元。仅将这些内容包装在关键代码周围，以最大程度地减少对性能的影响。
+2.使用线程安全功能，例如Spring中的数据访问抽象。
+3.最大限度地减少共享资源的使用，以便从控制流中消除尽可能多的复杂性，并降低发生意外情况的可能性。
+4.使用多线程处理和对共享变量进行操作时，仅使用线程安全函数。
+5.对共享变量使用原子操作。警惕看起来无辜的构造，如“x++”。这可能在代码层看起来是原子的，但在指令层实际上是非原子的，因为它涉及读取，然后是计算，然后是写入。
+6.对关键变量使用可变类型修饰符，以避免意外的编译器优化或重新排序。"
+cwe427,对搜索路径元素未加控制,低危,"产品使用固定或受控的搜索路径来查找资源，但该路径中的一个或多个位置可能处于非预期参与者的控制之下。
+尽管任何类型的资源都可能出现此弱点，但当产品使用目录搜索路径查找可执行文件或代码库时，通常会引入此弱点，但该路径包含攻击者可以修改的目录，例如“/tmp”或当前工作目录。
+在基于 Windows 的系统中，当使用不包含完全限定路径的 DLL 名称调用 LoadLibrary 或 LoadLibraryEx 函数时，该函数将遵循包含两个可能不受控制的路径元素的搜索顺序：
+在某些情况下，攻击可以远程进行，例如在使用 SMB 或 WebDAV 网络共享时。
+在一些基于Unix的系统中，可能会创建一个包含空元素的PATH，例如，通过将空变量拼接到PATH中。此空元素可以解释为等效于当前工作目录，该目录可能是不受信任的搜索元素。","以下代码来自一个 Web 应用程序，该应用程序允许用户访问一个界面，通过该界面，他们可以在系统上更新其密码。在此环境中，可以使用 UNIX 系统上常用的网络信息系统 （NIS） 来管理用户密码。执行 NIS 更新时，更新密码的部分过程是在 /var/yp 目录中运行 make 命令。执行 NIS 更新需要额外的权限。
+...
+System.Runtime.getRuntime（）.exec（“make”）;
+...
+这里的问题是，程序没有为 make 指定绝对路径，并且在执行对 Runtime.exec（） 的调用之前不会清理其环境。如果攻击者可以修改$PATH变量以指向名为 make 的恶意二进制文件，并导致在其环境中执行程序，则将加载恶意二进制文件，而不是预期的二进制文件。由于应用程序的性质，它以执行系统操作所需的权限运行，这意味着攻击者的make现在将使用这些权限运行，可能使攻击者完全控制系统。","1.将搜索路径硬编码为一组已知安全值（如系统目录），或仅允许管理员在配置文件中指定这些值。不允许外部方修改这些设置。
+2.调用其他程序时，请使用完全限定的路径名指定这些程序。虽然这是一种有效的方法，但使用完全限定路径名的代码可能无法移植到不使用相同路径名的其他系统。通过将完全限定的路径定位在源代码中易于修改的集中位置，并让代码引用这些路径，可以提高可移植性。
+3.在调用其他程序之前删除或限制所有环境设置。这包括 PATH 环境变量、LD_LIBRARY_PATH、标识代码库位置的其他设置，以及任何特定于应用程序的搜索路径。
+4.在使用之前检查搜索路径，并删除任何可能不安全的元素，例如当前工作目录或临时文件目录。由于这是一种黑名单方法，因此可能不是一个完整的解决方案。
+5.使用需要显式路径的其他函数。使用任何其他需要显式路径的现成函数是避免此问题的安全方法。例如，C 中的 system（） 不需要完整路径，因为 shell 可以使用 PATH 环境变量查找程序，而 execl（） 和 execv（） 需要完整径。"
+cwe319,敏感信息的明文传输,中危,"该软件在通信通道中以明文形式传输敏感或安全关键数据，未经授权的行为者可以嗅探该通信通道。
+在数据传输过程中，攻击者可以“嗅探”许多通信通道。例如，有权访问网络接口的任何攻击者通常都可以嗅探网络流量。这大大降低了攻击者利用的难度。","下面的代码尝试建立与站点的连接以传达敏感信息。
+try {
+URL u = new URL（“http://www.secret.example.org/”）;
+HttpURLConnection hu = （HttpURLConnection） u.openConnection（）;
+hu.setRequestMethod（“PUT”）;
+hu.connect（）;
+OutputStream os = hu.getOutputStream（）;
+hu.disconnect（）;
+}
+catch （IOException e） {
+
+//...
+}
+虽然成功建立了连接，但连接是未加密的，并且发送到服务器或从服务器接收的所有敏感数据都可能被意外的执行组件读取。","1.在传输之前，使用可靠的加密方案对数据进行加密。
+2.将 Web 应用程序与 SSL 结合使用时，请对从登录到注销的整个会话使用 SSL，而不仅仅是对初始登录页面使用 SSL。
+3.使用需要手动（人工）分析的工具和技术，例如渗透测试、威胁建模和允许测试人员记录和修改活动会话的交互式工具。这些可能比严格的自动化技术更有效。与设计和业务规则相关的弱点尤其如此。
+4.将服务器配置为使用加密通道进行通信，其中可能包括 SSL 或其他安全协议。"
+cwe843,使用不兼容类型访问资源（类型混淆）,低危,"程序使用一种类型分配或初始化资源（如指针、对象或变量），但稍后使用与原始类型不兼容的类型访问该资源。当程序使用不兼容的类型访问资源时，这可能会触发逻辑错误，因为资源没有预期的属性。在没有内存安全的语言（如 C 和 C++）中，类型混淆可能导致越界内存访问。
+虽然在C中解析具有许多不同嵌入对象类型的数据时，此弱点通常与联合有关，但它可以出现在任何可以通过多种方式解释相同变量或内存位置的应用程序中。
+这个弱点并不是C和C++独有的。例如，PHP 应用程序中的错误可以通过在预期标量时提供数组参数来触发，反之亦然。像Perl这样的语言，当一种类型的变量被访问时，它执行自动转换，就好像它是另一种类型一样，也可能包含这些问题。
+","以下 Perl 代码旨在通过执行对 $UserPrivilegeArray 引用的访问来查找用户 ID 在 0 到 3 之间的特权。预计只有 userID 3 是管理员（因为这列在数组的第三个元素中）。
+my $UserPrivilegeArray = [""user"", ""user"", ""admin"", ""user""];
+
+my $userID = get_current_user_ID();
+
+if ($UserPrivilegeArray eq ""user"") {
+print ""Regular user!\n"";
+}
+else {
+print ""Admin!\n"";
+}
+print ""\$UserPrivilegeArray = $UserPrivilegeArray\n"";
+在这种情况下，程序员打算使用“$UserPrivilegeArray->{$userID}”来访问数组中的正确位置。但是由于省略了下标，因此将“user”字符串与$UserPrivilegeArray引用的标量表示形式进行了比较，后者可能是“ARRAY（0x229e8）”或类似形式。
+由于逻辑也“失败打开”（CWE-636），因此此错误的结果是为所有用户分配了管理员权限。
+虽然这是一个强制示例，但它演示了类型混淆如何产生安全后果，即使在内存安全语言中也是如此。",由于许多程序直接或间接地依赖于松散类型，潜在的“类型混淆”行为可能是有意的，可能需要更多的手动分析。
+cwe601,URL重定向漏洞,中危,"也称URL跳转、URL重定向漏洞，由于?标?站未对程序跳转的URL地址及参数做合法性判断，导致应?程序直接跳转到参数中指定的的URL地址。攻击者可通过将跳转地址修改为指向恶意站点，即可发起?络钓鱼、诈骗甚?窃取?户凭证等。
+","下面的代码从查询字符串中获取 URL，然后将用户重定向到该 URL。
+$redirect_url = $_GET['url'];
+header(""Location: "" . $redirect_url);
+上述代码的问题在于，攻击者可以通过将用户重定向到恶意站点，将此页面用作网络钓鱼诈骗的一部分。例如，假设上面的代码位于文件示例中.php。攻击者可以向用户提供以下链接：
+http://example.com/example.php?url=http://malicious.example.com
+用户看到指向原始受信任站点（example.com）的链接，并且没有意识到可能发生的重定向。","1. 严格控制将要跳转的域名，如果某个业务事先已经确定将要跳转的?站，最稳妥的?式是将其直接编码在源代码中，通过URL中传?
+的参数来映射跳转?址。
+2. 严格验证跳转URL参数的有效性、合法性。
+3. 校验传?的URL参数是否为可信域名。
+"
+cwe863,授权机制不正确,中危,"当参与者尝试访问资源或执行操作时，软件会执行授权检查，但未正确执行检查。这使得攻击者能够绕过预期的访问限制。假设用户具有给定标识，则授权是根据用户的权限以及适用于该资源的任何权限或其他访问控制规范来确定该用户是否可以访问给定资源的过程。
+当访问控制检查应用不正确时，用户能够访问数据或执行不应允许他们执行的操作。这可能会导致各种各样的问题，包括信息泄露、拒绝服务和任意代码执行。","以下代码可能用于医疗记录应用程序。它向已经过身份验证的用户显示记录，使用存储在 Cookie 中的值确认用户的授权。（PHP）
+$role = $_COOKIES['role'];
+if (!$role) {
+$role = getRole('user');
+if ($role) {
+// save the cookie to send out in future responses
+setcookie(""role"", $role, time()+60602);
+}
+else{
+ShowLoginScreen();
+die(""\n"");
+}
+}
+if ($role == 'Reader') {
+DisplayMedicalHistory($_POST['patient_ID']);
+}
+else{
+die(""You are not Authorized to view this record\n"");
+}
+程序员期望只有在 getRole（） 成功时才设置 cookie。程序员甚至努力为 cookie 指定 2 小时的过期时间。但是，攻击者可以很容易地将“角色”Cookie设置为值“读者”。因此，$role变量是“Reader”，并且永远不会调用getRole（）。攻击者绕过了授权系统。","1.将软件划分为匿名、普通、特权和管理区域。通过仔细地将角色与数据和功能对应起来减少攻击面。使用基于角色的访问控制 （RBAC）在适当的边界强制实施角色。此方法可能无法防止水平授权，即它不会保护用户免受具有相同角色的其他人的攻击。
+2.确保执行与业务逻辑相关的访问控制检查。这些检查可能与应用于更通用的资源（如文件、连接、进程、内存和数据库记录）的访问控制检查不同。例如，数据库可能将医疗记录的访问限制为特定的数据库用户，但每个记录可能仅供患者和患者的医生访问 。
+3.使用不允许发生此弱点的经过审查的库或框架，或者提供使此弱点更容易避免的构造。例如，考虑使用授权框架，如 JAAS 授权框架和 OWASP ESAPI 访问控制功能
+4.对于 Web 应用程序，请确保在每个页面上的服务器端正确实施访问控制机制。用户不应通过简单地请求直接访问该页面来访问任何未经授权的功能或信息。执行此操作的一种方法是确保不会缓存包含敏感信息的所有页面，并且所有此类页面都限制对附带与具有访问该页面所需权限的用户关联的活动且经过身份验证的会话令牌的请求的访问。"
+cwe532,在日志文件中包含敏感信息,中危,"写入日志文件的信息可能具有敏感性质，可为攻击者提供有价值的指导或公开敏感的用户信息。
+虽然在开发阶段记录所有信息可能会有所帮助，但在产品发布之前正确设置日志记录级别非常重要，这样敏感的用户数据和系统信息就不会意外地暴露给潜在的攻击者。","1.在下面的代码段中，用户的全名和信用卡号将写入日志文件。（Java）
+logger.info(""Username: "" + usernme + "", CCN: "" + ccn);
+
+2.此代码存储有关当前用户的位置信息：（Java）
+locationClient = new LocationClient(this, this, this);
+locationClient.connect();
+currentUser.setLocation(locationClient.getLastLocation());
+...
+
+catch (Exception e) {
+AlertDialog.Builder builder = new AlertDialog.Builder(this);
+builder.setMessage(""Sorry, this application has experienced an error."");
+AlertDialog alert = builder.create();
+alert.show();
+Log.e(""ExampleActivity"", ""Caught exception: "" + e + "" While on User:"" + User.toString());
+}
+当应用程序遇到异常时，它会将用户对象写入日志。由于用户对象包含位置信息，因此用户的位置也会写入日志。","1.认真考虑写入日志文件的信息的敏感性。不要将机密写入日志文件。
+2.在将应用程序部署到生产环境之前，请先删除调试日志文件。
+3.保护日志文件免受未经授权的读/写。
+4.在软件从调试状态过渡到生产状态时，适当调整配置。"
+cwe770,不加限制或调节的资源分配,低危,软件代表执行组件分配可重用资源或资源组，而不会对可分配的资源的大小或数量施加任何限制，这违反了对该参与者的预期安全策略。,"此代码在每次收到新连接时分配一个套接字和分叉。（C语言）
+sock=socket(AF_INET, SOCK_STREAM, 0);
+while (1) {
+newsock=accept(sock, ...);
+printf(""A connection has been accepted\n"");
+pid = fork();
+}
+该程序不跟踪已建立的连接数，也不限制连接数。由于分叉是一项相对昂贵的操作，因此攻击者可以通过建立大量连接来导致系统耗尽 CPU、进程或内存。或者，攻击者可以使用所有可用的连接，从而阻止其他人远程访问系统。
+","1.明确指定对功能的最小和最大期望值，并指示当资源分配达到限制时哪些行为是可以接受的。
+2.限制非特权用户可访问的资源量。为资源设置每用户限制。允许系统管理员定义这些限制。
+3.将限制机制设计到系统体系结构中。最好的保护是限制未经授权的用户可能导致消耗的资源量。强大的身份验证和访问控制模型将有助于从一开始就防止此类攻击的发生，并且它将帮助管理员识别谁在实施滥用。应尽可能保护登录应用程序免受 DoS 攻击。限制数据库访问（可能通过缓存结果集）有助于最大限度地减少消耗的资源。为了进一步限制 DoS 攻击的可能性，请考虑跟踪从用户收到的请求速率，并阻止超过定义的速率阈值的请求。"
+cwe327,使用被破解或有风险的加密算法,中危,使用损坏或有风险的加密算法会产生不必要的风险，可能导致敏感信息泄露。,"这些代码示例使用数据加密标准 （DES）。
+有问题的C语言代码
+EVP_des_ecb();
+
+有问题的Java代码
+Cipher des=Cipher.getInstance(""DES..."");
+des.initEncrypt(key2);
+
+有问题的PHP代码
+function encryptPassword($password){
+$iv_size = mcrypt_get_iv_size(MCRYPT_DES, MCRYPT_MODE_ECB);
+$iv = mcrypt_create_iv($iv_size, MCRYPT_RAND);
+$key = ""This is a password encryption key"";
+$encryptedPassword = mcrypt_encrypt(MCRYPT_DES, $key, $password, MCRYPT_MODE_ECB, $iv);
+return $encryptedPassword;
+}
+DES曾经被认为是一种强大的算法，现在被认为不足以满足许多应用的需求。它已被高级加密标准（AES）取代。",当需要存储或传输敏感数据时，使用强大的、最新的加密算法加密该数据。选择一个目前被该领域专家认为是强大的、经过仔细审查的算法，并使用经过充分测试的加密算法。
+cwe90,LDAP注?,中危,LDAP 注?是利??户引?的参数?成恶意 LDAP 查询，通过构造 LDAP 过滤器来绕过访问控制、?户权限提升。在维持正常过滤器的情况下构造出 AND、OR 操作注?来获得敏感信息,"下面的代码使用用户输入地址数据构造 LDAP 查询：
+context = new InitialDirContext(env);
+String searchFilter = ""StreetAddress="" + address;
+NamingEnumeration answer = context.search(searchBase, searchFilter, searchCtls);
+由于代码无法中和用于构造查询的地址字符串，因此攻击者可以提供包含其他 LDAP 查询的地址。","1.如&、！、|、=、<、>、，、+、-、”、’、；这些字符正常情况下不会?到，如果?户的输?中出现了，需要?反斜杠转义处理。
+2.还有些字符如(、)、\、*、/、NUL这些字符不仅需要?反斜杠处理，还要将字符变成相应的ASCII码值。
+"

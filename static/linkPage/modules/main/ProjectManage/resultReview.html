@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en" style="height: 100%">
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="../../../../assets/libs/element/index.css">
+    <link rel="stylesheet" type="text/css" href="../../../../assets/libs/highlight/styles/a11y-light.css">
+
+    <title>详情</title>
+    <style>
+        .el-header {
+            /*background-color: #B3C0D1;*/
+            /*color: #333;*/
+            line-height: 60px;
+        }
+
+        .el-aside {
+            color: #333;
+        }
+        .box-card {
+            /*width: 1000px;*/
+            /*margin: auto;*/
+            height: 100%;
+        }
+        .autoWrap {
+            white-space: pre-wrap; /* 保持空格和换行，但允许长行折行 */
+            word-wrap: break-word; /* 长单词也会换行 */
+            max-width: 100%; /* 设置最大宽度，宽度超过这个值就换行 */
+            overflow: auto; /* 添加滚动条以防止内容超出容器 */
+            word-break: break-all; /* 长单词会在任意点断行 */
+            height: calc(100% - 30px);
+        }
+        pre {
+            background-color: #f4f4f4;
+            padding: 10px;
+            margin: 5px;
+            border-radius: 5px;
+            overflow-x: auto;
+
+        }
+        pre code {
+            font-size: 0.8rem;
+            font-family: sans-serif;
+        }
+       .line-highlight {
+            background-color: rgba(248, 248, 85, 0.7);
+        }
+        .el-loading-mask {
+            background-color: #f4f4f4;
+        }
+        .el-tabs__content {
+            height: calc(100% - 40px);
+        }
+        .el-card__body {
+            /*height: 100%;*/
+            height: calc(100% - 40px);
+        }
+
+
+    </style>
+</head>
+<body style="height: 100%; overflow-y:hidden">
+<div id="app" style="height: 100%" >
+  <template  style="height: 100%">
+    <el-page-header @back="goBack" content="结果审核" style="margin: 10px">
+    </el-page-header>
+
+    <el-container style="height: 95%;">
+        <el-aside style="background-color: rgb(238, 241, 246);border:1px solid #d7dcdf; margin-top: 20px;width:20%; ">
+<!--            <el-select v-model="value" placeholder="请选择漏洞类型" style="margin: 5px;width: 200px;">-->
+<!--                <el-option-->
+<!--                  v-for="item in options"-->
+<!--                  :key="item.value"-->
+<!--                  :label="item.label"-->
+<!--                  :value="item.value">-->
+<!--                </el-option>-->
+<!--            </el-select>-->
+<!--            <el-input v-model="input" placeholder="请输入关键字" style="margin: 5px;width: 200px"></el-input>-->
+
+          <!--              default-expanded-keys  默认展开的节点的数组。另外这个需配套指定node-key。里面的值是node-key的值-->
+            <el-tree   style="margin-top: 30px;"
+               ref="tree"
+               show-checkbox
+              :data="fileList"
+              :props="{ label: 'name', children: 'files' }"
+              node-key="fileid"
+              :default-expanded-keys="[firstFile]"
+              current-node-key="currentFileId"
+              highlight-current
+              @node-click="handleNodeClick"
+              @click="getCheckedKeys"
+            ></el-tree>
+
+            <el-button type="primary" @click="shenhe">批量审核</el-button>
+
+            <el-dialog title="批量审核" :visible.sync="showDialog" width="50%" >
+                <el-form ref="form1" :model="form" label-width="80px" style="margin: 10px">
+                    <el-radio v-model="form1.Question" label="是问题" @change="handleRadioChange1">是问题</el-radio>
+                    <br>
+                    <el-radio-group v-model="form1.list1" style="margin: 10px" :disabled="isDisabled1">
+                        <el-radio :label="1">高危</el-radio>
+                        <el-radio :label="2">中危</el-radio>
+                        <el-radio :label="3">低危</el-radio>
+                    </el-radio-group>
+                    <br>
+                    <el-radio v-model="form1.Question" label="不是问题" @change="handleRadioChange1">不是问题</el-radio>
+                    <br>
+                    <el-radio-group v-model="form1.list2" style="margin: 10px" :disabled="isDisabled2">
+                        <el-radio :label="1">误报</el-radio>
+                        <el-radio :label="2">永久忽略</el-radio>
+                    </el-radio-group>
+                    <el-form-item label="备注信息" style="margin-top: 10px">
+                        <el-input v-model="form1.remarks" style="width: 200px"></el-input>
+                        <el-button type="primary" @click="submit1()">提交</el-button>
+                    </el-form-item>
+                </el-form>
+            </el-dialog>
+
+        </el-aside>
+
+        <el-main  style="height: 100%;">
+          <router-view v-if="isRouterAlive">
+          <el-tabs v-model="activeName" @tab-click="handleClick" ref="tabs" style="height: 100%;">
+
+            <el-tab-pane label="代码详情" name="first"  style="height: 100%;overflow: hidden;">
+              <el-card class="box-card">
+                  <el-row>
+                      <el-col :span="24"><div class="">{{details.filepath}}</div></el-col>
+                  </el-row>
+                  <hr>
+                  <el-row style="height: calc(100% - 40px);">
+                      <el-col :span="12" style="height: 100%;">
+<!--                        <div >-->
+                        <pre  id="codeBlock"  class="autoWrap"><code>{{details.source_code}}</code></pre>
+<!--                        </div>-->
+                        </el-col>
+
+                      <el-col :span="12"><div class="">
+                          <pre  style="white-space: pre-wrap" style="word-wrap: break-word" style="max-width: 100%"  >爆发点：{{details.Sink}}</pre>
+                          <pre  style="white-space: pre-wrap" style="word-wrap: break-word" style="max-width: 100%" >缺陷源：{{details.Source}}</pre>
+                          <pre  style="white-space: pre-wrap" style="word-wrap: break-word" style="max-width: 100%">爆发点函数：{{details.Enclosing_Method}}</pre>
+                          <el-form ref="form" :model="form" label-width="80px" style="margin: 10px">
+                            <el-radio v-model="form.Question" label="是问题" @change="handleRadioChange">是问题</el-radio>
+                              <br>
+                            <el-radio-group v-model="form.list1" style="margin: 10px" :disabled="isDisabled1">
+                              <el-radio :label="1">高危</el-radio>
+                              <el-radio :label="2">中危</el-radio>
+                              <el-radio :label="3">低危</el-radio>
+                            </el-radio-group>
+                             <br>
+                            <el-radio v-model="form.Question" label="不是问题" @change="handleRadioChange">不是问题</el-radio>
+                             <br>
+                            <el-radio-group v-model="form.list2" style="margin: 10px" :disabled="isDisabled2">
+                              <el-radio :label="1">误报</el-radio>
+                              <el-radio :label="2">永久忽略</el-radio>
+                            </el-radio-group>
+
+                            <el-form-item label="备注信息" style="margin-top: 10px">
+                                <el-input v-model="form.remarks" style="width: 200px"></el-input>
+                                <el-button type="primary" @click="submit()">提交</el-button>
+                            </el-form-item>
+                          </el-form>
+                      </div></el-col>
+                  </el-row>
+              </el-card>
+            </el-tab-pane>
+            <el-tab-pane label="缺陷描述" name="second"  style="height: 100%;overflow: hidden">
+                  <el-descriptions style="margin: 10px" title="">
+                      <el-descriptions-item label="缺陷名称">{{descriptions.NAME}}</el-descriptions-item>
+                      <el-descriptions-item label="缺陷修复状态">
+                        <el-tag size="small">{{descriptions.repair_status}}</el-tag>
+                      </el-descriptions-item>
+                      <el-descriptions-item label="代码语言">{{descriptions.LANGUAGE}}</el-descriptions-item>
+                      <el-descriptions-item label="原始风险等级">
+                        <el-tag size="small" type="danger">{{descriptions.risk_level}}</el-tag>
+                      </el-descriptions-item>
+                      <el-descriptions-item label="缺陷路径">{{descriptions.filepath}}</el-descriptions-item>
+                      <el-descriptions-item label="发现日期">{{descriptions.startTime}}</el-descriptions-item>
+                  </el-descriptions>
+                  <el-descriptions :colon="false" style="margin: 10px" title="缺陷描述：">
+                        <el-descriptions-item label="">{{descriptions.description}}</el-descriptions-item>
+                  </el-descriptions>
+                  <el-descriptions :colon="false" style="margin: 10px" title="参考代码示例：">
+                        <el-descriptions-item label="">{{descriptions.example}}</el-descriptions-item>
+                  </el-descriptions>
+                  <el-descriptions :colon="false" style="margin: 10px" title="解决方案：">
+                          <el-descriptions-item label="">{{descriptions.repairPlan}}</el-descriptions-item>
+                  </el-descriptions>
+            </el-tab-pane>
+            <el-tab-pane label="代码修复" name="third"  style="height:100%;overflow: auto">
+              <el-card class="box-card"  style="height: 100%;">
+                  <el-row style="height: 42px">
+                      <el-col :span="20">
+                          <span class="">{{details.filepath}}</span>
+                      </el-col>
+                      <el-col :span="4">
+                          <span><el-button type="danger" size="mini" round @click="repair1()">一键修复</el-button></span>
+                          <span><el-button  type="danger" size="mini" round @click="get_repair_feedback()">修复反馈</el-button></span>
+                      </el-col>
+                  </el-row>
+
+                  <hr>
+                  <el-row style="height: calc(100% - 44px)">
+                      <el-col :span="12" style="height: 100%">
+                        <pre id="codeBlock2" class="autoWrap"><code>
+{{details.source_code}}</code></pre>
+                      </el-col>
+                      <el-col :span="12"><div class="" v-loading="loading">
+                        <pre class="autoWrap" id="codeBlock3"><code>{{details.repair_code}}</code></pre>
+                      </div></el-col>
+                  </el-row>
+              </el-card>
+                </el-tab-pane>
+            </el-tabs>
+
+            <el-dialog
+              title="修复反馈"
+              :visible.sync="dialogVisible"
+              width="50%">
+              <span>请将您认为正确的修复后代码填在下方</span>
+              <div style="margin: 20px 0;"></div>
+              <el-input
+                type="textarea"
+                :autosize="{ minRows: 6,}"
+                placeholder="请输入内容"
+                v-model="textarea">
+              </el-input>
+              <span slot="footer" class="dialog-footer">
+                <el-button @click="dialogVisible = false">取 消</el-button>
+                <el-button type="primary" @click="submit_repair_feedback()">确 定</el-button>
+              </span>
+            </el-dialog>
+          </router-view>
+        </el-main>
+
+    </el-container>
+  </template>
+</div>
+<script src="../../../../assets/libs/vue/vue.js"></script>
+<script src="../../../../assets/libs/element/index.js"></script>
+<script src="../../../../assets/libs/echarts/echarts.min.js"></script>
+<script src="../../../../assets/libs/jquery-1.11.3.min.js"></script>
+<script src="../../../../assets/js/mainData.js"></script>
+<script src="resultReview.js"></script>
+<!--<script src="../../../../assets/libs/highlight/highlight.min.js"></script>-->
+<!--<script>hljs.highlightAll();</script>-->
+
+</body>
+</html>

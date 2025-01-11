@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport"
+        content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <!--<link rel="stylesheet" href="../../../js/element/index.css">-->
+  <link rel="stylesheet" href="../../../../assets/libs/element/index.css">
+  <title>模型训练</title>
+  <style>
+    .PositiveUpload{
+        font-size: 14px;
+        color: #6a6a6a;
+    }
+    .center {
+        display: flex;
+        justify-content: center;
+    }
+    .el-transfer-panel {
+        width: 400px;
+    }
+
+  </style>
+</head>
+
+<body>
+<div id="app">
+  <template>
+    <el-tabs v-model="activeName1" :tab-position="tabPosition" style="margin: 10px">
+      <el-tab-pane name="first" label="基座模型">
+        <el-table  ref="singleTable" :data="modelAll" :default-sort="{prop: 'date', order: 'descending'}"
+                  highlight-current-row @current-change="handleTableChange"
+                   :header-cell-style="{textAlign:'center'}" :cell-style="{textAlign:'center'}"
+                   style="margin-top: 20px">
+          <el-table-column
+            property="model_name"
+            label="模型名"
+            width="">
+          </el-table-column>
+          <el-table-column
+            property="model_path"
+            label="识别漏洞数量"
+            width="">
+          </el-table-column>
+          <el-table-column
+            property="cwe_id"
+            label="识别漏洞种类"
+            width="300">
+          </el-table-column>
+          <el-table-column
+            property="model_train_start"
+            label="训练开始时间"
+            width="">
+          </el-table-column>
+          <el-table-column
+            property="model_train_end"
+            label="训练时长"
+            width="">
+          </el-table-column>
+          <el-table-column
+            property="remarks"
+            label="备注"
+            width="">
+          </el-table-column>
+          <el-table-column label="操作">
+            <template slot-scope="scope">
+              <el-button
+                size="mini"
+                @click="handleEdit(scope.$index, scope.row)">编辑</el-button>
+              <el-button
+                size="mini"
+                type="danger"
+                @click="handleDelete(scope.$index, scope.row)">删除</el-button>
+            </template>
+          </el-table-column>
+        </el-table>
+
+        <el-dialog title="编辑" :visible.sync="dialogFormVisible">
+          <el-form :model="formEdit">
+            <el-form-item label="模型名">
+              <el-input v-model="formEdit.model_name" autocomplete="off"></el-input>
+            </el-form-item>
+            <el-form-item label="备注" >
+                <el-input v-model="formEdit.remarks" autocomplete="off"></el-input>
+            </el-form-item>
+          </el-form>
+          <div slot="footer" class="dialog-footer">
+            <el-button @click="dialogFormVisible = false">取 消</el-button>
+            <el-button type="primary" @click="identifyEdit()">确 定</el-button>
+          </div>
+        </el-dialog>
+
+      </el-tab-pane>
+
+      <el-tab-pane name="second" label="正样本">
+        <div class="center">
+
+           <el-tabs v-model="activeName2" type="border-card" @tab-click="handleClick" style="width: 80%;">
+              <el-tab-pane label="git下载" name="first" style="text-align: center">
+                <el-form :model="formPositive" label-width="120px" style="margin-top: 50px;display: inline-block">
+                  <el-form-item label="URL:" prop="" >
+                    <el-input v-model="formPositive.url" style=""></el-input>
+                  </el-form-item>
+                  <el-form-item label="密钥:" prop="">
+                    <el-input v-model="formPositive.key" style=""></el-input>
+                  </el-form-item>
+                  <el-form-item label="请选择时间范围:" >
+                    <el-date-picker
+                      v-model="formPositive.date1"
+                      type="daterange"
+                      value-format="yyyy-MM-dd"
+                      placement="bottom-start"
+                      range-separator="至"
+                      start-placeholder="开始日期"
+                      end-placeholder="结束日期">
+                    </el-date-picker>
+                    <el-button type="primary" @click="getPositiveGit()">确认</el-button>
+                  </el-form-item>
+                </el-form>
+              </el-tab-pane>
+
+              <el-tab-pane label="本地上传" name="second" style="text-align: center">
+                <el-upload
+                  class="upload-demo"
+                  drag
+                  :action="uploadURL"
+                  :data="uploadURLData"
+                  :on-preview="handlePreview"
+                  :on-remove="handleRemove"
+                  :on-success="uploadSuccess"
+                  :before-remove="beforeRemove"
+                  :file-list="uploadFileList"
+                  multiple>
+                  <i class="el-icon-upload"></i>
+                  <div class="el-upload__text" >将文件拖到此处，或<em>点击上传</em></div>
+                </el-upload>
+                <div style="margin: 20px">
+                  <span class="PositiveUpload">请选择时间范围:</span>
+                  <el-date-picker
+                    v-model="date_PositiveUpload"
+                    type="daterange"
+                    value-format="yyyy-MM-dd"
+                    placement="bottom-start"
+                    range-separator="至"
+                    start-placeholder="开始日期"
+                    end-placeholder="结束日期">
+                  </el-date-picker>
+                  <el-button type="primary" @click="getPositiveUpload()">确认</el-button>
+                </div>
+              </el-tab-pane>
+
+              <div class="center">
+                <el-transfer style="margin: 20px;"
+                  filterable
+                  filter-placeholder="请输入关键字"
+                  :titles="['全部文件', '参与训练文件']"
+                  @change="handleTransferChange1"
+                  v-model="positiveSample"
+                  :data="transferData1">
+                </el-transfer>
+              </div>
+           </el-tabs>
+        </div>
+      </el-tab-pane>
+
+      <el-tab-pane name="third" label="负样本">
+
+
+        <div style="text-align: center">
+          <el-upload
+            class="upload-demo"
+            drag
+            :action="uploadURL_Negative"
+            :data="uploadURLData_Negative"
+            :on-preview="handlePreview_Negative"
+            :on-remove="handleRemove_Negative"
+            :on-success="uploadSuccess_Negative"
+            :before-remove="beforeRemove_Negative"
+            :file-list="uploadFileList_Negative"
+            multiple>
+            <i class="el-icon-upload"></i>
+            <div class="el-upload__text" >将文件拖到此处，或<em>点击上传</em></div>
+          </el-upload>
+          <el-form :model="formNegative" label-width="120px"  style="display: inline-block;margin: 20px">
+            <el-form-item label="请选择时间范围:" >
+              <el-date-picker
+                v-model="formNegative.date"
+                type="daterange"
+                value-format="yyyy-MM-dd"
+                placement="bottom-start"
+                range-separator="至"
+                start-placeholder="开始日期"
+                end-placeholder="结束日期">
+              </el-date-picker>
+              <el-button type="primary" @click="getNegative()">确认</el-button>
+            </el-form-item>
+          </el-form>
+        </div>
+        <div class="center">
+          <el-transfer
+            filterable
+            filter-placeholder="请输入关键字"
+            :titles="['全部文件', '参与训练文件']"
+            @change="handleTransferChange2"
+            v-model="negativeSample"
+            :data="transferData2">
+          </el-transfer>
+        </div>
+      </el-tab-pane>
+
+      <el-tab-pane name="fourth" label="模型训练">
+        <div style="text-align: center">
+          <el-button type="primary" plain style="margin: 10px" @click="startProcess()">开始训练</el-button>
+          <el-card shadow="never" style="">
+            <div slot="header" class="clearfix">
+              <span>日志</span>
+            </div>
+            {{log}}
+          </el-card>
+<!--          <el-button type="primary" plain style="margin: 10px" >保存模型</el-button>-->
+<!--          <el-button type="info" plain >不保存模型</el-button>-->
+        </div>
+      </el-tab-pane>
+    </el-tabs>
+
+
+
+
+  </template>
+</div>
+
+
+<script src="../../../../assets/libs/vue/vue.js"></script>
+<script src="../../../../assets/libs/element/index.js"></script>
+<script src="../../../../assets/libs/jquery-1.11.3.min.js"></script>
+<script src="../../../../assets/js/mainData.js"></script>
+<script src="iteration2.js" ></script>
+</body>
+</html>

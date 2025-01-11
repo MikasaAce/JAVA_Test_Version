@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport"
+        content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <link rel="stylesheet" href="../../../../assets/libs/element/index.css">
+  <title>漏洞表征模型训练</title>
+  <style>
+      .PositiveUpload{
+          font-size: 14px;
+          color: #6a6a6a;
+      }
+      .center {
+          display: flex;
+          justify-content: center;
+      }
+      .el-transfer-panel {
+          width: 400px;
+      }
+  </style>
+</head>
+<body >
+  <div id="app">
+    <template>
+      <el-tabs v-model="activeName1" :tab-position="tabPosition" style="margin: 10px">
+        <el-tab-pane name="first" label="漏洞表征">
+          <div class="center">
+            <el-tabs v-model="activeName2" type="border-card" @tab-click="handleClick" style="width: 80%;text-align: center">
+              <el-tab-pane label="json文件上传" name="first" style="text-align: center">
+                <el-form :inline="true" :model="classification" class="demo-form-inline" method="post" style="margin: 10px">
+                  <el-form-item label="选择分类模式：" >
+                    <el-select v-model="classification.type" placeholder="请选择" @change="change($event)">
+                      <el-option label="二分类" value="2"></el-option>
+                      <el-option label="多分类" value="1"></el-option>
+                    </el-select>
+                  </el-form-item>
+                </el-form>
+                <el-upload
+                    class="upload-demo"
+                    drag
+                    :action="uploadURL1"
+                    :data="uploadURLData1"
+                    :on-preview="handlePreview1"
+                    :on-remove="handleRemove1"
+                    :on-success="uploadSuccess1"
+                    :before-remove="beforeRemove1"
+                    :file-list="uploadFileList1"
+                    multiple>
+                  <i class="el-icon-upload"></i>
+                  <div class="el-upload__text" >将json文件拖到此处，或<em>点击上传</em></div>
+                </el-upload>
+              </el-tab-pane>
+
+              <el-tab-pane label="本地文件夹上传" name="second" style="text-align: center">
+                <el-form :inline="true" :model="classification" class="demo-form-inline" method="post" style="margin: 10px">
+                  <el-form-item label="选择分类模式：" >
+                    <el-select v-model="classification.type" placeholder="请选择" @change="change($event)">
+                      <el-option label="二分类" value="2"></el-option>
+                      <el-option label="多分类" value="1"></el-option>
+                    </el-select>
+                  </el-form-item>
+                </el-form>
+                <el-upload
+                    class="upload-demo"
+                    drag
+                    :action="uploadURL"
+                    :data="uploadURLData"
+                    :on-preview="handlePreview"
+                    :on-remove="handleRemove"
+                    :on-success="uploadSuccess"
+                    :before-remove="beforeRemove"
+                    :file-list="uploadFileList"
+                    multiple>
+                  <i class="el-icon-upload"></i>
+                  <div class="el-upload__text" >将压缩包文件拖到此处，或<em>点击上传</em></div>
+                </el-upload>
+              </el-tab-pane>
+
+              <el-tab-pane label="已有多分类特征转为二分类" name="third" style="text-align: center">
+                <el-form :inline="true" :model="classification" class="demo-form-inline" method="post" style="margin: 10px">
+                  <el-form-item label="选择特征：" >
+                    <el-select v-model="classification.feature" placeholder="请选择">
+                      <el-option label="codebert" value="1"></el-option>
+                      <el-option label="codet5p" value="2"></el-option>
+                      <el-option label="codet5_small" value="3"></el-option>
+                      <el-option label="codet5_base" value="4"></el-option>
+                      <el-option label="codet5_large" value="5"></el-option>
+                      <el-option label="codegen" value="6"></el-option>
+                      <el-option label="deepseek" value="7"></el-option>
+                      <el-option label="codegen2b" value="8"></el-option>
+                    </el-select>
+                  </el-form-item>
+                  <el-form-item>
+                    <el-button type="primary" plain  @click="transfrom()">开始训练</el-button>
+                  </el-form-item>
+                </el-form>
+              </el-tab-pane>
+
+              <el-card shadow="never" style="margin-top: 20px;text-align: center">
+                <div slot="header" class="clearfix">
+                  <span>日志</span>
+                  <el-button type="primary" @click="feature_downLoad()" style="float: right" >下载记录文件</el-button>
+                </div>
+                <div v-for="(item, index) in feature_log" :key="index">
+                  {{ item }}
+                </div>
+              </el-card>
+
+
+            </el-tabs>
+          </div>
+        </el-tab-pane>
+
+        <el-tab-pane name="second" label="模型训练">
+          <div style="text-align: center">
+            <el-form :inline="true" :model="train" class="demo-form-inline" method="post" style="margin: 10px">
+              <el-form-item label="选择分类模式：" >
+                <el-select v-model="train.classification" placeholder="请选择">
+                  <el-option label="二分类" value="2"></el-option>
+                  <el-option label="多分类" value="1"></el-option>
+                </el-select>
+              </el-form-item>
+              <el-form-item label="选择特征模式：" >
+                <el-select v-model="train.model" placeholder="请选择">
+                  <el-option label="单特征" value="1"></el-option>
+                  <el-option label="混合特征" value="2"></el-option>
+                </el-select>
+              </el-form-item>
+              <el-form-item label="选择特征：" v-if="train.model == '1'">
+                <el-select v-model="train.type" placeholder="请选择" @change="changeValue1($event)">
+                  <el-option label="codebert" value="1"></el-option>
+                  <el-option label="codet5p" value="2"></el-option>
+                  <el-option label="codet5_small" value="3"></el-option>
+                  <el-option label="codet5_base" value="4"></el-option>
+                  <el-option label="codet5_large" value="5"></el-option>
+                  <el-option label="codegen" value="6"></el-option>
+                  <el-option label="deepseek" value="7"></el-option>
+                  <el-option label="codegen2b" value="8"></el-option>
+                </el-select>
+              </el-form-item>
+              <el-form-item label="模型一：" v-if="train.model == '2'">
+                <el-select v-model="train.feature1" placeholder="请选择" @change="changeValue2($event)">
+                  <el-option label="codebert" value="1"></el-option>
+                  <el-option label="codet5p" value="2"></el-option>
+                  <el-option label="codet5_small" value="3"></el-option>
+                  <el-option label="codet5_base" value="4"></el-option>
+                  <el-option label="codet5_large" value="5"></el-option>
+                  <el-option label="codegen" value="6"></el-option>
+                  <el-option label="deepseek" value="7"></el-option>
+                  <el-option label="codegen2b" value="8"></el-option>
+                </el-select>
+              </el-form-item>
+              <el-form-item label="模型二：" v-if="train.model == '2'">
+                <el-select v-model="train.feature2" placeholder="请选择" @change="changeValue3($event)">
+                  <el-option label="codebert" value="1"></el-option>
+                  <el-option label="codet5p" value="2"></el-option>
+                  <el-option label="codet5_small" value="3"></el-option>
+                  <el-option label="codet5_base" value="4"></el-option>
+                  <el-option label="codet5_large" value="5"></el-option>
+                  <el-option label="codegen" value="6"></el-option>
+                  <el-option label="deepseek" value="7"></el-option>
+                  <el-option label="codegen2b" value="8"></el-option>
+                </el-select>
+              </el-form-item>
+              <el-form-item label="特征维度：" >
+                <el-input v-model="train.dim" placeholder="请输入关键字" disabled></el-input>
+              </el-form-item>
+              <el-form-item label="模型分类数：" >
+                <el-input v-model="train.num" placeholder="请输入关键字" ></el-input>
+              </el-form-item>
+              <el-form-item label="保存模型名称：" >
+                <el-input v-model="train.name" placeholder="请输入关键字" ></el-input>
+              </el-form-item>
+              <el-form-item>
+                <el-button type="primary" plain  @click="startProcess1()" v-if="train.model == '1'">开始训练</el-button>
+                <el-button type="primary" plain  @click="startProcess2()" v-if="train.model == '2'">开始训练</el-button>
+              </el-form-item>
+            </el-form>
+
+            <el-card shadow="never" style="">
+              <div slot="header" class="clearfix">
+                <span>日志</span>
+                <el-button type="primary" @click="train_downLoad()" style="float: right" >下载记录文件</el-button>
+              </div>
+              <div v-for="(item, index) in train_log" :key="index">
+                {{ item }}
+              </div>
+            </el-card>
+          </div>
+        </el-tab-pane>
+      </el-tabs>
+    </template>
+  </div>
+
+  <script src="../../../../assets/libs/vue/vue.js"></script>
+  <script src="../../../../assets/libs/element/index.js"></script>
+  <script src="../../../../assets/libs/jquery-1.11.3.min.js"></script>
+  <script src="../../../../assets/js/mainData.js"></script>
+  <script src="feature.js" ></script>
+</body>
+</html>

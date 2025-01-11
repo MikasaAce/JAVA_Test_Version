@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport"
+        content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <!--<link rel="stylesheet" href="../../../js/element/index.css">-->
+  <link rel="stylesheet" href="../../../../assets/libs/element/index.css">
+  <title>配置策略</title>
+  <style>
+      .clearfix:before,
+      .clearfix:after {
+          display: table;
+          content: "";
+      }
+      .clearfix:after {
+          clear: both
+      }
+      .box-card {
+          width: 80%;
+      }
+      html,body,div{
+          margin: 0;
+          padding: 0;
+      }
+      html,body{
+          height: 100%;
+      }
+
+      .box {
+          width: 50%;
+          height: 50%;
+          background: #ffffff;
+          border: 1px solid #EBEEF5 ;
+          border-radius: 5px;
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%); /*向左向上分别平移自身的一半*/
+          /*-webkit-transform: translate(-50%, -50%);*/
+          /*-moz-transform: translate(-50%, -50%);*/
+          /*transition: 1s*/
+      }
+      .title {
+          width: 100%;
+          float: left;
+          font-size: 18px;
+          padding: 18px 20px;
+          border-bottom: 1px solid #EBEEF5;
+          box-sizing: border-box;
+      }
+      .el-radio-group {
+          margin: 20px;
+      }
+      .el-avatar, .el-cascader-panel, .el-radio, .el-radio--medium.is-bordered .el-radio__label, .el-radio__label {
+          font-size: 18px;
+      }
+      .buttonSave{
+          text-align: center;
+          position: absolute;
+          bottom: 18%;
+          left: 45%;
+      }
+
+      .el-input__inner{
+        width: 100%;
+      }
+      .el-cascader, .el-tag {
+         display: flex;
+      }
+      .el-radio {
+        margin: 30px 150px 30px 0;
+
+      }
+  </style>
+</head>
+
+<body>
+<div id="app">
+
+  <template>
+<!--rule1是01+fortify-->
+<!--rule2是fortify+01-->
+<!--rule3是fortify-->
+<!--rule4是qwen-7b-->
+<!--rule5是自定义规则单独扫描-->
+    <div class="box">
+      <span class="title">配置选择</span>
+      <el-radio-group v-model="config1" @change="input">
+        <el-radio  label="rule3" width="200px">模型R</el-radio>
+        <el-radio  label="rule0">模型O</el-radio>
+        <el-radio  label="rule1">模型OR</el-radio>
+        <el-radio  label="rule2">模型RO</el-radio>
+        <el-radio  label="rule4">模型Q</el-radio>
+        <el-radio  label="deepSeek">模型D</el-radio>
+        <el-radio  label="deepSeek_6.7b">模型D+</el-radio>
+        <el-radio  label="rule5">模型R2</el-radio>
+        <el-radio  label="Muti_transformer">模型M</el-radio>
+
+      </el-radio-group>
+      <div style="margin: 20px" v-show="ruuule">
+        <div style="margin-bottom: 20px">按以下规范检测漏洞：</div>
+        <el-cascader
+                v-model="version"
+                :options="options"
+                placeholder="请选择"
+                :props="{ expandTrigger: 'hover' }"
+                @change="handleChange"></el-cascader>
+      </div>
+    </div>
+
+    <div class="buttonSave">
+      <el-button type="primary" @click="save()" >保存配置</el-button>
+      <el-button type="primary" @click="reset()" >重置</el-button>
+    </div>
+
+  </template>
+</div>
+
+
+  <script src="../../../../assets/libs/vue/vue.js"></script>
+  <script src="../../../../assets/libs/vue/vue-router.js"></script>
+  <script src="../../../../assets/libs/element/index.js"></script>
+  <script src="../../../../assets/libs/jquery-1.11.3.min.js"></script>
+  <script src="../../../../assets/js/mainData.js"></script>
+  <script src="config.js" ></script>
+</body>
+</html>

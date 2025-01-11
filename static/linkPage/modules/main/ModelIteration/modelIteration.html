@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <!--<link rel="stylesheet" href="../../../js/element/index.css">-->
+    <link rel="stylesheet" href="../../../../assets/libs/element/index.css">
+    <title>模型训练</title>
+    <style>
+        .box {
+            height: 1000px;
+
+        }
+        .demonstration {
+            color: #606266;
+            line-height: 40px;
+            font-size: 14px
+        }
+        body {
+            background-color: #fafafa;
+        }
+
+    </style>
+</head>
+<body>
+<div id="app">
+    <template>
+        <el-card class="box">
+        <el-form :model="form" label-width="120px" style="margin-top: 50px;margin-left: 400px">
+            <el-form-item label="模型选择:">
+                <el-select v-model="form.source"  value-key="id" placeholder="请选择"  @change="chooseModel">
+                    <el-option
+                            v-for="item in options"
+                            :key="item.description"
+                            :label="item.description"
+                            :value="item.description">
+                    </el-option>
+                </el-select>
+            </el-form-item>
+            <el-form-item label="正样本下载来源:" prop="source">
+<!--                <el-radio-group v-model="form.source">-->
+<!--                    <el-radio label="git下载"></el-radio>-->
+<!--                    <el-radio label="本地" ></el-radio>-->
+<!--                </el-radio-group>-->
+git下载
+            </el-form-item>
+            <el-form-item label="URL:" prop="">
+                <el-input v-model="form.url" style="width: 500px"></el-input>
+            </el-form-item>
+            <el-form-item label="密钥:" prop="">
+                <el-input v-model="form.key" style="width: 500px"></el-input>
+            </el-form-item>
+            <el-form-item label="负样本下载来源:" >审核结果为有缺陷的代码            </el-form-item>
+<!--            <el-button  @click="" style="margin-left: 120px">拉取负样本</el-button>-->
+            <div class="block">
+                <span class="demonstration">请选择一个时间段内审核后的缺陷代码：</span>
+                <el-date-picker
+                        v-model="form.date"
+                        type="daterange"
+                        range-separator="至"
+                        start-placeholder="开始日期"
+                        end-placeholder="结束日期">
+                </el-date-picker>
+            </div>
+        </el-form>
+
+        <div style="height:10px;text-align: center">
+        <el-button type="primary" @click="uploadModel()" style="margin-top: 20px">开始迭代</el-button></div>
+<!--        <el-button  @click="modelIteration = false">取消</el-button>-->
+        </el-card>
+    </template>
+</div>
+
+
+
+
+<script src="../../../../assets/libs/vue/vue.js"></script>
+<script src="../../../../assets/libs/element/index.js"></script>
+<script src="../../../../assets/libs/jquery-1.11.3.min.js"></script>
+<!--<script src="../../../../assets/js/mainData.js"></script>-->
+<script src="modelIteration.js" ></script>
+
+</body>
+</html>

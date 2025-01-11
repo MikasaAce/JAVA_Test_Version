@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="../../../../assets/libs/element/index.css">
+    <title>详情</title>
+    <style>
+        .el-header {
+            /*background-color: #B3C0D1;*/
+            /*color: #333;*/
+            line-height: 60px;
+        }
+
+        .el-aside {
+            color: #333;
+        }
+        .box-card {
+            /*width: 1000px;*/
+            margin: auto;
+        }
+        pre {
+            background-color: #f4f4f4;
+            padding: 10px;
+            margin: 5px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+
+        pre code .highlight {
+            background-color: yellow;
+        }
+
+    </style>
+</head>
+<body>
+<div id="app">
+<el-container style="height: 800px; border: 1px solid #eee">
+    <el-aside width="250px" style="background-color: rgb(238, 241, 246)">
+        <el-select v-model="value" placeholder="请选择漏洞类型" style="margin: 5px;width: 200px;">
+            <el-option
+                    v-for="item in options"
+                    :key="item.value"
+                    :label="item.label"
+                    :value="item.value">
+            </el-option>
+        </el-select>
+        <el-input v-model="input" placeholder="请输入关键字" style="margin: 5px;width: 200px"></el-input>
+        <el-tree
+                :data="fileList"
+                :props="{ label: 'name', children: 'files' }"
+                @node-click="handleNodeClick"
+        ></el-tree>
+    </el-aside>
+
+
+        <el-main>
+            <el-tabs v-model="activeName" @tab-click="handleClick">
+                <el-tab-pane label="代码详情" name="first">
+                    <el-card class="box-card">
+                        <el-row>
+                            <el-col :span="24"><div class="">\abrt@abrt\3c1b60cfa62d39e5\brackets.java</div></el-col>
+                        </el-row>
+                        <hr>
+                        <el-row>
+                            <el-col :span="12"><div class=""><pre>
+                                    <code>
+29    public static String httpParamPollution(String url) {
+30        if (StrUtil.isNotBlank(url)) {
+31            <span class="highlight">url = UriUtils.encode(url, StandardCharsets.UTF_8);</span>
+32        }
+33        return url;
+34    }
+    </code></pre></div></el-col>
+
+                            <el-col :span="12"><div class="">
+                                <el-form ref="form" :model="form" label-width="80px" style="margin: 10px">
+                                    <!--                    <el-form-item>-->
+                                    <el-radio v-model="radio" label="1">是问题</el-radio>
+                                    <!--                    </el-form-item>-->
+                                    <br>
+                                    <el-checkbox-group v-model="checkList1">
+                                        <el-checkbox label="高危"></el-checkbox>
+                                        <el-checkbox label="中危"></el-checkbox>
+                                        <el-checkbox label="低危"></el-checkbox>
+                                    </el-checkbox-group>
+                                    <el-radio v-model="radio" label="2">不是问题</el-radio>
+                                    <el-checkbox-group v-model="checkList2">
+                                        <el-checkbox label="误报"></el-checkbox>
+                                        <el-checkbox label="永久忽略"></el-checkbox>\
+                                    </el-checkbox-group>
+                                    <el-form-item label="备注信息" style="margin-top: 10px">
+                                        <el-input v-model="form.name" style="width: 200px"></el-input>
+                                        <el-button type="primary">提交</el-button>
+                                    </el-form-item>
+                                </el-form>
+                            </div></el-col>
+                        </el-row>
+                    </el-card>
+                </el-tab-pane>
+                <el-tab-pane label="缺陷描述" name="second">配置管理</el-tab-pane>
+                <el-tab-pane label="审核日志" name="third">审核日志</el-tab-pane>
+                <el-tab-pane label="代码修复" name="fourth">
+                    <el-card class="box-card">
+                        <el-row>
+                            <el-col :span="20">
+                                <span class="">\abrt@abrt\3c1b60cfa62d39e5\comment_save.java</span>
+                            </el-col>
+                            <el-col :span="4">
+                                <span><el-button type="danger" size="mini" round>一键修复</el-button></span>
+                            </el-col>
+                        </el-row>
+
+                        <hr>
+                        <el-row>
+                            <el-col :span="12"><div class=""><pre>
+                                    <code>
+5   public class Main {
+6     public static void main(String[] args) {
+7          int x = 5;
+8          int y = 0;
+9          <span class="highlight">int z = x / y; </span>
+10          System.out.println("Result: " + z);
+11     }
+12 }
+    </code></pre></div></el-col>
+
+                            <el-col :span="12"><div class=""><pre>
+                                    <code>
+  public class Main {
+     public static void main(String[] args) {
+         int x = 5;
+          int y = 1;
+         if (y != 0) {
+              int z = x / y;
+             System.out.println("Result: " + z);
+          } else {
+             System.out.println("Cannot divide by zero.");
+         }
+    }
+ }
+    </code></pre></div></el-col>
+
+
+                        </el-row>
+                    </el-card>
+                </el-tab-pane>
+            </el-tabs>
+        </el-main>
+</el-container>
+
+
+</div>
+<script src="../../../../assets/libs/vue/vue.js"></script>
+<script src="../../../../assets/libs/element/index.js"></script>
+<script src="../../../../assets/libs/echarts/echarts.min.js"></script>
+<script src="../../../../assets/libs/jquery-1.11.3.min.js"></script>
+<!--<script src="../../../../assets/js/mainData.js"></script>-->
+<script src="details.js"></script>
+</body>
+</html>

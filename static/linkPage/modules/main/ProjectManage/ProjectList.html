@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+<!--    <link rel="stylesheet" href="../../../../assets/libs/layui/css/layui.css" />-->
+    <!--<link rel="stylesheet" href="../../../js/element/index.css">-->
+    <link rel="stylesheet" href="../../../../assets/libs/element/index.css">
+
+    <title>项目列表管理</title>
+    <style>
+        .box-card {
+            /*width: 800px;*/
+            margin: 10px;
+        }
+        .clearfix:before,
+        .clearfix:after {
+            display: table;
+            content: "";
+        }
+        .clearfix:after {
+            clear: both
+        }
+
+        .box-card .el-radio__label {
+            font-size: 20px;
+            margin: 10px;
+        }
+
+        .box-card .el-radio{
+            margin:10px 0;
+            display: block;
+            line-height: 20px;
+
+        }
+        .highlight .highlighted-row {
+            background-color: #ECF5FF; /* 设置高亮显示的背景颜色 */
+        }
+        .topData{
+            width: 100%;
+            height: 90px;
+            /*border: red solid 1px;*/
+            padding: 5px;
+        }
+        .top_title{
+            width: 100%;
+            height: 30px;
+            line-height: 30px;
+            font-size: 14px;
+            color: rgb(128, 128, 128);
+        }
+        .top_data{
+            width: 100%;
+            height: 50px;
+            line-height: 50px;
+            font-size: 25px;
+        }
+
+
+    </style>
+</head>
+<!--{% raw %}-->
+<body>
+
+<div id="app">
+    <el-row :gutter="20" style="margin: 20px">
+        <el-col :span="3">
+            <div class="topData">
+                <div class="top_title">项目总数:</div>
+                <div class="top_data">{{data1}}个</div>
+            </div>
+        </el-col>
+        <el-col :span="3">
+            <div class="topData">
+                <div class="top_title">检测任务数:</div>
+                <div class="top_data">{{data2}}个</div>
+            </div>
+        </el-col>
+        <el-col :span="3">
+            <div class="topData">
+                <div class="top_title">已完成检测文件数:</div>
+                <div class="top_data">{{data3}}个</div>
+            </div>
+        </el-col>
+        <el-col :span="3">
+            <div class="topData">
+                <div class="top_title">正在检测:</div>
+                <div class="top_data">{{data4}}个</div>
+            </div>
+        </el-col>
+        <el-col :span="3">
+            <div class="topData">
+                <div class="top_title">检测完成任务数:</div>
+                <div class="top_data">{{data5}}个</div>
+            </div>
+        </el-col>
+        <el-col :span="3">
+            <div class="topData">
+                <div class="top_title">检测失败任务数:</div>
+                <div class="top_data">{{data6}}个</div>
+            </div>
+        </el-col>
+
+    </el-row>
+    <el-row :gutter="20" style="margin: 20px">
+        <div class="slecet" style="margin-right:20px;margin-bottom: 15px; ">
+            <el-form :inline="true" :model="query" class="demo-form-inline" method="post" >
+                <el-form-item label="项目名称：">
+                    <el-input v-model="query.project_name" placeholder="请输入关键字"></el-input>
+                </el-form-item>
+
+                <el-form-item>
+                    <el-button type="primary" @click="checkFormData()">查询</el-button>
+                    <el-button type="primary" @click="createPro()">新建项目</el-button>
+<!--                    <el-button  type="primary" @click="config()">配置策略</el-button>-->
+                </el-form-item>
+            </el-form>
+        </div>
+    </el-row>
+
+    <el-card style="margin: 20px">
+        <div class="head">
+            项目列表
+        </div>
+        <template>
+            <el-table  :data="tableData" class="table" :header-cell-style="{textAlign:'center'}" :cell-style="{textAlign:'center'}" tooltip-effect="dark" style="width: 100%"  :default-sort = "{prop: 'createTime', order: 'descending'}">
+                <el-table-column prop="itemname" label="项目名称" ></el-table-column>
+                <el-table-column prop="description" label="项目描述" width="400" show-overflow-tooltip></el-table-column>
+<!--                <el-table-column prop="status" label="检测状态" width="100">-->
+<!--                    <template slot-scope="scope">-->
+<!--                        <el-tag effect="dark" v-if="scope.row.status === '0'" >检测中</el-tag>-->
+<!--                        <el-tag effect="dark" v-else type="success">已完成</el-tag>-->
+<!--                    </template>-->
+<!--                </el-table-column>-->
+                <el-table-column prop="language" label="扫描语言" ></el-table-column>
+<!--                <el-table-column prop="type" label="扫描策略" width="150"></el-table-column>-->
+                <el-table-column prop="source" label="项目来源" ></el-table-column>
+                <el-table-column prop="account" label="缺陷统计(高中低)" width="250">
+                    <template slot-scope="scope">
+                        <el-tag effect="dark" type="danger">{{scope.row.high}}</el-tag>
+                        <el-tag effect="dark" type="warning">{{scope.row.med}}</el-tag>
+                        <el-tag effect="dark" type="success">{{scope.row.low}}</el-tag>
+                    </template>
+                </el-table-column>
+
+                <el-table-column prop="createTime" label="创建时间" sortable show-overflow-tooltip></el-table-column>
+<!--                <el-table-column prop="audit" label="审核结果" width="100">-->
+<!--                    <template slot-scope="scope">-->
+<!--                        <el-tag effect="dark" v-if="scope.row.audit === '0'" >未审核</el-tag>-->
+<!--                        <el-tag effect="dark" v-else type="success">已审核</el-tag>-->
+<!--                    </template>-->
+<!--                </el-table-column>-->
+                <el-table-column  fixed='right' label="操作" width="300px">
+                    <template v-slot="scope">
+                        <el-row style="text-align: center">
+                            <el-col :span="8">
+                                <a lay-href=""> <el-button size="mini" type="text" @click="view(scope.row)">项目详情</el-button></a>
+                            </el-col>
+                            <el-col :span="8">
+                                <el-button size="mini" type="text" @click="account(scope.row)">缺陷统计</el-button>
+                            </el-col>
+                            <el-col :span="8">
+                                <el-button size="mini" type="text" @click="delopen(scope.row)">删除</el-button>
+                            </el-col>
+                        </el-row>
+                    </template>
+                </el-table-column>
+            </el-table>
+            <el-pagination
+                    background
+                    layout="total, sizes, prev, pager, next, jumper"
+                    :total="count"
+                    @current-change="handleCurrentChange"
+                    @size-change="handleSizeChange"
+                    :page-sizes="[5,10,20]"
+                    :current-page="currentPage"
+                    :page-size="pageSize"
+                    style="text-align: center">
+            </el-pagination>
+        </template>
+        <el-dialog title="" :visible.sync="configs" width="50%" style="">
+            <el-card class="box-card" shadow="never">
+                <div slot="header" class="clearfix">
+                    <span style="float: left;font-size: 18px">配置选择</span>
+                </div>
+                <el-radio-group v-model="config1">
+                    <el-radio  label="fortify">快速扫描</el-radio>
+                    <el-radio  label="model_fortify">深度扫描</el-radio>
+                    <el-radio  label="fortify_model">智能扫描</el-radio>
+                    <el-radio  label="deepSeek">deepSeek扫描</el-radio>
+                </el-radio-group>
+            </el-card>
+            <el-card class="box-card" shadow="never">
+                <div slot="header" class="clearfix">
+                    <span style="float: left;font-size: 18px">模型选择</span>
+                </div>
+                <el-table class="highlight" ref="singleTable" :data="tableConfig" :default-sort="{prop: 'description', order: 'descending'}"
+                          highlight-current-row @current-change="handleTableChange" :row-class-name="rowClassName"
+                          style="width: 100%">
+                    <el-table-column
+                            property="model_name"
+                            label="模型"
+                            width="">
+                    </el-table-column>
+                    <el-table-column
+                            property="remarks"
+                            label="描述"
+                            width="">
+                    </el-table-column>
+                </el-table>
+            </el-card>
+            <div style="text-align: center">
+                <el-button type="primary" @click="save()" >保存配置</el-button>
+            </div>
+        </el-dialog>
+
+        <el-dialog title="新建项目" :visible.sync="getAlert" width="50%" >
+            <el-form ref="form" :model="form" label-width="120px" :rules="rules">
+                <el-form-item label="项目名称:" prop="item_name">
+                    <el-input v-model="form.item_name"></el-input>
+                </el-form-item>
+                <el-form-item label="项目描述:" prop="description">
+                    <el-input v-model="form.description"></el-input>
+                </el-form-item>
+                <el-form-item label="代码语言:" prop="language">
+                    <el-radio-group v-model="form.language">
+                        <el-radio label="java"></el-radio>
+                        <el-radio label="C/C++" ></el-radio>
+                        <el-radio label="c#" ></el-radio>
+                        <el-radio label="php" ></el-radio>
+                        <el-radio label="Python" ></el-radio>
+                    </el-radio-group>
+                </el-form-item>
+                <el-form-item label="下载来源:" prop="source">
+                    <el-radio-group v-model="form.source">
+                        <el-radio label="git下载"></el-radio>
+                        <el-radio label="本地" ></el-radio>
+                        <el-radio label="SVN下载"></el-radio>
+                    </el-radio-group>
+                </el-form-item>
+<!--                <el-form-item label="URL:" prop="">-->
+<!--                    <el-input v-model="form.url"></el-input>-->
+<!--                </el-form-item>-->
+<!--                <el-form-item label="密钥:" prop="">-->
+<!--                    <el-input v-model="form.key"></el-input>-->
+<!--                </el-form-item>-->
+
+                <el-form-item>
+                    <el-button type="primary" @click="create()">立即创建</el-button>
+                    <el-button @click="getAlert = false">取消</el-button>
+                </el-form-item>
+            </el-form>
+        </el-dialog>
+
+    </el-card>
+
+<!--    <router-view></router-view>-->
+</div>
+
+<script src="../../../../assets/libs/vue/vue.js"></script>
+<script src="../../../../assets/libs/vue/vue-router.js"></script>
+<script type="text/javascript" src="../../../../assets/libs/layui/layui.js"></script>
+<script src="../../../../assets/libs/element/index.js"></script>
+<script src="../../../../assets/libs/jquery-1.11.3.min.js"></script>
+<script src="../../../../assets/js/mainData.js"></script>
+<script src="ProjectList.js" ></script>
+
+
+</body>
+<!--{% endraw %}-->
+</html>

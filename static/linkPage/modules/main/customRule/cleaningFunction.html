@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <!--<link rel="stylesheet" href="../../../js/element/index.css">-->
+    <link rel="stylesheet" href="../../../../assets/libs/element/index.css">
+    <title>缺陷处理策略</title>
+    <style>
+        /* 自定义表格样式 */
+        .el-table {
+            /*border-radius: 4px;*/
+            /*box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);*/
+        }
+        .el-table th, .el-table td {
+            padding: 12px 0 ;
+        }
+        .el-table th {
+            background-color: #f5f7fa;
+            color: #909399;
+            font-weight: 500;
+        }
+        .el-table td {
+            color: #606266;
+        }
+        .el-table .cell {
+            padding: 0 16px;
+            text-align: center; /* 使内容居中 */
+        }
+        .el-aside {
+            border-right: 1px solid #e0e0e0; /* 添加右侧边框 */
+        }
+        .custom-row {
+            cursor: default !important; /* 移除指针样式 */
+        }
+        .red-dot {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            background-color: red;
+            border-radius: 50%;
+            position: relative; /* 添加相对定位 */
+            z-index: 1; /* 确保红球在上方 */
+        }
+
+        /* 调整高亮样式的层级 */
+        .el-table__row.current-row {
+            z-index: 0; /* 确保高亮样式在下方 */
+        }
+    </style>
+</head>
+<body>
+
+<div id="app">
+    <el-container>
+        <el-header>
+            <div style="">
+
+            <el-form :inline="true" :model="query" class="demo-form-inline" style="margin-top: 20px">
+
+                <el-button type="primary" @click="clickAdd">新增</el-button>
+                <div style="float: right">
+                    <el-form-item >
+                        <el-input v-model="query.strategy_name" placeholder="策略名称"></el-input>
+                    </el-form-item>
+                    <el-form-item >
+                        <el-select v-model="query.status" placeholder="启用状态">
+                            <el-option label="请选择" value=""></el-option>
+                            <el-option label="启用" value="1"></el-option>
+                            <el-option label="停用" value="0"></el-option>
+                        </el-select>
+                    </el-form-item>
+                    <el-form-item >
+                        <el-select v-model="query.language" placeholder="代码语言">
+                            <el-option label="all" value="all"></el-option>
+                            <el-option label="java" value="java"></el-option>
+                            <el-option label="C/C++" value="C/C++"></el-option>
+                            <el-option label="c#" value="c#"></el-option>
+                            <el-option label="php" value="php"></el-option>
+                            <el-option label="Python" value="Python"></el-option>
+                        </el-select>
+                    </el-form-item>
+                    <el-form-item>
+                        <el-button type="primary" @click="getTableData('chaxun')">查询</el-button>
+                    </el-form-item>
+                </div>
+            </el-form>
+            </div>
+        </el-header>
+        <el-main  style=""> <!-- 添加右侧边框 -->
+            <el-table :data="tableData" style="width:100%" v-loading="loading1">
+                <el-table-column prop="name" label="策略名称" align="center" width=""></el-table-column>
+                <el-table-column prop="language" label="代码语言" align="center" width=""></el-table-column>
+                <el-table-column prop="name_CN" label="缺陷类型" align="center" width=""></el-table-column>
+                <el-table-column prop="func_name" label="清洁函数名称" align="center" width=""></el-table-column>
+                <el-table-column prop="notes" label="备注描述" align="center" width=""></el-table-column>
+                <el-table-column label="操作"  align="center" width="">
+                    <template slot-scope="scope">
+<!--                        <el-popover-->
+<!--                                placement="top"-->
+<!--                                width="160"-->
+<!--                                :visible="scope.row.popoverVisible"-->
+<!--                               >-->
+<!--                            <p>确定停用/启用吗？</p>-->
+<!--                            <div style="text-align: right; margin: 0">-->
+<!--                                <el-button size="mini" type="text" @click="() => {-->
+<!--                              scope.row.popoverVisible = false;-->
+<!--                            }">取消</el-button>-->
+<!--                                <el-button type="primary" size="mini" @click="scope.row.popoverVisible = false">确定</el-button>-->
+<!--                            </div>-->
+<!--                            <el-button slot="reference" type="text" v-if="scope.row.status === '1'" @click="ifUse(scope.row)" style="color:#606266">停用</el-button>-->
+<!--                            <el-button slot="reference" type="text" v-else  @click="ifUse(scope.row)">启用</el-button>-->
+
+<!--                        </el-popover>-->
+                        <el-button type="text" v-if="scope.row.status === '1'" @click="ifUse(scope.row)" style="color:#606266">停用</el-button>
+                        <el-button type="text" v-else  @click="ifUse(scope.row)">启用</el-button>
+                        <el-button type="text" @click="handleChange(scope.row)">编辑</el-button>
+                        <el-button type="text" @click="clickDetails(scope.row)">详情</el-button>
+                        <el-button type="text" @click="delopen(scope.row)">删除</el-button>
+
+                    </template>
+                </el-table-column>
+            </el-table>
+            <el-pagination
+                    @size-change="handleSizeChange"
+                    @current-change="handleCurrentChange"
+                    :current-page="currentPage"
+                    :page-sizes="[10, 20, 50]"
+                    :page-size="pageSize"
+                    layout="total, prev, pager, next"
+                    :total="count">
+            </el-pagination>
+        </el-main>
+
+        <!-- 新建策略 -->
+        <el-dialog :title="dialogTitle" :visible.sync="iscreate" width="40%"  @close="resetForm">
+            <el-form :model="createForm" :disabled="isFormDisabled" :rules="createRules" ref="ruleForm" label-width="120px" class="demo-ruleForm">
+                <el-form-item label="策略名称" prop="name">
+                    <el-input v-model="createForm.name"></el-input>
+                </el-form-item>
+                <el-form-item label="代码语言" prop="language">
+                    <el-select v-model="createForm.language" placeholder="请选择代码语言">
+                        <el-option label="all" value="all"></el-option>
+                        <el-option label="java" value="java"></el-option>
+                        <el-option label="C/C++" value="C/C++"></el-option>
+                        <el-option label="c#" value="c#"></el-option>
+                        <el-option label="php" value="php"></el-option>
+                        <el-option label="Python" value="Python"></el-option>
+                    </el-select>
+                </el-form-item>
+                <el-form-item label="缺陷类型" prop="vul_id">
+                    <el-select v-model="createForm.vul_id" filterable placeholder="请选择缺陷类型">
+                        <el-option v-for="item in allVuls"
+                           :key="item.id"
+                           :label="item.name"
+                           :value="item.id">
+                        </el-option>
+                    </el-select>
+                </el-form-item>
+                <el-form-item label="清洁函数名称" prop="func_name">
+                    <el-input v-model="createForm.func_name"></el-input>
+                </el-form-item>
+                <el-form-item label="备注描述" prop="description">
+                    <el-input v-model="createForm.notes" type="textarea" :rows="3"></el-input>
+                </el-form-item>
+                <el-form-item label="是否启用" prop="status">
+                    <el-switch v-model="createForm.status"  active-value="1"
+                               inactive-value="0"></el-switch>
+                </el-form-item>
+                <el-form-item>
+                    <el-button type="primary" @click="submitForm('ruleForm')" v-if="isNew">立即创建</el-button>
+                    <el-button type="primary" @click="submit_edit" v-else>更新</el-button>
+                    <el-button @click="resetForm">重置</el-button>
+                </el-form-item>
+            </el-form>
+        </el-dialog>
+
+
+
+    </el-container>
+</div>
+
+<script src="../../../../assets/libs/vue/vue.js"></script>
+<script src="../../../../assets/libs/vue/vue-router.js"></script>
+<script type="text/javascript" src="../../../../assets/libs/layui/layui.js"></script>
+<script src="../../../../assets/libs/element/index.js"></script>
+<script src="../../../../assets/libs/jquery-1.11.3.min.js"></script>
+<script src="../../../../assets/js/mainData.js"></script>
+<script src="cleaningFunction.js" ></script>
+</body>
+</html>`

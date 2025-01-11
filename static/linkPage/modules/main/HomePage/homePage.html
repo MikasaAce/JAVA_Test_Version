@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <link rel="stylesheet" href="../../../../assets/libs/element/index.css">
+    <title>首页统计</title>
+    <style>
+        .clearfix:before,
+        .clearfix:after {
+            display: table;
+            content: "";
+        }
+        .clearfix:after {
+            clear: both
+        }
+
+        .box-card1 {
+            /*width: 300px;*/
+            margin: 10px 5px 5px 10px;
+        }
+        .box-card2 {
+            /*width: 160px;*/
+            margin: 10px;
+        }
+        .box-card3 {
+            /*width: 600px;*/
+            margin: 10px;
+        }
+        .card_Header {
+            font-size: 20px;font-weight: bolder;
+        }
+        .topData{
+            width: 100%;
+            height: 90px;
+            /*border: red solid 1px;*/
+            padding: 5px;
+        }
+        .top_title{
+            width: 100%;
+            height: 30px;
+            line-height: 30px;
+            font-size: 16px;
+            color: #7f7f7f;
+            margin-left: 8px;
+        }
+        .top_data{
+            width: 100%;
+            height: 50px;
+            line-height: 50px;
+            font-size: 25px;
+            margin-left: 8px;
+            /*text-align: center;*/
+        }
+
+    </style>
+</head>
+<body>
+<div id="app">
+    <template>
+
+        <el-row :gutter="20">
+            <el-col :span="6"><el-card class="box-card1"  shadow="never">
+                <div slot="header" class="clearfix" style="display: flex">
+                    <span class="card_Header">项目总数图</span>
+                </div>
+                <el-container>
+                    <div id="echarts1" style="width: 100%;height: 180px;"></div>
+                </el-container>
+            </el-card></el-col>
+            <el-col :span="6"><el-card class="box-card1"  shadow="never">
+                <div slot="header" class="clearfix">
+                    <span class="card_Header">任务总数</span>
+                </div>
+                <el-container>
+                    <div id="echarts2" style="width: 100%;height: 180px;"></div>
+                </el-container>
+            </el-card></el-col>
+            <el-col :span="6"><el-card class="box-card1"  shadow="never">
+                <div slot="header" class="clearfix">
+                    <span class="card_Header">总代码量</span>
+                </div>
+                <el-container>
+                    <div id="echarts3" style="width: 100%;height: 180px;"></div>
+                </el-container>
+            </el-card></el-col>
+            <el-col :span="6"><el-card class="box-card1"  shadow="never">
+                <div slot="header" class="clearfix">
+                    <span class="card_Header">缺陷总数</span>
+                </div>
+                <el-container>
+                    <div id="echarts4" style="width: 100%;height: 180px;"></div>
+                </el-container>
+            </el-card></el-col>
+        </el-row>
+
+
+        <el-row :gutter="20" style="margin: 10px">
+            <el-col :span="5">
+                <div class="topData">
+                    <div class="top_title">项目总数:</div>
+                    <div class="top_data">{{count.item_count}}个</div>
+                </div>
+            </el-col>
+            <el-col :span="5">
+                <div class="topData">
+                    <div class="top_title">检测任务数:</div>
+                    <div class="top_data">{{count.task_count}}个</div>
+                </div>
+            </el-col>
+            <el-col :span="5">
+                <div class="topData">
+                    <div class="top_title">已完成检测:</div>
+                    <div class="top_data">{{count.complete_count}}个</div>
+                </div>
+            </el-col>
+            <el-col :span="5">
+                <div class="topData">
+                    <div class="top_title">正在检测:</div>
+                    <div class="top_data">{{count.testing_count}}个</div>
+                </div>
+            </el-col>
+            <el-col :span="4">
+                <div class="topData">
+                    <div class="top_title">检测失败任务数:</div>
+                    <div class="top_data">{{count.fail_count}}个</div>
+                </div>
+            </el-col>
+
+        </el-row>
+
+        <el-row>
+            <el-col :span="12"><el-card class="box-card3"  shadow="never">
+                <div slot="header" class="clearfix">
+                    <span class="card_Header">检测任务新增趋势</span>
+                </div>
+                <el-container>
+                    <div id="echarts5" style="width: 100%;height: 300px;"></div>
+                </el-container>
+            </el-card></el-col>
+            <el-col :span="12"><el-card class="box-card3"  shadow="never">
+                <div slot="header" class="clearfix">
+                    <span class="card_Header">缺陷等级分布</span>
+                </div>
+                <el-container>
+
+                    <div id="echarts6" style="width: 100%;height: 300px;"></div>
+                </el-container>
+            </el-card></el-col>
+        </el-row>
+
+    </template>
+</div>
+
+<script src="../../../../assets/libs/vue/vue.js"></script>
+<script src="../../../../assets/libs/element/index.js"></script>
+<script src="../../../../assets/libs/echarts/echarts.min.js"></script>
+<script src="../../../../assets/libs/jquery-1.11.3.min.js"></script>
+<script src="../../../../assets/js/mainData.js"></script>
+<script src="homePage.js"></script>
+</body>
+</html>

@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <link rel="stylesheet" href="../../../../assets/libs/element/index.css">
+  <link rel="stylesheet" href="SecurityProjectManageNew.css">
+
+  <title>源码安全检测New</title>
+
+</head>
+<!--{% raw %}-->
+
+<body>
+<div id="app" v-cloak>
+
+  <el-row :gutter="20" style="margin: 20px">
+    <el-col :span="2">
+      <el-button type="danger" @click="goback()">返回</el-button>
+    </el-col>
+
+    <el-col :span="21">
+      <el-descriptions class="margin-top" title="" :column="3" border>
+        <el-descriptions-item><template slot="label"><i class="el-icon-mobile-phone"></i>漏洞类型</template>
+          <el-input v-model="bugsType" :disabled="true"></el-input>
+        </el-descriptions-item>
+      </el-descriptions>
+    </el-col>
+    <el-col :span="1">
+      <el-button  circle @click="reload()">
+        <svg t="1703055399666" class="icon" viewBox="0 0 1029 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="4461" width="16" height="16"><path d="M1007.2 262.4c-12.8-6.4-32 0-38.4 19.2l-25.6 70.4C904.8 256 847.2 179.2 757.6 128c-108.8-64-230.4-89.6-352-57.6C232.8 108.8 104.8 236.8 60 409.6 53.6 428.8 66.4 441.6 79.2 448 98.4 448 111.2 441.6 117.6 422.4c38.4-153.6 153.6-268.8 307.2-300.8 108.8-25.6 217.6-6.4 307.2 51.2 76.8 44.8 134.4 115.2 166.4 198.4l-76.8-32c-12.8-6.4-32 0-38.4 19.2-6.4 12.8 0 32 12.8 38.4l128 51.2c6.4 6.4 12.8 6.4 19.2 6.4 0 0 6.4 0 6.4 0 0 0 0 0 0 0 0 0 0 0 6.4 0 6.4 0 12.8-6.4 12.8-12.8L1026.4 294.4C1032.8 281.6 1020 268.8 1007.2 262.4zM949.6 576c-12.8-6.4-32 6.4-32 19.2-38.4 153.6-153.6 268.8-307.2 300.8-108.8 25.6-217.6 6.4-307.2-51.2-76.8-44.8-134.4-115.2-166.4-198.4l76.8 32c12.8 6.4 32 0 38.4-19.2 6.4-12.8 0-32-12.8-38.4L104.8 576C98.4 576 92 569.6 85.6 569.6c0 0-6.4 0-6.4 0 0 0 0 0 0 0 0 0 0 0-6.4 0C66.4 576 60 582.4 60 588.8L2.4 729.6c-6.4 12.8 0 32 19.2 38.4 12.8 6.4 32 0 38.4-19.2l25.6-70.4C124 768 181.6 844.8 271.2 896c108.8 64 230.4 89.6 352 57.6 172.8-38.4 307.2-172.8 345.6-345.6C975.2 595.2 962.4 582.4 949.6 576z" fill="#d81e06" p-id="4462"></path></svg>
+      </el-button>
+    </el-col>
+  </el-row>
+
+  <el-row :gutter="20" style="margin: 20px">
+    <el-col :span="8">
+      <el-descriptions class="margin-top" title="" :column="3" border>
+        <el-descriptions-item><template slot="label"><i class="el-icon-user"></i>漏洞个数</template>
+          <el-input v-model="bugsFile" :disabled="true"></el-input>
+        </el-descriptions-item>
+      </el-descriptions>
+    </el-col>
+    <el-col :span="16">
+      <el-descriptions class="margin-top" title="" :column="3" border>
+        <el-descriptions-item><template slot="label"><i class="el-icon-mobile-phone"></i>高</template>
+          <el-input v-model="high_num" :disabled="true"></el-input>
+        </el-descriptions-item>
+        <el-descriptions-item><template slot="label"><i class="el-icon-mobile-phone"></i>中</template>
+          <el-input v-model="mid_num" :disabled="true"></el-input>
+        </el-descriptions-item>
+        <el-descriptions-item><template slot="label"><i class="el-icon-mobile-phone"></i>低</template>
+          <el-input v-model="low_num" :disabled="true"></el-input>
+        </el-descriptions-item>
+
+      </el-descriptions>
+    </el-col>
+  </el-row>
+
+  <el-row :gutter="20" style="margin: 20px">
+    <el-col :span="24">
+      <el-card class="box-card2">
+        <div slot="header" class="clearfix" style="display: flex">
+          <span style="font-size: 20px;font-weight: bolder;">检测数据</span>
+          <div style="margin-left: 20px">
+            <el-button type="text" @click="opentable1">问题反馈</el-button>
+          </div>
+        </div>
+        <el-container>
+          <el-main>
+            <div>
+                <template>
+                  <el-table :data="tableList_bugsFile">
+                    <el-table-column label="文件名称" prop="vulFileName" width="250"></el-table-column>
+                    <el-table-column label="源代码" prop="befored" width=""></el-table-column>
+                    <el-table-column label="所属类型" prop="vulType" width="150"></el-table-column>
+                    <el-table-column label="漏洞位置" prop="location" width="200"></el-table-column>
+                    <el-table-column label="修复参考" prop="repair" ></el-table-column>
+                    <el-table-column fixed="right" label="操作" width="200">
+                      <template slot-scope="scope">
+                        <el-button @click="repair(scope.row)" type="text" v-if="scope.row.type == '1'">一键修复</el-button>
+                        <el-button @click="download(scope.row)" type="text" v-if="scope.row.url">下载</el-button>
+                      </template>
+                    </el-table-column>
+                  </el-table>
+                  <el-pagination
+                          background
+                          layout="total, sizes, prev, pager, next, jumper"
+                          :total="count"
+                          @current-change="handleCurrentChange"
+                          @size-change="handleSizeChange"
+                          :page-sizes="[5,10,20]"
+                          :current-page="currentPage"
+                          :page-size="pageSize"
+                          style="text-align: center">
+                  </el-pagination>
+                </template>
+
+            </div>
+          </el-main>
+        </el-container>
+      </el-card>
+    </el-col>
+
+  </el-row>
+
+</div>
+
+<script src="../../../../assets/libs/vue/vue.js"></script>
+<script src="../../../../assets/libs/element/index.js"></script>
+<script src="../../../../assets/libs/echarts/echarts.min.js"></script>
+<script src="../../../../assets/libs/jquery-1.11.3.min.js"></script>
+<script src="../../../../assets/js/mainData.js"></script>
+<script src="SecurityProjectManageNew.js"></script>
+</body>
+<!--{% endraw %}-->
+
+</html>

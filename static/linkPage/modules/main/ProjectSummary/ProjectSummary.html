@@ -1,0 +1,262 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport"
+    content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <!--<link rel="stylesheet" href="../../../js/element/index.css">-->
+  <link rel="stylesheet" href="../../../../assets/libs/element/index.css">
+  <link rel="stylesheet" href="ProjectSummary.css">
+
+  <title>项目数据汇总</title>
+  <style>
+      .box-card {
+          /*width: 800px;*/
+          margin: 10px;
+      }
+      .clearfix:before,
+      .clearfix:after {
+          display: table;
+          content: "";
+      }
+      .clearfix:after {
+          clear: both
+      }
+
+      .box-card .el-radio__label {
+          font-size: 20px;
+          margin: 10px;
+      }
+
+      .box-card .el-radio{
+          margin:10px 0;
+          display: block;
+          line-height: 20px;
+
+      }
+      .highlight .highlighted-row {
+          background-color: #ECF5FF; /* 设置高亮显示的背景颜色 */
+      }
+
+
+  </style>
+</head>
+<!--{% raw %}-->
+<body>
+ 
+    <div id="app">
+        <el-row :gutter="20" style="margin: 20px">
+            <div class="slecet" style="margin-right:20px;margin-bottom: 15px; ">
+                <el-form :inline="true" :model="query" class="demo-form-inline" method="post" >
+
+<!--                    <el-form-item label="扫描类型:">-->
+<!--                        <el-select v-model="query.scan_type" placeholder="请选择扫描类型">-->
+<!--                            <el-option label="所有类型" value=""></el-option>-->
+<!--                            <el-option label="快速扫描" value="快速扫描"></el-option>-->
+<!--                            <el-option label="深度扫描" value="深度扫描"></el-option>-->
+<!--                        </el-select>-->
+<!--                    </el-form-item>-->
+
+                  <el-form-item label="项目名称：">
+                    <el-input v-model="query.project_name" placeholder="请输入关键字"></el-input>
+                  </el-form-item>
+
+                  <el-form-item>
+                      <el-button type="primary" @click="checkFormData()">查询</el-button>
+                      <el-button type="primary" @click="createPro()">新建项目</el-button>
+                      <el-button  type="primary" @click="config()">配置策略</el-button>
+                      <el-button  type="primary" @click="iterate()">模型迭代</el-button>
+<!--                      <el-button type="primary" @click="downLoadKnow()">下载漏洞知识库</el-button>-->
+                  </el-form-item>
+                </el-form>
+            </div>
+        </el-row>
+
+        <el-card style="margin: 20px">
+            <div class="head">
+                项目列表
+            </div>
+            <template>
+                <el-table v-loading="loading" :data="tableData" class="table" :header-cell-style="{textAlign:'center'}" :cell-style="{textAlign:'center'}" tooltip-effect="dark" style="width: 100%" >
+                    <el-table-column prop="name" label="项目名称" width="150"></el-table-column>
+                    <el-table-column prop="description" label="项目描述" width="450"></el-table-column>
+                    <el-table-column prop="type" label="扫描类型" width="150"></el-table-column>
+                    <el-table-column prop="language" label="扫描语言" width="150"></el-table-column>
+                    <el-table-column prop="createTime" label="项目创建时间" show-overflow-tooltip></el-table-column>
+<!--                    <el-table-column prop="lastScanTime" label="扫描时间" show-overflow-tooltip></el-table-column>-->
+<!--                    <el-table-column prop="riskLevel" label="风险等级" width="150"></el-table-column>-->
+                    <el-table-column prop="vulTotal" label="漏洞汇总" width="150"></el-table-column>
+                    <el-table-column prop="status" label="任务状态" show-overflow-tooltip>
+
+                    </el-table-column>
+                    <el-table-column  fixed='right' label="操作" width="400px">
+                        <template v-slot="scope">
+                            <el-row style="text-align: center">
+                                <el-col :span="6">
+                                    <el-button size="mini" type="primary" @click="upload(scope.row)">上传源码</el-button>
+                                </el-col>
+                                <el-col :span="6">
+                                    <el-button size="mini" type="primary" @click="view(scope.row)">项目详情</el-button>
+                                </el-col>
+                                <el-col :span="6">
+                                    <el-button size="mini" @click="edit(scope.row)">编辑</el-button>
+                                </el-col>
+<!--                                <el-col :span="4">-->
+<!--                                    <el-button size="mini" type="danger" @click="delopen(scope.row)">删除</el-button>-->
+<!--                                </el-col>-->
+                                <el-col :span="6">
+                                    <el-button size="mini" type="danger" @click="delAllopen(scope.row)">一键删除</el-button>
+                                </el-col>
+                            </el-row>
+                        </template>
+                    </el-table-column>
+                </el-table>
+                <el-pagination
+                        background
+                        layout="total, sizes, prev, pager, next, jumper"
+                        :total="count"
+                        @current-change="handleCurrentChange"
+                        @size-change="handleSizeChange"
+                        :page-sizes="[5,10,20]"
+                        :current-page="currentPage"
+                        :page-size="pageSize"
+                        style="text-align: center">
+                </el-pagination>
+            </template>
+            <el-dialog title="" :visible.sync="configs" width="50%" style="">
+                <el-card class="box-card" shadow="never">
+                    <div slot="header" class="clearfix">
+                        <span style="float: left;font-size: 18px">配置选择</span>
+                    </div>
+                    <el-radio-group v-model="config1">
+                        <el-radio  label="规则">快速扫描+规则定位</el-radio>
+                        <el-radio  label="修复">快速扫描+修复</el-radio>
+                        <el-radio  label="规则_2">组合扫描+规则定位</el-radio>
+<!--                        <el-radio  label="3">快速扫描+规则定位（降误报优先）</el-radio>-->
+<!--                        <el-radio  label="4">快速扫描+规则定位（降漏报优先）</el-radio>-->
+                    </el-radio-group>
+
+                </el-card>
+                <el-card class="box-card" shadow="never">
+                    <div slot="header" class="clearfix">
+                        <span style="float: left;font-size: 18px">模型选择</span>
+                    </div>
+                    <el-table class="highlight" ref="singleTable" :data="tableConfig" :default-sort="{prop: 'description', order: 'descending'}"
+                              highlight-current-row @current-change="handleTableChange" :row-class-name="rowClassName"
+                              style="width: 100%">
+                        <el-table-column
+                          property="model"
+                          label="模型"
+                          width="">
+                        </el-table-column>
+                        <el-table-column
+                          property="description"
+                          label="描述"
+                          width="">
+                        </el-table-column>
+                    </el-table>
+                </el-card>
+                <div style="text-align: center">
+                    <el-button type="primary" @click="save" >保存配置</el-button>
+                </div>
+
+            </el-dialog>
+            <el-dialog title="模型迭代训练" :visible.sync="modelIteration" width="50%" style="text-align: center">
+                <template>
+                    <el-form :model="formIteration">
+                        <el-form-item>
+                            <el-select v-model="formIteration.source"  value-key="id" placeholder="请选择"  @change="chooseModel">
+                                <el-option
+                                  v-for="item in options"
+                                  :key="item.description"
+                                  :label="item.description"
+                                  :value="item.description">
+                                </el-option>
+                            </el-select>
+                        </el-form-item>
+                    </el-form>
+                    <el-upload  ref="iterate" drag :action="iterateUrl" :data="iterateData" :auto-upload="false"
+                                :before-upload="beforeUpload" :file-list="fileListTrain" :show-file-list="isShowList"
+                                :on-success="uploadSuccess" v-loading="loading" :limit=1 :on-remove="removeList"
+                                accept='.zip, .rar,' style="margin-top: 15px">
+                        <i class="el-icon-upload"></i>
+                        <div class="el-upload__text">将需要训练的文件压缩包拖到此处，或<em>点击上传</em></div>
+                    </el-upload>
+                    <div style="height:10px"></div>
+                    <el-button type="primary" @click="uploadModel()">迭代</el-button>
+                    <el-button  @click="modelIteration = false">取消</el-button>
+                </template>
+            </el-dialog>
+            <el-dialog title="新建项目" :visible.sync="getAlert" width="50%" >
+                <el-form ref="form" :model="form" label-width="120px" :rules="rules">
+                    <el-form-item label="项目名称:" prop="name">
+                        <el-input v-model="form.name"></el-input>
+                    </el-form-item>
+                    <el-form-item label="项目描述:" prop="description">
+                        <el-input v-model="form.description"></el-input>
+                    </el-form-item>
+<!--                    <el-form-item label="扫描类型:" prop="type">-->
+<!--                        <el-select v-model="form.type" placeholder="请选择扫描类型">-->
+<!--                            <el-option label="快速扫描" value="快速扫描"></el-option>-->
+<!--                            <el-option label="深度扫描" value="深度扫描"></el-option>-->
+<!--                        </el-select>-->
+<!--                    </el-form-item>-->
+                    <el-form-item label="代码语言:" prop="language">
+                        <el-radio-group v-model="form.language">
+                            <el-radio label="java"></el-radio>
+                            <el-radio label="C/C++" disabled></el-radio>
+                            <el-radio label="c#" disabled></el-radio>
+                            <el-radio label="php" disabled></el-radio>
+                            <el-radio label="Python" disabled></el-radio>
+                        </el-radio-group>
+                    </el-form-item>
+
+                    <el-form-item>
+                        <el-button type="primary" @click="create()" v-if="isshow=='1'">立即创建</el-button>
+                        <el-button type="primary" @click="editsubmit()" v-else-if="isshow=='2'" >更新</el-button>
+                        <el-button @click="getAlert = false">取消</el-button>
+                    </el-form-item>
+                </el-form>
+            </el-dialog>
+
+            <el-dialog title="上传(仅支持上传压缩包)" :visible.sync="getupload" width="50%" style="text-align: center">
+<!--                <div style="height: 50px">-->
+<!--                    <el-radio-group v-model="radio" @change="handleChange1">-->
+<!--                        <el-radio label="检测"><span style="font-size: 17px">快速检测</span></el-radio>-->
+<!--                        <el-radio label="修复"><span style="font-size: 17px">检测修复</span></el-radio>-->
+<!--                    </el-radio-group>-->
+<!--                </div>-->
+<!--                <div style="height: 50px" v-show="showmutilab">-->
+<!--                    <el-radio-group v-model="mutilab" @change="handleChange2" >-->
+<!--                        <el-radio label="True"><span style="font-size: 17px">多标签</span></el-radio>-->
+<!--                        <el-radio label="Fasle"><span style="font-size: 17px">单标签</span></el-radio>-->
+<!--                    </el-radio-group>-->
+<!--                </div>-->
+                <el-upload  ref="upload" drag :action="trainUrl" :data="uploadData" :auto-upload="false"
+                            :before-upload="beforeUpload" :file-list="fileListTrain" :show-file-list="isShowList"
+                            :on-success="uploadSuccess" v-loading="loading" :limit=1 :on-remove="removeList"
+                            accept='.zip, .rar,' style="margin-top: 15px">
+                    <i class="el-icon-upload"></i>
+                    <div class="el-upload__text">将需要检测的文件压缩包拖到此处，或<em>点击上传</em></div>
+                </el-upload>
+                <div style="height:10px"></div>
+                <el-button type="primary" @click="submitUpload()">立即上传</el-button>
+                <el-button  @click="getupload = false">取消</el-button>
+            </el-dialog>
+        </el-card>
+
+       
+    </div>
+
+  <script src="../../../../assets/libs/vue/vue.js"></script>
+  <script src="../../../../assets/libs/element/index.js"></script>
+  <script src="../../../../assets/libs/jquery-1.11.3.min.js"></script>
+    <script src="../../../../assets/js/mainData.js"></script>
+  <script src="ProjectSummart.js" ></script>
+
+
+</body>
+<!--{% endraw %}-->
+</html>

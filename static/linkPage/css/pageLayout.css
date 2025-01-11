@@ -1,0 +1,31 @@
+[v-cloak]{
+    display: none;
+}
+
+.el-header, .el-footer {
+    color: #333;
+    border-bottom: solid #e2e2e2 0.2px;
+    color: rgba(0, 0, 0, 0.85);
+    font-weight: bold;
+    font-size: 16px;
+    margin-left: 15px;
+    line-height: 60px;
+}
+
+body{
+    background-color: transparent;
+}
+.ant-layout-header{
+    background-color: transparent;
+    color: #333;
+    border-bottom: solid #e2e2e2 0.2px;
+    color: rgba(0, 0, 0, 0.85);
+    font-weight: bold;
+    font-size: 16px;
+    margin-left: 15px;
+    line-height: 60px;
+}
+.ant-layout-content{
+    padding: 20px 20px 50px 20px;
+    /*background-color: white;*/
+}

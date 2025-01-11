@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport"
+        content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <!--<link rel="stylesheet" href="../../../js/element/index.css">-->
+  <link rel="stylesheet" href="../../../../assets/libs/element/index.css">
+<!--  <link rel="stylesheet" href="ProjectSummary.css">-->
+
+  <title></title>
+  <style>
+      body{
+          background-color: #EDEFF7;
+      }
+      body::-webkit-scrollbar {
+          display: none;
+      }
+      ::-webkit-scrollbar {
+          /*隐藏滚轮*/
+          display: none;
+      }
+      [v-cloak] {
+          display: none;
+      }
+      .msgCss {
+          font-size: 16px;
+          font-weight: 500;
+          height: auto;
+      }
+    .touxiang{
+        width: 50px;
+        height: 50px;
+        vertical-align: middle;
+        border-radius: 50%;
+        padding-right: 10px;
+    }
+    .title{
+        background-color: #e4dbee;
+        width: 100%;
+        height: 50px;
+        line-height: 50px;
+        text-align: center;
+        /*color: red;*/
+        font-size: 20px;
+    }
+    .border_text{
+        padding: 10px;
+        border-radius: 10px;
+        border: #E1E0F4 solid 1px;
+        background-color: #FDFDFE;
+    }
+    .chatText{
+        width: 80%;
+        font-size: 16px;
+        line-height: 30px;
+        font-weight: 500;
+    }
+      /*.el-menu-vertical-demo{*/
+      /*    float: right;*/
+      /*    width: 35%;*/
+      /*    height: 750px;*/
+      /*    !*background-color: #DEDDF4;*!*/
+      /*    background: linear-gradient(to bottom, #EEE8EC, #DDDDF5);*/
+      /*}*/
+      .container {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 16px;
+        /*background-color: white;*/
+        padding: 20px;
+        /*border-radius: 8px;*/
+        /*box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);*/
+        /*width: 90%;*/
+        margin: auto;
+      }
+      .card {
+        display: flex;
+        align-items: center;
+        background-color: #f7f8fc;
+        padding: 20px;
+        border-radius: 8px;
+        transition: box-shadow 0.3s;
+      }
+      .card:hover {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      }
+      .card-icon {
+        margin-right: 16px;
+        font-size: 24px;
+      }
+      .card-content {
+        flex: 1;
+      }
+      .card-title {
+        font-weight: bold;
+        margin-bottom: 8px;
+        color: #333;
+      }
+      .card-description {
+        font-size: 14px;
+        color: #666;
+      }
+
+      .header {
+        margin-bottom: 20px;
+      }
+      .header h1 {
+        margin: 0;
+        font-size: 24px;
+        color: #333;
+      }
+      .header p {
+        margin: 10px 0 0;
+        font-size: 14px;
+        color: #666;
+      }
+
+      .content {
+        /*text-align: center;*/
+        background-color: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        width: 90%;
+      }
+      /*鼠标点击后移开，恢复本身样式*/
+      .buttonDiv, .buttonDiv:focus{
+        border: 1px solid #717379;
+        color: #FFF;
+        background: #717379;
+      }
+      /*鼠标悬浮，没有按下；鼠标按下后抬起，没有移开*/
+      .buttonDiv:active, .buttonDiv:hover{
+        background: #a6a9ad;
+        border: 1px solid #a6a9ad !important;
+        color: #FFF;
+      }
+
+  </style>
+</head>
+<!--{% raw %}-->
+<body >
+
+<div id="app" v-cloak>
+  <el-container>
+    <el-container>
+      <el-main >
+        <el-row type="flex" class="row-bg" justify="center">
+<!--          <el-col :span="8">-->
+<!--            <el-menu default-active="1" class="el-menu-vertical-demo" @open="handleOpen" @close="handleClose">-->
+<!--              <el-menu-item index="1" @click="handleMenuClick('代码漏洞检测')">-->
+<!--                <i class="el-icon-document"></i>-->
+<!--                <span slot="title">AIsecurity</span>-->
+<!--              </el-menu-item>-->
+<!--              <el-menu-item index="2" @click="handleMenuClick('代码修复')">-->
+<!--                <i class="el-icon-document"></i>-->
+<!--                <span slot="title">代码修复</span>-->
+<!--              </el-menu-item>-->
+<!--              <el-menu-item index="3" @click="handleMenuClick('质量检测')">-->
+<!--                <i class="el-icon-document"></i>-->
+<!--                <span slot="title">质量检测</span>-->
+<!--              </el-menu-item>-->
+<!--              <el-menu-item index="4" @click="handleMenuClick('代码生成')">-->
+<!--                <i class="el-icon-document"></i>-->
+<!--                <span slot="title">代码生成</span>-->
+<!--              </el-menu-item>-->
+<!--              <el-menu-item index="5" @click="handleMenuClick('代码补全')">-->
+<!--                <i class="el-icon-document"></i>-->
+<!--                <span slot="title">代码补全</span>-->
+<!--              </el-menu-item>-->
+<!--              <el-menu-item index="6" @click="handleMenuClick('代码翻译')">-->
+<!--                <i class="el-icon-document"></i>-->
+<!--                <span slot="title">代码翻译</span>-->
+<!--              </el-menu-item>-->
+<!--              <el-menu-item index="7" @click="handleMenuClick('文本生成SQL')">-->
+<!--                <i class="el-icon-document"></i>-->
+<!--                <span slot="title">文本生成SQL</span>-->
+<!--              </el-menu-item>-->
+<!--              <el-menu-item index="8" @click="handleMenuClick('克隆检测')">-->
+<!--                <i class="el-icon-document"></i>-->
+<!--                <span slot="title">克隆检测</span>-->
+<!--              </el-menu-item>-->
+<!--            </el-menu>-->
+<!--          </el-col>-->
+<!--          <el-col :span="12" >-->
+            <div  style="width: 70%;height: 80%;" >
+              <template v-loading="loading" >
+<!--                <div class="title">-->
+<!--                  {{menuName}}-->
+<!--                </div>-->
+                <div style="display: flex;justify-content: center;align-items: center;height: 700px"  v-if="display">
+                  <div class="content">
+                    <div class="header">
+                      <h1>你好，我是AIsecurity</h1>
+                      <p>你可以试着问问我:</p>
+                    </div>
+                    <div class="container">
+                      <div class="card"  @click="exam1()">
+                        <div class="card-icon">🎥</div>
+                        <div class="card-content">
+                          <div class="card-title">代码生成</div>
+                          <div class="card-description">{{truncateFileName(example1,'20')}}</div>
+                        </div>
+                      </div>
+                      <div class="card"  @click="exam2()">
+                        <div class="card-icon">📦</div>
+                        <div class="card-content">
+                          <div class="card-title">代码修复</div>
+                          <div class="card-description">{{truncateFileName(example2,'17')}}</div>
+                        </div>
+                      </div>
+                      <div class="card"  @click="exam3()">
+                        <div class="card-icon">❔</div>
+                        <div class="card-content">
+                          <div class="card-title">代码理解</div>
+                          <div class="card-description">{{truncateFileName(example3,'22')}}</div>
+                        </div>
+                      </div>
+                      <div class="card"  @click="exam4()">
+                        <div class="card-icon">💡</div>
+                        <div class="card-content">
+                          <div class="card-title">代码翻译</div>
+                          <div class="card-description">{{truncateFileName(example4,'20')}}</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div style="height: 700px;overflow:auto;" id="bigBox" v-else>
+                  <div v-for="(item, index) in list" class="msgCss" style="text-align: left">
+                    <div style="display: flex;margin-top: 10px">
+                      <div>
+                        <img class="touxiang" v-if="item.align == 'left'" src="./img/LOGO.png"/>
+                        <img class="touxiang" v-else src="./img/me.png"/>
+                      </div>
+                      <div class="border_text" >
+                        <span class="chatText" v-html="item.text"></span>
+                      </div>
+
+                    </div>
+                  </div>
+                 
+                </div>
+                <div style="margin-top: 15px;display:flex;" >
+                  <el-input placeholder="请输入你的问题吧！" v-model="input3" class="input-with-select" :autofocus="true" ref="serachBox">
+
+                  </el-input>
+                  <el-button :loading="loading" @keydown.enter.native="handleMsg" slot="append" type="info" class="buttonDiv" @click="handleMsg">发送</el-button>
+                </div>
+              </template>
+            </div>
+<!--          </el-col>-->
+        </el-row>
+
+      </el-main>
+    </el-container>
+  </el-container>
+
+
+</div>
+
+<script src="../../../../assets/libs/vue/vue.js"></script>
+<script src="../../../../assets/libs/element/index.js"></script>
+<script src="../../../../assets/libs/jquery-1.11.3.min.js"></script>
+<script src="../../../../assets/js/mainData.js"></script>
+<script src="chatHome.js" ></script>
+
+
+</body>
+<!--{% endraw %}-->
+</html>

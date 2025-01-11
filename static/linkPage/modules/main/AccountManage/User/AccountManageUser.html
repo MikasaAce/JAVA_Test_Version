@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>账户管理/用户管理</title>
+
+  <link rel="stylesheet" href="../../../../../assets/libs/element/index.css">
+  <link rel="stylesheet" href="AccountManageUser.css">
+</head>
+<body>
+  <div id="app" v-cloak>
+    <el-row :gutter="10" style="margin: 20px;" >
+      <el-breadcrumb separator-class="el-icon-arrow-right">
+        <el-breadcrumb-item>用户管理</el-breadcrumb-item>
+      </el-breadcrumb>
+    </el-row>
+
+    <el-row :gutter="10" style="margin: 10px">
+<!--      <el-col :span="4">-->
+<!--        <el-card class="box-card">-->
+<!--          <el-input-->
+<!--            placeholder="搜索团队"-->
+<!--            v-model="filterText">-->
+<!--          </el-input>-->
+
+<!--          <el-tree-->
+<!--            class="filter-tree"-->
+<!--            :data="data"-->
+<!--            :props="defaultProps"-->
+<!--            default-expand-all-->
+<!--            :filter-node-method="filterNode"-->
+<!--            ref="tree">-->
+<!--          </el-tree>-->
+<!--        </el-card>-->
+
+
+<!--      </el-col>-->
+
+      <el-col :span="24">
+        <el-card class="box-card">
+          <template>
+            <div style="margin-bottom: 20px">
+              <el-form :inline="true" :model="query" class="demo-form-inline" method="post" >
+                <el-form-item label="用户名称">
+                  <el-input v-model="query.name" placeholder="请输入关键字"></el-input>
+                </el-form-item>
+                <el-form-item label="登录账号：">
+                  <el-input v-model="query.account" placeholder="请输入关键字"></el-input>
+                </el-form-item>
+
+                <el-form-item>
+                  <el-button type="primary" @click="checkFormData()">查询</el-button>
+                  <el-button type="primary" @click="addUser" icon="el-icon-user">新建用户</el-button>
+                </el-form-item>
+              </el-form>
+
+            </div>
+            <el-table
+              ref="multipleTable"
+              :data="tableData"
+              tooltip-effect="dark"
+              style="width: 100%">
+              <el-table-column prop="username" label="用户名称" ></el-table-column>
+              <el-table-column prop="account" label="登录账号" ></el-table-column>
+              <el-table-column prop="role" label="角色" >
+                <template slot-scope="scope">
+                  <span v-if="scope.row.role==='0'">管理员</span>
+                  <span v-else-if="scope.row.role==='1'">普通用户</span>
+                </template>
+              </el-table-column>
+              <el-table-column prop="teamName" label="团队名称" ></el-table-column>
+              <el-table-column label="操作" >
+                <template slot-scope="scope">
+                  <el-button type="text" @click="handleEdit(scope.row)">编辑</el-button>
+                  <el-button type="text" @click="handleResetPassword(scope.row)">修改密码</el-button>
+                  <el-button type="text" @click="delopen(scope.row)" :disabled="scope.row.role =='0'">删除</el-button>
+                </template>
+
+              </el-table-column>
+            </el-table>
+            <el-pagination
+                    background
+                    layout="total, sizes, prev, pager, next, jumper"
+                    :total="count"
+                    @current-change="handleCurrentChange"
+                    @size-change="handleSizeChange"
+                    :page-sizes="[5,10,20]"
+                    :current-page="currentPage"
+                    :page-size="pageSize"
+                    style="text-align: center">
+            </el-pagination>
+
+            <el-dialog :title="addUserTitle" :visible.sync="addUserDialog" width="50%" >
+              <el-form ref="addform" :model="addform" label-width="100px" :rules="rules1">
+                <el-form-item label="用户名称:" prop="username">
+                  <el-input v-model="addform.username"></el-input>
+                </el-form-item>
+                <el-form-item label="登录账号:" v-if="isshow=='1'" prop="account">
+                  <el-input v-model="addform.account"></el-input>
+                </el-form-item >
+                <el-form-item label="登录密码:" v-if="isshow=='1'" prop="password">
+                  <el-input v-model="addform.password" type="password" show-password autocomplete="off"></el-input>
+                </el-form-item>
+
+                <el-form-item>
+                  <el-button type="primary" @click="createUser()" v-if="isshow=='1'">立即创建</el-button>
+                  <el-button type="primary" @click="editUser()" v-else-if="isshow=='2'" >更新</el-button>
+                  <el-button @click="addUserDialog = false">取消</el-button>
+                </el-form-item>
+              </el-form>
+            </el-dialog>
+
+            <el-dialog title="修改密码" :visible.sync="pwdDialog" width="50%" >
+              <el-form ref="changeform" :model="changeform" label-width="80px" :rules="rules2">
+                <el-form-item label="原密码:"  prop="pwd">
+                  <el-input v-model="changeform.pwd" ></el-input>
+                </el-form-item>
+                <el-form-item label="新密码:" prop="pwdnew">
+                  <el-input v-model="changeform.pwdnew" type="password" show-password autocomplete="off"></el-input>
+                </el-form-item>
+
+                <el-form-item>
+                  <el-button type="primary" @click="changePwd()">确定修改</el-button>
+                  <el-button @click="pwdDialog = false">取消</el-button>
+                </el-form-item>
+              </el-form>
+            </el-dialog>
+
+          </template>
+        </el-card>
+
+      </el-col>
+    </el-row>
+
+
+  </div>
+
+  <script src="../../../../../assets/libs/vue/vue.js"></script>
+  <script src="../../../../../assets/libs/element/index.js"></script>
+  <script src="../../../../../assets/libs/echarts/echarts.min.js"></script>
+  <script src="../../../../../assets/libs/jquery-1.11.3.min.js"></script>
+    <script src="../../../../../assets/js/mainData.js"></script>
+  <script src="AccountManageUser.js"></script>
+</body>
+</html>
