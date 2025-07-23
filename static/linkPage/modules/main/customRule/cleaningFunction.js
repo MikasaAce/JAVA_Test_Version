@@ -140,7 +140,7 @@ var vm = new Vue({
                     vul_id: that.createForm.vul_id ? that.createForm.vul_id : '',
                     func_name: that.createForm.func_name ? that.createForm.func_name : '',
                     notes: that.createForm.notes ? that.createForm.notes : '',
-                    status: that.createForm.status ? that.createForm.status : '',
+                    status: that.createForm.status ? that.createForm.status : '0',
                 },
                 type: 'post',
                 dataType: 'JSON',

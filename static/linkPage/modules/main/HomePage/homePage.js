@@ -1,3 +1,4 @@
+
 let mymessage = {}
 
 var a = new Vue({
@@ -30,14 +31,47 @@ var a = new Vue({
             data3:[0,0,0,0,0],
             data4:[0,0,0,0,0],
             data5:[0,0,0,0,0,0,0,0,0,0,0,0],
+            data5new:[0,0,0,0,0,0,0,0,0,0,0,0],
             data6:{},
+            chartInstances: [], // 新增图表实例数组
+            topName:[
+                {vultype:"暂无数据",vul_num:0},
+                {vultype:"暂无数据",vul_num:0},
+                {vultype:"暂无数据",vul_num:0},
+                {vultype:"暂无数据",vul_num:0},
+                {vultype:"暂无数据",vul_num:0},
+                {vultype:"暂无数据",vul_num:0},
+                {vultype:"暂无数据",vul_num:0},
+                {vultype:"暂无数据",vul_num:0},
+                {vultype:"暂无数据",vul_num:0},
+                {vultype:"暂无数据",vul_num:0},
+            ]
 
 
 
         }
     },
-    methods:{
+    // 修改所有渲染方法（示例为 renderEcharts1）
+    renderEcharts1() {
+        const dom = document.getElementById('echarts1');
+        dom.style.height = dom.parentElement.offsetHeight + 'px'; // 动态设置高度
 
+        const chart = echarts.init(dom);
+        this.chartInstances.push(chart); // 注册实例到数组
+        chart.setOption(this.option1, true);
+
+        // 移除原有的 resize 调用
+    },
+    methods:{
+        handleChartsResize() {
+            this.chartInstances.forEach(chart => {
+                chart.resize({
+                    width: 'auto',
+                    height: 'auto',
+                    silent: true // 静默模式提升性能
+                });
+            });
+        },
         //第二行的数据
         getNumber() {
             const that = this
@@ -49,7 +83,7 @@ var a = new Vue({
                     method: 'get_item_num',
                 },
                 success: function (res) {
-                    console.log(res.data);
+                    // console.log(res.data);
                     that.count = res.data
                 },
                 error: function (err) {
@@ -72,7 +106,7 @@ var a = new Vue({
                     method: 'Homepage_statistics',
                 },
                 success: function (res) {
-                    console.log(res)
+                    // console.log(res)
                     if (res.filelist1.length){
                         var n = res.filelist1.length    //有n年的数据
                         var nn = res.filelist2.length
@@ -82,65 +116,25 @@ var a = new Vue({
                         that.year = res.filelist1[n-1].year     //最近的年份
                         that.years = [that.year-4,that.year-3,that.year-2,that.year-1,that.year]
                         // console.log(that.years)
-                        //第一个图
-                        for (let i = 0;i < n ;i++) {
-                            if(res.filelist1[i].year == that.years[0]){
-                                that.data1[0] = res.filelist1[i].item_sum
-                            } else if(res.filelist1[i].year == that.years[1]){
-                                that.data1[1] = res.filelist1[i].item_sum
-                            }else if(res.filelist1[i].year == that.years[2]){
-                                that.data1[2] = res.filelist1[i].item_sum
-                            }else if(res.filelist1[i].year == that.years[3]){
-                                that.data1[3] = res.filelist1[i].item_sum
-                            }else if(res.filelist1[i].year == that.years[4]){
-                                that.data1[4] = res.filelist1[i].item_sum
-                            }
+                        if (res.filelist1.length > 0) {
+                            res.filelist1.forEach((item) => {
+                                that.data1[item.year - that.year + 4] = item.item_sum
+                            })
                         }
-                        // console.log(that.data1)
-                        // 第二个图
-                        for (let i = 0;i < nn ;i++) {
-                            if(res.filelist2[i].year == that.years[0]){
-                                that.data2[0] = res.filelist2[i].task_sum
-                            } else if(res.filelist2[i].year == that.years[1]){
-                                that.data2[1] = res.filelist2[i].task_sum
-                            }else if(res.filelist2[i].year == that.years[2]){
-                                that.data2[2] = res.filelist2[i].task_sum
-                            }else if(res.filelist2[i].year == that.years[3]){
-                                that.data2[3] = res.filelist2[i].task_sum
-                            }else if(res.filelist2[i].year == that.years[4]){
-                                that.data2[4] = res.filelist2[i].task_sum
-                            }
-                            // console.log(that.data2)
+                       if (res.filelist2.length > 0) {
+                           res.filelist2.forEach((item) => {
+                               that.data2[item.year - that.year + 4] = item.task_sum
+                           })
+                       }
+                        if (res.filelist3.length > 0) {
+                            res.filelist3.forEach((item) => {
+                                that.data3[item.year - that.year + 4] = item.code_sum
+                            })
                         }
-
-                        // 第三个图
-                        for (let i = 0;i < nnn ;i++) {
-                            if(res.filelist3[i].year == that.years[0]){
-                                that.data3[0] = res.filelist3[i].code_sum
-                            } else if(res.filelist3[i].year == that.years[1]){
-                                that.data3[1] = res.filelist3[i].code_sum
-                            }else if(res.filelist3[i].year == that.years[2]){
-                                that.data3[2] = res.filelist3[i].code_sum
-                            }else if(res.filelist3[i].year == that.years[3]){
-                                that.data3[3] = res.filelist3[i].code_sum
-                            }else if(res.filelist3[i].year == that.years[4]){
-                                that.data3[4] = res.filelist3[i].code_sum
-                            }
-                            // console.log(that.data3)
-                        }
-                        // 第四个图
-                        for (let i = 0;i < nnnn ;i++) {
-                            if(res.filelist4[i].year == that.years[0]){
-                                that.data4[0] = res.filelist4[i].vul_sum
-                            } else if(res.filelist4[i].year == that.years[1]){
-                                that.data4[1] = res.filelist4[i].vul_sum
-                            }else if(res.filelist4[i].year == that.years[2]){
-                                that.data4[2] = res.filelist4[i].vul_sum
-                            }else if(res.filelist4[i].year == that.years[3]){
-                                that.data4[3] = res.filelist4[i].vul_sum
-                            }else if(res.filelist4[i].year == that.years[4]){
-                                that.data4[4] = res.filelist4[i].vul_sum
-                            }
+                        if (res.filelist4.length > 0) {
+                            res.filelist4.forEach((item) => {
+                                that.data4[item.year - that.year + 4] = item.vul_sum
+                            })
                         }
 
                     } else {     //如果没有数据
@@ -165,16 +159,27 @@ var a = new Vue({
                 this.renderEcharts1()
             })
         },
+
         //代码漏洞等级分布参数配置
         getechart1() {
             const that = this;
+            const commonGrid = {
+                containLabel: true,
+                top: 20,
+                right: 15,
+                bottom: 25,
+                left: 15
+            };
             // 指定图表的配置项和数据
             this.option1 = {
                 //网格
                 grid: {
-                    bottom: '5%',
-                    containLabel: true,  //刻度标签,常用于『防止标签溢出』
+                    bottom: '15%',
+                    // containLabel: true,  //刻度标签,常用于『防止标签溢出』
+                    ...commonGrid,
                 },
+                animation: false, // 关闭动画提升 resize 性能
+                throttle: 100, // 事件节流
                 //提示框
                 tooltip: {
                     trigger: 'axis',  //坐标轴触发
@@ -262,11 +267,24 @@ var a = new Vue({
         },
         getechart2() {
             const that = this;
+            const commonGrid = {
+                containLabel: true,  //刻度标签,常用于『防止标签溢出』
+                top: 20,
+                right: 15,
+                bottom: 25,
+                left: 15
+            };
             this.option2 = {
+                // grid: {
+                //     bottom: '5%',
+                //     containLabel: true,
+                // },
                 grid: {
-                    bottom: '5%',
-                    containLabel: true,
+                    bottom: '15%',
+                    ...commonGrid,
                 },
+                animation: false, // 关闭动画提升 resize 性能
+                throttle: 100, // 事件节流
                 tooltip : {
                     trigger: 'item'
                 },
@@ -308,11 +326,24 @@ var a = new Vue({
         },
         getechart3() {
             const that = this;
+            const commonGrid = {
+                containLabel: true,
+                top: 20,
+                right: 15,
+                bottom: 25,
+                left: 15
+            };
             this.option3 = {
+                // grid: {
+                //     bottom: '5%',
+                //     containLabel: true,
+                // },
                 grid: {
-                    bottom: '5%',
-                    containLabel: true,
+                    bottom: '15%',
+                    ...commonGrid,
                 },
+                animation: false, // 关闭动画提升 resize 性能
+                throttle: 100, // 事件节流
                 tooltip : {
                     trigger: 'axis'
                 },
@@ -352,12 +383,17 @@ var a = new Vue({
                         name:'总代码量',
                         type:'bar',    //柱状图
                         data:that.data3,
-                        markPoint : {
-                            data : [
-                                {type : 'max', name: '最大值'},
-                                {type : 'min', name: '最小值'}
-                            ]
-                        },
+                        // markPoint : {
+                        //     symbolSize: 30, // 标记点大小
+                        //     data : [
+                        //         {type : 'max', name: '最大值', label: {
+                        //                 fontSize: 12 // 适当缩小字号
+                        //             }},
+                        //         {type : 'min', name: '最小值',label: {
+                        //                 fontSize: 12
+                        //             }}
+                        //     ]
+                        // },
 
                         itemStyle: {
                             opacity: 0.7,
@@ -386,7 +422,13 @@ var a = new Vue({
         },
         getechart4() {
             const that = this;
-
+            const commonGrid = {
+                containLabel: true,
+                top: 20,
+                right: 15,
+                bottom: 25,
+                left: 15
+            };
             this.option4 = {
                 tooltip: {
                     trigger: 'axis',
@@ -397,10 +439,16 @@ var a = new Vue({
                         },
                     },
                 },
+                // grid: {
+                //     bottom: '5%',
+                //     containLabel: true,
+                // },
                 grid: {
-                    bottom: '5%',
-                    containLabel: true,
+                    bottom: '15%',
+                    ...commonGrid,
                 },
+                animation: false, // 关闭动画提升 resize 性能
+                throttle: 100, // 事件节流
                 color: ['#019688', '#119AC2'],
                 xAxis: [
                     {
@@ -492,35 +540,15 @@ var a = new Vue({
                     year: that.year,
                 },
                 success: function (res) {
-                    console.log(res)
-                    //看返回的数据是哪几个月的，然后赋值对应月份的数据
-                    for (let i = 0;i < res.length ;i++) {
-                        if(res[i].month === 1){
-                            that.data5[0] = res[i].task_count
-                        } else if(res[i].month === 2){
-                            that.data5[1] = res[i].task_count
-                        }else if(res[i].month === 3){
-                            that.data5[2] = res[i].task_count
-                        }else if(res[i].month === 4){
-                            that.data5[3] = res[i].task_count
-                        }else if(res[i].month === 5){
-                            that.data5[4] = res[i].task_count
-                        } else if(res[i].month === 6){
-                            that.data5[5] = res[i].task_count
-                        }else if(res[i].month === 7){
-                            that.data5[6] = res[i].task_count
-                        }else if(res[i].month === 8){
-                            that.data5[7] = res[i].task_count
-                        }else if(res[i].month === 9){
-                            that.data5[8] = res[i].task_count
-                        } else if(res[i].month === 10){
-                            that.data5[9] = res[i].task_count
-                        }else if(res[i].month === 11){
-                            that.data5[10] = res[i].task_count
-                        }else if(res[i].month === 12){
-                            that.data5[11] = res[i].task_count
-                        }
+                    // console.log(res)
+
+                    if (res[0]) {
+                        res.forEach(item => {
+                            that.data5new[item.month - 1] = item.total_vul
+                            that.data5[item.month - 1] = item.task_count
+                        })
                     }
+
                     // console.log(that.data5)
                 },
                 error: function (err) {
@@ -535,11 +563,23 @@ var a = new Vue({
         },
         getechart5() {
             const that = this;
+            const commonGrid = {
+                containLabel: true,
+                top: 35,
+                right: 38,
+                bottom: 25,
+                left: 15
+            };
             this.option5 = {
                 grid: {
-                    bottom: '5%',
-                    containLabel: true,
+                    ...commonGrid,
+                    bottom: '15%',
                 },
+                legend: {
+                    data: ['Direct', 'Search Engine']
+                },
+                animation: false, // 关闭动画提升 resize 性能
+                throttle: 100, // 事件节流
                 tooltip : {
                     trigger: 'axis'
                 },
@@ -555,13 +595,15 @@ var a = new Vue({
                 },
                 series : [
                     {
-                        name:'检测任务数',         //用于tooltip的显示
+                        name:'检出缺陷数',         //用于tooltip的显示
                         type:'line',            //折线/面积图
                         symbolSize:8,          // 设置折线上圆点大小
                         symbol: 'none',       // 设置小圆点消失,注意：设置symbol: 'none'以后，拐点不存在了，设置拐点上显示数值无效
                         smooth: 0.5,         // 设置折线弧度，取值：0-1之间
-                        data: this.data5,
+                        data: this.data5new,
                         markPoint : {
+                            // symbol: 'pin', // 改用图钉形状
+                            symbolSize: 40,
                             data : [
                                 {type : 'max', name: '最大值'},
                                 // {type : 'min', name: '最小值'}
@@ -571,7 +613,70 @@ var a = new Vue({
                             data:[
                                 {type:'average',name:'平均值'}
                             ]
-                        }
+                        },
+                        itemStyle: {
+                            normal: {
+                                color: '#c23531', //折点颜色
+                                lineStyle: {
+                                    color: '#c23531' //折线颜色
+                                }
+                            }
+                        },
+                        //线下阴影
+                        areaStyle: {
+                            normal: {
+                                color: {
+                                    x: 0,
+                                    y: 0,
+                                    x2: 0,
+                                    y2: 1,
+                                    colorStops: [{
+                                        offset: 0,
+                                        color: "#ef9890" // 0% 处的颜色
+                                    }, {
+                                        offset: 0.7,
+                                        color: "#ef9890" // 100% 处的颜色
+                                    }],
+                                    globalCoord: false // 缺省为 false
+                                }
+                            }
+                        },
+                    },
+                    {
+                        name:'检测任务数',         //用于tooltip的显示
+                        type:'line',            //折线/面积图
+                        symbolSize:8,          // 设置折线上圆点大小
+                        symbol: 'none',       // 设置小圆点消失,注意：设置symbol: 'none'以后，拐点不存在了，设置拐点上显示数值无效
+                        smooth: 0.5,         // 设置折线弧度，取值：0-1之间
+                        data: this.data5,
+                        itemStyle: {
+                            normal: {
+                                color: '#0a5696', //折点颜色
+                                lineStyle: {
+                                    color: '#0a5696' //折线颜色
+                                }
+                            }
+                        },
+                        //线下阴影
+                        areaStyle: {
+                            normal: {
+                                color: {
+                                    x: 0,
+                                    y: 0,
+                                    x2: 0,
+                                    y2: 1,
+                                    colorStops: [{
+                                        offset: 0,
+                                        color: "#5bafe5" // 0% 处的颜色
+                                    }, {
+                                        offset: 0.7,
+                                        color: "#5bafe5" // 100% 处的颜色
+                                    }],
+                                    globalCoord: false // 缺省为 false
+                                }
+                            }
+                        },
+
                     },
                 ]
             };
@@ -619,81 +724,118 @@ var a = new Vue({
                 this.renderEcharts6()
             })
         },
+        // 原来的饼图
+        // getechart6() {
+        //     const that = this;
+        //     // console.log(this.data6)
+        //     const data = [
+        //         {name: '高危',value:that.data6.high},
+        //         {name: '中危',value:that.data6.low},
+        //         {name: '低危',value:that.data6.med},
+        //     ]
+        //
+        //     // 指定图表的配置项和数据
+        //     this.option6 = {
+        //         legend: {
+        //             orient: 'vertical',
+        //             x: 'left',
+        //             data: ['高危', '中危', '低危',]
+        //         },
+        //         color:[
+        //             "#ff7070",
+        //             "#EEB26C",
+        //             "#7ed3f4",
+        //         ],
+        //         tooltip: {
+        //             trigger: 'item',
+        //             formatter: '{a} <br/>{b} : {c} ({d}%)'
+        //         },
+        //         // legend:{
+        //         //     show:false,
+        //         // },
+        //         series: [{
+        //             name: '等级分布',
+        //             type: 'pie',
+        //             // 设置饼形图在容器中的位置
+        //             center: ["50%", "50%"],
+        //             //内圆半径和外圆半径
+        //             radius: ['50%', '70%'],
+        //             // hoverAnimation:true,
+        //             avoidLabelOverlap: false,
+        //             //显示标签文字
+        //             label: {
+        //                 show: false,
+        //                 position: 'center'
+        //             },
+        //             labelLine: {
+        //                 show: false
+        //             },
+        //             emphasis: {
+        //                 label: {
+        //                     show: true,
+        //                     fontSize: '20',
+        //                     fontWeight: 'bold'
+        //                 }
+        //             },
+        //             data: data
+        //         }]
+        //     };
+        //
+        // },
+        // 现改为柱状图
         getechart6() {
             const that = this;
-            // console.log(this.data6)
-            const data = [
-                {name: '高危',value:that.data6.high},
-                {name: '中危',value:that.data6.low},
-                {name: '低危',value:that.data6.med},
-            ]
+            const commonGrid = {
+                containLabel: true,
+                top: 35,
+                right: 38,
+                bottom: 25,
+                left: 15
+            };
 
+            // console.log(this.data6)
+            const datax = that.topName.map(item => item.vul_num)
+            const datay = that.topName.map(item => item.vultype)
 
             // 指定图表的配置项和数据
             this.option6 = {
-                legend: {
-                    orient: 'vertical',
-                    x: 'left',
-                    data: ['高危', '中危', '低危',]
+                // color:[
+                    // "#ff7070",
+                    // "#EEB26C",
+                    // "#7ed3f4",
+                // ],
+                grid: {
+                    ...commonGrid,
+                    bottom: '15%',
                 },
-                color:[
-                    "#ff7070",
-                    "#EEB26C",
-                    "#7ed3f4",
-                ],
-                tooltip: {
-                    trigger: 'item',
-                    formatter: '{a} <br/>{b} : {c} ({d}%)'
+                xAxis: {
+                    max: 'dataMax'
                 },
-                // legend:{
-                //     show:false,
-                // },
-                series: [{
-                    name: '等级分布',
-                    type: 'pie',
-                    // 设置饼形图在容器中的位置
-                    center: ["50%", "50%"],
-                    //内圆半径和外圆半径
-                    radius: ['50%', '70%'],
-                    // hoverAnimation:true,
-                    avoidLabelOverlap: false,
-                    //显示标签文字
-                    label: {
-                        show: false,
-                        position: 'center'
-                    },
-                    labelLine: {
-                        show: false
-                    },
-                    emphasis: {
+                yAxis: {
+                    type: 'category',
+                    data: datay,
+                    inverse: true,
+                    max: 10
+                },
+                series: [
+                    {
+                        name: 'X',
+                        type: 'bar',
+                        data: datax,
+                        barMaxWidth: '60%',
                         label: {
                             show: true,
-                            fontSize: '20',
-                            fontWeight: 'bold'
+                            position: 'right',
+                        },
+                        itemStyle: {
+                            opacity: 0.7,
+                            // color: '#f4b7b7',
                         }
-                    },
-                    // label: {
-                    //     show: true,
-                    //     normal: {
-                    //         show: true,
-                    //         formatter: "{b} : {c}个",//视觉引导线内容格式器,{a}（系列名称），{b}（数据项名称），{c}（数值）, {d}（百分比）
-                    //         color:'rgba(19,16,14)',
-                    //         fontSize: '16',
-                    //     },
-                    // },
-                    // 显示连接线(图形和文字之间的线)
-                    // labelLine: {
-                    //     show: true,
-                    //     lineStyle: {
-                    //         color: 'rgba(19,16,14, 0.5)'
-                    //     },
-                    //     smooth: 0.2,
-                    //     //以下两个指线的长度
-                    //     length: 10, //连接扇形图线长
-                    //     length2: 20 //连接文字线长
-                    // },
-                    data: data
-                }]
+                    }
+                ],
+
+                animationEasing: 'linear',
+                animationEasingUpdate: 'linear'
             };
 
         },
@@ -704,6 +846,30 @@ var a = new Vue({
             boxsSex.clear();
             boxsSex.setOption(this.option6, true);
         },
+        //top10的漏洞类型
+        getTop10 () {
+            var that = this;
+            $.ajax({
+                url: (http_head + '/login/'),
+                type: 'post',
+                dataType: 'json',
+                async:false,          //!!!先执行接口函数再执行图表函数
+                data: {
+                    method: 'vul_top',
+                    year: that.year,
+                },
+                success: function (res) {
+                    console.log(res)
+                    if (res.length > 0) {
+                        that.topName = res
+                    }
+                },
+                error: function (err) {
+                    console.log(err)
+                    mymessage.error("获取失败")
+                }
+            })
+        },
 
     },
     mounted(){
@@ -713,6 +879,17 @@ var a = new Vue({
         this.getList4()
         this.getList5()
         this.getList6()
-
+        this.getTop10()
+        window.addEventListener('resize', this.handleChartsResize);
+        // 初始化后立即触发一次
+        this.$nextTick(() => {
+            this.handleChartsResize();
+        });
+    },
+    // 在 beforeDestroy 生命周期清理
+    beforeDestroy() {
+        window.removeEventListener('resize', this.handleChartsResize);
+        this.chartInstances.forEach(chart => chart.dispose());
+        this.chartInstances = [];
     }
 })

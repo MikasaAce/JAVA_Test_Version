@@ -23,6 +23,11 @@ def initialize_parser():
     parser (tree_sitter.Parser): 初始化后的解析器。
     """
     global JAVA_LANGUAGE, PARSER
+    # 获取py 文件所在目录
+    current_path = os.path.dirname(__file__)
+
+    # 把这个目录设置成工作目录
+    os.chdir(current_path)
 
     if PARSER is None:
         # 构建语言库

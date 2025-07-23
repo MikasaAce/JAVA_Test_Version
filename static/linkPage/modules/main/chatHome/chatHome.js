@@ -76,6 +76,8 @@ var vm = new Vue({
     return {
       vueList: vueListData,
       menuName:'AIsecurity',
+      isLogicVulnerabilityActive:false,
+      isLogicVulnerability:0,
       input3: "",
       task:'代码漏洞检测',
       language:'',
@@ -206,6 +208,18 @@ var vm = new Vue({
       this.cwe =''
       this.task = ''
     },
+    toggleLogicVulnerability() {
+      this.isLogicVulnerabilityActive = !this.isLogicVulnerabilityActive
+      if(this.isLogicVulnerabilityActive==false){
+        this.isLogicVulnerability=0
+        console.log('启用思考模式')
+      }
+      else{
+        this.isLogicVulnerability=1
+        console.log('启用逻辑漏洞')
+      }
+
+    },
     handleOpen(){
 
     },
@@ -283,61 +297,61 @@ var vm = new Vue({
       }
     },
     // 发送信息获取数据
-  /*  getMsg() {
-      var that = this
-      // 处理自己的接口请求 返回需要的数据
-      $.ajax({
-        url:  (http_head + '/Muti/'),
-        data:{
-          method:'deepseek_chat',
-          prompt: that.input3,
-        },
-        type : 'post',
-        dataType : 'JSON',
-        async: 'true',
-        success :  function (res){
-          console.log(res);
-          if (res.code == 200) {
-            // 自行处理需要的数据
-            // console.log(res.response)
-            //↵替换成<br> （不是通过 ↵去替换，而是在html中会被识别为\r,\n等转义字符，所以需要使用\r\n去替换。）
-            var msg = res.response.replace(/(\r\n|\n|\r)/gm, "<br>")
-            // \s是指空白，包括空格、换行、tab缩进等所有的空白
-            msg = msg.replace(/\s/gm,'&nbsp')
-            //过滤掉最开头的回车<br和空格&nbsp
-            msg = msg.replace(/^<br\s*\/?>/i, '')
-            msg = msg.replace(/^(&nbsp)+/i, '');
+    /*  getMsg() {
+        var that = this
+        // 处理自己的接口请求 返回需要的数据
+        $.ajax({
+          url:  (http_head + '/Muti/'),
+          data:{
+            method:'deepseek_chat',
+            prompt: that.input3,
+          },
+          type : 'post',
+          dataType : 'JSON',
+          async: 'true',
+          success :  function (res){
+            console.log(res);
+            if (res.code == 200) {
+              // 自行处理需要的数据
+              // console.log(res.response)
+              //↵替换成<br> （不是通过 ↵去替换，而是在html中会被识别为\r,\n等转义字符，所以需要使用\r\n去替换。）
+              var msg = res.response.replace(/(\r\n|\n|\r)/gm, "<br>")
+              // \s是指空白，包括空格、换行、tab缩进等所有的空白
+              msg = msg.replace(/\s/gm,'&nbsp')
+              //过滤掉最开头的回车<br和空格&nbsp
+              msg = msg.replace(/^<br\s*\/?>/i, '')
+              msg = msg.replace(/^(&nbsp)+/i, '');
 
-            let listMsg = {
-              align: "left",
-              text: that.processText(msg),
-              link: "",
-            };
-            console.log(listMsg)
-            that.list.push(listMsg);
-            that.scrollTop11();
+              let listMsg = {
+                align: "left",
+                text: that.processText(msg),
+                link: "",
+              };
+              console.log(listMsg)
+              that.list.push(listMsg);
+              that.scrollTop11();
+            }
+            that.loading = false;
+
+          },
+          error: function (err) {
+            console.log(err)
+            that.loading = false;
           }
-          that.loading = false;
+        })
 
-        },
-        error: function (err) {
-          console.log(err)
-          that.loading = false;
-        }
-      })
-
-      // 模拟信息返回
-      // setTimeout(async () => {
-      //   let listMsg = {
-      //     align: "left",
-      //     text: "模拟信息返回",
-      //     link: "",
-      //   };
-      //   await this.list.push(listMsg);
-      //   await this.scrollTop11();
-      //   this.loading = false;
-      // }, 1000);
-    },*/
+        // 模拟信息返回
+        // setTimeout(async () => {
+        //   let listMsg = {
+        //     align: "left",
+        //     text: "模拟信息返回",
+        //     link: "",
+        //   };
+        //   await this.list.push(listMsg);
+        //   await this.scrollTop11();
+        //   this.loading = false;
+        // }, 1000);
+      },*/
     getMsg() {
       var that = this;
       // 创建一个新的 XMLHttpRequest 对象来处理流式请求
@@ -358,29 +372,20 @@ var vm = new Vue({
       xhr.onprogress = function (event) {
         var chunk = event.target.responseText;
         // console.log(chunk)
-        // 过滤掉前面的 "data: " 前缀并拼接流式数据
-        fullMessage = chunk.replace(/data:\s*/g, '');
-        //↵替换成<br> （不是通过 ↵去替换，而是在html中会被识别为\r,\n等转义字符，所以需要使用\r\n去替换。）
-        // var msg = fullMessage.replace(/(\r\n|\n|\r)/gm, "<br>")
-        // console.log(fullMessage)
-        // \s是指空白，包括空格、换行、tab缩进等所有的空白
-        var msg = fullMessage.replace(/\s/gm,'&nbsp')
-        // console.log(msg)
-        //过滤掉最开头的回车<br和空格&nbsp
-        // msg = msg.replace(/^<br\s*\/?>/i, '')
-        fullMessage = msg.replace(/&nbsp;/g, '');
-        // 可以在这里输出拼接后的消息
-        // console.log(fullMessage);
+
+        fullMessage = chunk.replace(/(\r\n|\n)?data:\s*/g, '') // 过滤掉前面的 "data: " 前缀并拼接流式数据
+            .replace(/^<think>\s*|<\/think>/g, '')　　// 去除 < think >和</think>
 
         // 实时更新消息列表，展示已经拼接的部分
         let listMsg = {
           align: "left",
-          text: that.processText(fullMessage), // 处理后赋值给text
+          text: fullMessage, // 处理后赋值给text
           link: "",
         };
+        // console.log(fullMessage)
         // that.list.push(listMsg);
         // 实时更新已经插入的消息，而不是每次都插入新的
-        that.list[lastIndex].text = that.processText(fullMessage); // 更新文本
+        that.list[lastIndex].text = fullMessage; // 更新文本
         that.$forceUpdate(); // 强制 Vue 重新渲染列表
         that.scrollTop11();
       };
@@ -393,9 +398,10 @@ var vm = new Vue({
       xhr.onloadend = function () {
         that.loading = false;
       };
-
+      var key = encodeURIComponent(that.isLogicVulnerability); 
       // 将数据编码为表单格式并发送
-      var formData = `method=deepseek_chat&prompt=${encodeURIComponent(that.input3)}`;
+      var formData = `method=deepseek_chat&prompt=${encodeURIComponent(that.input3)}&key=${key}`;
+      console.log(formData)
       xhr.send(formData); // 发送表单格式的数据
       that.loading = true;
     },

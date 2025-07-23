@@ -1,14 +1,30 @@
 from app.api.main_app.M_app import *
 
+def get_level_EN_CN(vul_name):
+    # 根据cwe_id获取危险等级
+    try:
+        with pymysql.connect(**config) as conn:
+            with conn.cursor() as cursor:
+                if vul_name:
+                    name_sql = """select name_CN from subVulList where name_EN = %s"""
+                    cursor.execute(name_sql, (vul_name,))
+                data = cursor.fetchall()
+                if data:
+                    return data[0][0]
+                else:
+                    print("未能查询到中文名的漏洞类型",vul_name)
+                    return "Vulnerability level not found"
+    except pymysql.MySQLError as e:
+        print(f"MySQL Error: {e}{vul_name}")
+    return "Error occurred while fetching vulnerability level"
 
-def rule1_detection(req):
+def rule1_detection(arg):
     """只使用fortify扫描"""
-    folder_path = req.POST['folder_path']
-    item_id = req.POST['item_id']
-    task_name = req.POST['task_name']
-    model_name = req.POST['model_name']  # fortify
-    template = req.POST['template']
-    version = req.POST['version']
+    folder_path = arg['folder_path']
+    item_id = arg['item_id']
+    task_name = arg['task_name']
+    template = arg['template']
+    version = arg['version']
     start_time = get_current_time()
 
     check_result = check_task_name(task_name, item_id)
@@ -32,6 +48,7 @@ def rule1_detection(req):
     vulnerability_detail = vuldetail_insert(task_id, item_id, task_name, detection_type, 0, 0, 0, code_size, file_size,
                                             file_num, current_status,
                                             start_time, 0, 0, review_status, version)
+
     if vulnerability_detail.status_code == 500:
         return JsonResponse({"msg": "漏洞信息页面数据插入错误", "code": "500"})
 
@@ -75,7 +92,7 @@ def rule1_detection(req):
                 'filename': file_name,
                 'file_path': file_path,
                 'cwe_id': cwe_id,
-                'vul_name': vul_name,
+                'vul_name': get_level_EN_CN(vul_name),
                 'code': code,
                 'line_number': line_number,
                 'risk_level': '',

@@ -2,7 +2,8 @@
 layui.config({
     version: '318',   // 更新组件缓存，设为true不缓存，也可以设一个固定值
 //    base: "http://10.99.16.24:8088/static/assets/module/"
-    base: "/static/assets/module/"
+
+    base: "/static/assets/module/"
 }).extend({
     steps: 'steps/steps',
     notice: 'notice/notice',
@@ -82,12 +83,12 @@ layui.config({
 //                "path": "#/GetFeature",
 //                "component": "/static/linkPage/modules/main/ModelIteration/feature.html"
 //            },
-            {
-                "icon": "layui-icon layui-icon-senior",
-                "title": "配置策略",
-                "path": "#/config",
-                "component": "/static/linkPage/modules/main/config/config.html"
-            },
+           {
+               "icon": "layui-icon layui-icon-senior",
+               "title": "配置策略",
+               "path": "#/config",
+               "component": "/static/linkPage/modules/main/config/config.html"
+           },
 //            {
 //                "icon": "layui-icon layui-icon-dialogue",
 //                "title": "代码生成",
@@ -100,6 +101,25 @@ layui.config({
                 "path": "#/knowledge_base",
                 "component": "/static/linkPage/modules/main/vulnerability/knowledge_base.html"
             },
+            {
+                "icon": "layui-icon layui-icon-dialogue",
+                "title": "大模型问答",
+                "path": "#/chatHome",
+                "component": "/static/linkPage/modules/main/chatHome/chatHome.html"
+            },
+//            {
+//                "icon": "layui-icon layui-icon-user",
+//                "title": "知识库权限管理",
+//                "path": "#/projectKnowManage",
+//                "component": "/static/linkPage/modules/main/projectKnowManage/knowmanage.html"
+//            },
+//            {
+//                "icon": "layui-icon layui-icon-dialogue",
+//                "title": "知识库问答",
+//                "path": "#/projectknowledge_base",
+//                "component": "/static/linkPage/modules/main/projectknowledge_base/knowledge_base.html"
+//            },
+
 
         ],
         "data1": [
@@ -127,6 +147,18 @@ layui.config({
                 "path": "#/ProjectManage",
                 "component": "/static/linkPage/modules/main/ProjectManage/ProjectList.html",
             },
+            {
+                "icon": "layui-icon layui-icon-senior",
+                "title": "扫描策略管理",
+                "path": "#/vulnerability",
+                "component": "/static/linkPage/modules/main/vulnerability/newvulnerability.html"
+            },
+            {
+                "icon": "layui-icon layui-icon-senior",
+                "title": "配置策略",
+                "path": "#/config",
+                "component": "/static/linkPage/modules/main/config/config.html"
+           },
 		  {
                 "icon": "layui-icon layui-icon-dialogue",
                 "title": "代码生成",
@@ -163,6 +195,18 @@ layui.config({
                 "path": "#/projectGAOJING",
                 "component": "/static/linkPage/modules/main/projectGAOJING/gaojing.html"
             },
+            {
+                "icon": "layui-icon layui-icon-dialogue",
+                "title": "大模型问答",
+                "path": "#/chatHome",
+                "component": "/static/linkPage/modules/main/chatHome/chatHome.html"
+            },
+//            {
+//                "icon": "layui-icon layui-icon-dialogue",
+//                "title": "知识库问答",
+//                "path": "#/projectknowledge_base",
+//                "component": "/static/linkPage/modules/main/projectknowledge_base/knowledge_base.html"
+//            },
             
             
 //            {

@@ -52,10 +52,30 @@ var vm = new Vue({
       Recipients: [], // 邮箱收件人列表
       selectedRecipients: '',
 
+      manualInputDialogVisible: false,
+      manualInputForm: {
+        summary: '',
+        content: ''
+      }
+
     }
 
   },
   methods: {
+    openManualInputDialog() {
+      this.manualInputDialogVisible = true;
+    },
+    // 确认手动录入
+    confirmManualInput() {
+      // 检查摘要和内容是否同时为空
+      if (!this.manualInputForm.summary && !this.manualInputForm.content) {
+        mymessage.error("请输入标题或者内容！");
+        return; // 如果两者都为空，弹出提示并终止执行
+      }
+      // 如果录入了摘要或内容，弹出成功提示
+      mymessage.success("录入成功！");
+      this.manualInputDialogVisible = false; // 关闭弹窗
+    },
     // 打开新建联系人弹窗
     openContactDialog() {
       this.contactDialogVisible = true;
@@ -339,11 +359,11 @@ var vm = new Vue({
         return; // 如果未选择发送途径，直接返回
       }
 
-      // 判断是否选择了表格中的行
       const selectedRows = this.$refs.multipleTable.selection;
-      if (selectedRows.length === 0) {
-        mymessage.error("请选择至少一条告警内容！");
-        return; // 如果未选择行，直接返回
+      // 判断是否录入了标题摘要或选择了告警内容
+      if (!this.manualInputForm.summary && selectedRows.length === 0 && !this.manualInputForm.content ) {
+        mymessage.error("请输入或者选择告警内容！");
+        return; // 如果两者都为空，弹出提示并终止执行
       }
 
       // 根据发送途径执行不同逻辑
@@ -354,9 +374,19 @@ var vm = new Vue({
         const webhook_url = this.selectedWechatContacts;
         // const webhook_url = this.selectedWechatContacts.join(';');
         console.log("webhook_url：", webhook_url);
-        const message = selectedRows.map(row => {
-          return `项目名称：${row.export_name}\n扫描语言：${row.itemname}\n创建时间：${row.fileType}\n高危数量：${row.high}\n中危数量：${row.med}\n低危数量：${row.low}`;
-        }).join('\n\n'); // 多条内容用空行分隔
+        // 拼接手动录入的信息和选择的告警内容
+        let message = '';
+        // 如果有录入标题摘要，添加到 message
+        if (this.manualInputForm.summary || this.manualInputForm.content) {
+          message += `${this.manualInputForm.summary}\n${this.manualInputForm.content}\n\n`;
+        }
+        // 如果有选择告警内容，添加到 message
+        if (selectedRows.length > 0) {
+          const tableContent = selectedRows.map(row => {
+            return `项目名称：${row.export_name}\n扫描语言：${row.itemname}\n创建时间：${row.fileType}\n高危数量：${row.high}\n中危数量：${row.med}\n低危数量：${row.low}`;
+          }).join('\n\n');
+          message += tableContent;
+        }
         console.log("发送内容：", message);
 
         // 构造 form-data 数据
@@ -391,9 +421,18 @@ var vm = new Vue({
         const receiver_email = this.selectedEmailRecipients;
         // const receiver_email = this.selectedEmailRecipients.join(';');
         console.log("receiver_email：", receiver_email);
-        const message = selectedRows.map(row => {
-          return `项目名称：${row.export_name}\n扫描语言：${row.itemname}\n创建时间：${row.fileType}\n高危数量：${row.high}\n中危数量：${row.med}\n低危数量：${row.low}`;
-        }).join('\n\n'); // 多条内容用空行分隔
+        let message = '';
+        // 如果有录入标题摘要，添加到 message
+        if (this.manualInputForm.summary || this.manualInputForm.content) {
+          message += `${this.manualInputForm.summary}\n${this.manualInputForm.content}\n\n`;
+        }
+        // 如果有选择告警内容，添加到 message
+        if (selectedRows.length > 0) {
+          const tableContent = selectedRows.map(row => {
+            return `项目名称：${row.export_name}\n扫描语言：${row.itemname}\n创建时间：${row.fileType}\n高危数量：${row.high}\n中危数量：${row.med}\n低危数量：${row.low}`;
+          }).join('\n\n');
+          message += tableContent;
+        }
         console.log("发送内容：", message);
         // 构造 form-data 数据
         const formData1 = new FormData();
@@ -428,9 +467,18 @@ var vm = new Vue({
         const receiver = this.selectedRecipients;
         // const receiver_email = this.selectedEmailRecipients.join(';');
         console.log("receiver：", receiver);
-        const message = selectedRows.map(row => {
-          return `项目名称：${row.export_name};   \n扫描语言：${row.itemname};   \n创建时间：${row.fileType};   \n高危数量：${row.high};   \n中危数量：${row.med};   \n低危数量：${row.low}。  `;
-        }).join('\n\n'); // 多条内容用空行分隔
+        let message = '';
+        // 如果有录入标题摘要，添加到 message
+        if (this.manualInputForm.summary || this.manualInputForm.content) {
+          message += `${this.manualInputForm.summary}\n${this.manualInputForm.content}\n\n`;
+        }
+        // 如果有选择告警内容，添加到 message
+        if (selectedRows.length > 0) {
+          const tableContent = selectedRows.map(row => {
+            return `项目名称：${row.export_name}\n扫描语言：${row.itemname}\n创建时间：${row.fileType}\n高危数量：${row.high}\n中危数量：${row.med}\n低危数量：${row.low}`;
+          }).join('\n\n');
+          message += tableContent;
+        }
         console.log("发送内容：", message);
         // 构造 form-data 数据
         const formData1 = new FormData();
@@ -467,12 +515,16 @@ var vm = new Vue({
       this.$refs.multipleTable.clearSelection();
       this.selectedEmailRecipients = '';
       this.selectedWechatContacts = '';
+      this.selectedRecipients = '';
 
       // 清空输入框
       this.wechatName = '';
       this.webhookUrl = '';
       this.emailName = '';
       this.receiverEmail = '';
+
+      this.manualInputForm.summary= '';
+      this.manualInputForm.content= '';
     },
 
   }

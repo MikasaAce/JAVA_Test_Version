@@ -17,11 +17,11 @@ def get_knowledge_base(req):
     offset = (page - 1) * results_per_page
 
     # 查询总结果数量
-    count_sql = """SELECT COUNT(*)  FROM cwelist"""
+    count_sql = """SELECT COUNT(*)  FROM subVulList"""
     conditions = []
 
     if cwe_name:
-        conditions.append("cwelist.name like '%%%s%%'" % cwe_name)
+        conditions.append("subVulList.name_CN like '%%%s%%'" % cwe_name)
 
     if conditions:
         count_sql += " WHERE " + " AND ".join(conditions)
@@ -29,8 +29,7 @@ def get_knowledge_base(req):
     cursor.execute(count_sql)
     total_count = cursor.fetchone()[0]
 
-    sql = """ SELECT cwelist.number AS cwe_number,  -- 使用别名将 number 改为 cwe_number
-    cwelist.name,cwelist.description,cwelist.level FROM cwelist"""
+    sql = """ SELECT subVulList.id,subVulList.name_CN as name,subVulList.description,subVulList.level FROM subVulList """
 
     if conditions:
         sql += " WHERE " + " AND ".join(conditions)
@@ -61,30 +60,28 @@ def insert_knowledge(req):
     """
     将用户新增的知识库保存到数据库中
     """
-    cwe_id = req.POST["cwe_id"]
     cwe_name = req.POST["cwe_name"]
     cwe_description = req.POST["description"]
     cwe_level = req.POST["level"]
 
     # 参数校验，检查是否为空或格式是否正确
-    if not all([cwe_id, cwe_name, cwe_description, cwe_level]):
+    if not all([cwe_name, cwe_description, cwe_level]):
         return HttpResponse(json.dumps({'msg': '信息未填写完整', 'msg-code': '400'}), content_type="application/json")
 
     sql = """
-        INSERT INTO cwelist (number, name, description, level)
-        VALUES (%s, %s, %s, %s)
+        INSERT INTO subVulList (name_CN, description, level) VALUES (%s, %s, %s)
     """
 
     try:
         with pymysql.connect(**config) as conn:
             with conn.cursor() as cursor:
                 # 检查 cwe_name 是否已存在
-                check_sql = "SELECT name FROM cwelist WHERE name = %s"
+                check_sql = "SELECT name_CN FROM subVulList WHERE name_CN = %s"
                 cursor.execute(check_sql, (cwe_name,))
                 if cursor.fetchone():
                     return HttpResponse(json.dumps({'msg': '漏洞名称已存在', 'msg-code': '400'}),content_type="application/json")
 
-                cursor.execute(sql, (cwe_id, cwe_name, cwe_description, cwe_level))
+                cursor.execute(sql, (cwe_name, cwe_description, cwe_level))
                 conn.commit()  # 提交事务
         return HttpResponse(json.dumps({'msg': '保存成功', 'msg-code': '200'}), content_type="application/json")
     except Exception as e:
@@ -97,28 +94,27 @@ def update_knowledge(request):
     更新,编辑
     """
     if request.method == 'POST':
-        cwe_id_old = request.POST["cwe_id_old"]
-        cwe_id = request.POST["cwe_id"]
+        id = request.POST["id"]
         cwe_name = request.POST["cwe_name"]
         cwe_description = request.POST["description"]
         cwe_level = request.POST["level"]
 
         # 参数校验
-        if not all([cwe_id_old, cwe_id, cwe_name, cwe_description, cwe_level]):
+        if not all([id,cwe_name, cwe_description, cwe_level]):
             return HttpResponse(
                 json.dumps({'msg': '参数缺失', 'msg-code': '400'}, ensure_ascii=False),
                 status=400
             )
 
         sql = """
-            UPDATE cwelist 
-            SET number = %s, name = %s, description = %s, level = %s 
-            WHERE number = %s
+            UPDATE subVulList 
+            SET name_CN = %s, description = %s, level = %s 
+            WHERE id = %s
         """
         try:
             with pymysql.connect(**config) as conn:
                 with conn.cursor() as cursor:
-                        cursor.execute(sql, (cwe_id, cwe_name, cwe_description, cwe_level,  cwe_id_old))
+                        cursor.execute(sql, (cwe_name, cwe_description, cwe_level,  id))
                         conn.commit()
             return HttpResponse(
                 json.dumps({'msg': '更新成功', 'msg-code': '200'}, ensure_ascii=False)
@@ -141,19 +137,19 @@ def delete_knowledge(request):
     删除
     """
     if request.method == 'POST':
-        cwe_id = request.POST['cwe_id']  # 获取 POST 参数
+        id = request.POST['id']  # 获取 POST 参数
 
-        if not cwe_id:  # 检查 cwe_id 是否为空
+        if not id:  # 检查 cwe_id 是否为空
             return HttpResponse(
-                json.dumps({'msg': 'cwe_id 不能为空', 'code': '400'}, ensure_ascii=False),
+                json.dumps({'msg': 'id 不能为空', 'code': '400'}, ensure_ascii=False),
                 status=400
             )
         try:
             conn = pymysql.connect(**config)
             cursor = conn.cursor()
 
-            sql = """ DELETE FROM cwelist WHERE number = %s """
-            cursor.execute(sql, (cwe_id,))
+            sql = """ DELETE FROM subVulList WHERE id = %s """
+            cursor.execute(sql, (id,))
 
             # 检查是否删除了数据
             if cursor.rowcount == 0:  # 如果没有删除任何数据

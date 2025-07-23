@@ -30,16 +30,18 @@ def get_host_ip():
     return ip
 
 
-base_path = r'/home/public/JAVA_gf/app/static/DATA_new_M'
+# base_path = r'/home2/JAVA_Test_Version/app/static/DATA_new_M'
+base_path = r'/home2/Vul_Data'
+lizard_path = r'/home2/Vul_Data/DATA_lizard' 
 
 # 过滤后文件保存路径
 file_save_path = os.path.join(base_path, 'item')
 # 解压后文件保存路径
 processed_file_save_path = os.path.join(base_path, 'processed')
 # 生成的pdf的保存路径
-pdf_save_path = r'/home/public/JAVA_gf/static/Export_PDF'
+pdf_save_path = r'/home2/JAVA_Test_Version/static/Export_PDF'
 # 日志文件保存路径
-LOG_DIR = '/home/public/JAVA_gf/app/static/DATA_new_M/log'
+LOG_DIR = '/home2/JAVA_Test_Version/app/static/DATA_new_M/log'
 # 获取当前主机ip
 HOST_IP = get_host_ip()
 # 小模型调用路径
@@ -62,7 +64,7 @@ small_model_device = 'cuda:0'
 config = {
     "host": "0.0.0.0",
     "port": 3307,
-    "database": "new_vul",
+    "database": "vul_test",
     "charset": "utf8",
     "user": "root",
     "passwd": "Li@123456"

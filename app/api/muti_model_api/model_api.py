@@ -44,7 +44,7 @@ def count_files(folder_path, language):
     for root, dirs, files in os.walk(folder_path):
         for file in files:
             # 检查文件扩展名
-            if language != 'all' and not file.endswith(f'.{language}'):
+            if language != 'all' and not file.endswith(f'.{language}') and not file.endswith('.xml'):
                 continue
 
             file_path = os.path.join(root, file)
@@ -120,7 +120,7 @@ def muti_transformer_detection(req):
     current_status = '正在检测'
     review_status = '未审核'
     detection_type = 'transformer模型多分类'
-    template = ''
+
 
 
     high_num = 0
@@ -133,13 +133,22 @@ def muti_transformer_detection(req):
 
     vulnerability_detail = vuldetail_insert(task_id, item_id, task_name, detection_type, high_num, medium_num, low_num, code_size, file_size,
                                             file_num, current_status,
-                                            start_time, 0, 0, review_status, template)
+                                            start_time, 0, 0, review_status)
 
     #folder_path = get_file(folder_path, task_name)
+    print(folder_path, language)
     file_num, code_size, file_size = count_files(folder_path, language)
+    print(file_num, code_size, file_size)
 
     if file_num == 0:
         print('Error! 文件夹内不存在该语言的文件！')
+        review_status = '检测失败'
+        vulnerability_detail = vuldetail_update(task_id, item_id, task_name, detection_type, high_num, medium_num,
+                                                low_num,
+                                                code_size,
+                                                file_size,
+                                                file_num, current_status,
+                                                start_time, 0, 0, review_status)
         return JsonResponse({'code': '500', 'msg': 'Error! 文件夹内不存在该语言的文件！'})
 
     vulnerability_detail = vuldetail_update(task_id, item_id, task_name, detection_type, high_num, medium_num, low_num,

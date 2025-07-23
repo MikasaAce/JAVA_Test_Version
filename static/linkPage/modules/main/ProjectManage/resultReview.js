@@ -21,20 +21,22 @@ var vm = new Vue({
         this.taskid = JSON.parse(sessionStorage.getItem('taskid_result') || '')
         this.getVulList()
         this.getConfig()
-        this.ifDescription()
+        // this.ifDescription()
+
     },
     data() {
         return {
             isRouterAlive : true,
             // fileList: [
-            //     { name: "CWE 235", files: [{ name: "brackets.java" }, { name: "checkdll.java" }, { name: "comment_save.java" }] },
-            //     { name: "CWE 89", files: [{ name: "内容4" }, { name: "内容5" }] },
+            //     { name: "CWE 235", files: [{ fileid: "596589" ,name: "BenchmarkTest00075.java"}, {fileid: "596580" , name: "checkdll.java" }, { fileid: "596580" ,name: "comment_save.java" }] },
+            //     { name: "CWE 89", files: [{fileid: "596583" , name: "内容4" }, {fileid: "596582" , name: "内容5" }] },
             // ],
             fileList:[],
             firstFile:'',
             moren: true,
             currentFileId:'',
             currentFileIds:[],
+            expandedKeys: [], // 维护展开状态的数组
             pp:[],
             allFileId:[],
             // value: '',
@@ -62,6 +64,7 @@ var vm = new Vue({
             descriptions:{},
             details:{
                 filepath:'',
+                Interpretation: '',
                 source_code:'',
                 repair_code:'',
             },
@@ -69,7 +72,24 @@ var vm = new Vue({
             textarea:'',
             ifDeepSeek:false,
             loading:false,
+            loading1:false,
             tabflag:'代码详情',
+            codeAnalysis:'',
+            pollingInterval1: null, // 定时器变量
+            pollingInterval2: null, // 定时器变量
+            // 使用对象存储各文件的加载状态，键为文件ID
+            fileLoadingMap: {},
+            pollingIntervals: {}, // 格式: { [fileId]: intervalId }
+            fileLoadingMap2: {},
+            pollingIntervals2: {}, // 格式: { [fileId]: intervalId }
+            filterText: '',
+
+            currentRequests: {},  // 进行中的请求 { [fileId]: xhr }
+            fileInterpretations:{},
+            fileXHRs: {},              // 存储各文件的XHR对象
+            currentRepairs: {},  // 进行中的请求 { [fileId]: xhr }
+            fileRepairs:{},
+            repairXHRs: {},              // 存储各文件的XHR对象
         }
     },
     provide() {
@@ -80,7 +100,12 @@ var vm = new Vue({
     },
     methods: {
         goBack(){
-            window.location.href = 'markList.html'
+            //如果是从任务详情页跳转过来
+            if (sessionStorage.getItem('iftaskdescrip') === 'true')  {
+                window.location.href = 'ProjectDetail.html'
+            } else {
+                window.location.href = 'markList.html'
+            }
         },
         getCheckedKeys(leafOnly){
             console.log(leafOnly);
@@ -93,7 +118,7 @@ var vm = new Vue({
                 // 检查item不是null、undefined、NaN，也不是空字符串或仅包含空格的字符串
                 return item !== null && item !== undefined && !isNaN(item) && item.trim() !== '';
             });
-            console.log(this.allFileId);
+            // console.log(this.allFileId);
         },
 
         //局部刷新
@@ -112,6 +137,7 @@ var vm = new Vue({
 
         //为了获取这个任务的扫描策略
         ifDescription(){
+
             var that = this
             $.ajax({
                 url: (http_head + '/login/'),
@@ -127,7 +153,7 @@ var vm = new Vue({
                         that.descriptionOrNot = false
 
                     }
-                    console.log(that.descriptionOrNot)
+                    // console.log(that.descriptionOrNot)
 
                 },
                 error: function (err) {
@@ -136,7 +162,7 @@ var vm = new Vue({
                 }
             })
         },
-        //左侧漏洞列表
+        //获取左侧漏洞列表
         getVulList() {
             const that = this
             $.ajax({
@@ -151,16 +177,32 @@ var vm = new Vue({
                     if(res.fileList[0]){
                         // console.log('列表',res.fileList)
                         that.fileList = res.fileList
-                        for (let i = 0;i<res.fileList.length;i++){
-                            var filesArray = res.fileList[i].files;
-                            // 提取 files 数组中的 name 属性
-                            var fileNamesArray = filesArray.map(function(file) {
-                                return file.name;
-                            });
-                            var result = fileNamesArray.join(", ");
-                            // console.log(res.fileList[i].name,result); // 输出字符串
-                        }
+                        // for (let i = 0;i<res.fileList.length;i++){
+                        //     var filesArray = res.fileList[i].files;
+                        //     // 提取 files 数组中的 name 属性
+                        //     var fileNamesArray = filesArray.map(function(file) {
+                        //         return file.name;
+                        //     });
+                        //     var result = fileNamesArray.join(", ");
+                        //     console.log(res.fileList[i].name,result); // 输出所有漏洞文件名时用
+                        // }
+                        // 为分类节点添加 (数量)
+                        that.fileList.forEach((category) => {
+                            if (category.files && category.files.length > 0) {
+                                category.name = `${category.name} (${category.files.length})`;
+                            }
+                        });
+                        // 为分类节点添加 fileid（如果接口未返回）
+                        // that.fileList.forEach((category, index) => {
+                        //     if (!category.fileid) {
+                        //         category.fileid = `100${index + 1}`; // 生成唯一的 fileid
+                        //     }
+                        // });
 
+                        // 初始化 expandedKeys，展开第一个分类节点
+                        // if (that.fileList.length > 0) {
+                        //     that.expandedKeys = [that.fileList[0].files[0].fileid]; // 使用分类节点的 fileid
+                        // }
                         //默认显示的文件
                         that.firstFile = res.fileList[0].files[0].fileid
                         that.currentFileId = that.firstFile
@@ -192,34 +234,68 @@ var vm = new Vue({
             }
         },
         //左侧树形控件
-        handleNodeClick(data, node,nodeData) {
+        async handleNodeClick(data, node,nodeData) {
             // console.log(data);
-            // console.log(nodeData)
             // console.log(node.level);  //第几层
             //如果点的是文件
             if (node.level === 2){
-                console.log('当前的tab:',this.tabflag)
-                this.currentFileId = data.fileid
-                if(this.tabflag === '代码详情') {
-                    this.reload()
-                    this.getDetails()
-                } else if(this.tabflag === '缺陷描述') {
-                    // this.reload()
-                    this.getDescriptions()
-                } else if(this.tabflag === '代码修复') {
-                    // this.reload()
-                    this.getRepair()
-                    // this.equalLength()
+                // console.log('当前的tab:',this.tabflag)
+                const oldFileId = this.currentFileId;
+                this.currentFileId = data.fileid;
+
+                if (oldFileId !== this.currentFileId) {
+                    this.$emit('file-changed'); // 触发请求取消
                 }
-                // this.reload()
+
+                try {
+                    if(this.tabflag === '代码详情') {
+                        this.reload()
+                        await  this.getDetails()
+                    } else if(this.tabflag === '缺陷描述') {
+                        // this.reload()
+                        await  this.getDescriptions()
+                    } else if(this.tabflag === '代码修复') {
+                        // this.reload()
+                        await  this.getRepair()
+                        // this.equalLength()
+                    }
+                } catch (err) {
+                    console.error('数据加载失败:', err);
+                }
+
             }
 
         },
+        // 手动维护展开状态
+        handleNodeExpand(data) {
+            const index = this.expandedKeys.indexOf(data.fileid);
+            // console.log(index)
+            // console.log(this.expandedKeys)
+            if (index === -1) {
+                this.expandedKeys.push(data.fileid);
+            }
+        },
+        handleNodeCollapse(data) {
+            const index = this.expandedKeys.indexOf(data.fileid);
+            console.log(index)
+            if (index !== -1) {
+                this.expandedKeys.splice(index, 1);
+            }
+        },
 
-
+        //对xml文件做转义处理
+         escapeHtml(unsafe) {
+            return unsafe
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        },
         //代码详情
         getDetails(){
             const that = this
+            // return new Promise((resolve, reject) => {
             $.ajax({
                 url: (http_head + '/login/'),
                 type: 'post',
@@ -234,9 +310,25 @@ var vm = new Vue({
                     console.log('代码详情',res)
 
                     if(res.fileList[0]){
+                        //去掉开头的空白
+                        res.fileList[0].Sink = res.fileList[0].Sink.replace(/^\s+/, '')
+                        res.fileList[0].Source = res.fileList[0].Source.replace(/^\s+/, '')
+                        res.fileList[0].Enclosing_Method = res.fileList[0].Enclosing_Method.replace(/^\s+/, '')
+
+                        if (res.fileList[0].Interpretation){
+                            res.fileList[0].Interpretation = res.fileList[0].Interpretation.replace(/^<think>\s*|<\/think>/g, '').replace(/^[\r\n]+/, '');
+                        }
+                        if (res.fileList[0].repair_code){
+                            res.fileList[0].repair_code = res.fileList[0].repair_code.replace(/^<think>\s*|<\/think>/g, '')
+                        }
+
                         that.details = res.fileList[0]
+
+
+                        // that.details.Sink = res.fileList[0].Sink.replace(/^\s+/, '')
                         // 获取代码块元素
                         var codeBlock = document.getElementById("codeBlock");
+
                         // 要高亮的行字符串，例如 "37,38,40"
                         var highlightedLinesString = res.fileList[0].code_location
                         // 将字符串拆分成行号数组
@@ -245,16 +337,23 @@ var vm = new Vue({
                         var code = res.fileList[0].source_code;
                         // 将代码内容拆分成行数组
                         var lines = code.split("\n");
+
+                        // 先对每一行代码进行转义
+                        var escapedLines = lines.map(line => that.escapeHtml(line));
+                        // console.log(escapedLines)
+
                         // 遍历要高亮的行号数组
                         highlightedLines.forEach(function(lineNumber) {
                             // 确保行号有效且未高亮过
-                            if (lineNumber >= 1 && lineNumber <= lines.length && !lines[lineNumber - 1].includes("line-highlight")) {
+                            if (lineNumber >= 1 && lineNumber <= escapedLines.length && !escapedLines[lineNumber - 1].includes("line-highlight")) {
                                 // 在要高亮的行前后添加 span 元素
-                                lines[lineNumber - 1] = "<span class='line-highlight'>"  + lines[lineNumber - 1] + "</span>";
+                                escapedLines[lineNumber - 1] = "<span class='line-highlight'>"  + escapedLines[lineNumber - 1] + "</span>";
                             }
                         });
+                        // console.log(escapedLines)
                         // 更新代码块内容
-                        codeBlock.innerHTML = "<code>" + lines.join("\n") + "</code>";
+                        codeBlock.innerHTML = "<code>" + escapedLines.join("\n") + "</code>";
+
                         // console.log(codeBlock)
 
                         //提交的修复反馈的内容
@@ -281,14 +380,17 @@ var vm = new Vue({
                 },
                 error: function (res){
                     mymessage.error('代码详情获取失败')
+                    reject(res); // 传递错误
                 },
             })
+            // });
 
         },
         //因为一个id只能绑定一个元素，所以为了让代码修复模块的修复前代码也能显示行号，需要再调一次接口
         //代码修复
         getRepair(){
             const that = this
+            // return new Promise((resolve, reject) => {
             $.ajax({
                 url: (http_head + '/login/'),
                 type: 'post',
@@ -300,9 +402,20 @@ var vm = new Vue({
                 success: function (res){
                     res = JSON.parse(res)
 
-                    console.log('代码修复',res)
+                    // console.log('代码修复',res)
                     if(res.fileList[0]){
+                        if (res.fileList[0].Interpretation){
+                            res.fileList[0].Interpretation = res.fileList[0].Interpretation.replace(/^<think>\s*|<\/think>/g, '').replace(/^[\r\n]+/, '');
+                        }
+                        if (res.fileList[0].repair_code){
+                            res.fileList[0].repair_code = res.fileList[0].repair_code.replace(/^<think>\s*|<\/think>/g, '')
+                        }
+                        res.fileList[0].Sink = res.fileList[0].Sink.replace(/^\s+/, '')
+                        res.fileList[0].Source = res.fileList[0].Source.replace(/^\s+/, '')
+                        res.fileList[0].Enclosing_Method = res.fileList[0].Enclosing_Method.replace(/^\s+/, '')
+
                         that.details = res.fileList[0]
+
 
                         // 获取代码块元素
                         var codeBlock2 = document.getElementById("codeBlock2");
@@ -331,23 +444,12 @@ var vm = new Vue({
                 },
                 error: function (res){
                     mymessage.error('代码修复获取失败')
+                    reject(res); // 传递错误
                 },
             })
+            // });
 
         },
-        //使修复前后的代码块的长度相等
-        // equalLength(){
-        //     var BoxHeight2 = document.getElementById('codeBlock2').offsetHeight;
-        //     var BoxHeight3 = document.getElementById('codeBlock3').offsetHeight;
-        //     console.log(BoxHeight2,BoxHeight3)
-        //     if (BoxHeight2 > BoxHeight3) {
-        //         // 设置第一个方块的高度为和第二个方块相同  减去的是内边距的长度
-        //         document.getElementById('codeBlock3').style.height = `${BoxHeight2 - 20}px`;
-        //     } else if (BoxHeight3 > BoxHeight2) {
-        //         document.getElementById('codeBlock2').style.height = `${BoxHeight3 - 20}px`;
-        //     }
-        //
-        // },
 
         //是不是问题
         handleRadioChange(value){
@@ -474,9 +576,8 @@ var vm = new Vue({
                     file_id: that.currentFileId,
                 },
                 success: function (res){
-                    console.log('缺陷描述',res)
+                    // console.log('缺陷描述',res)
                     if(res[0]){
-
                         that.descriptions = res[0]
                     }
 
@@ -508,73 +609,101 @@ var vm = new Vue({
                 }
             })
         },
-        //修复。这个是生成修复代码
-        repair1(){
-            const that = this
-            this.loading = true
-            // var modelName = 'deepseek'
-            // if (this.ifDeepSeek === true) {
-            //     modelName = 'deepseek'
-            // } else if (this.ifDeepSeek === false) {
-            //     modelName = 'CodeLlama'
-            // }
-            // $.ajax({
-            //     url: (http_head + '/Muti/'),
-            //     type: 'post',
-            //     dataType: 'json',
-            //     data: {
-            //         method: 'location_web',
-            //         vulId: that.currentFileId,
-            //         modelName: modelName,
-            //     },
-            //     success: function (res){
-            //         console.log('修复1',res)
-            //         that.repair2()
-            //     },
-            //     error: function (res){
-            //         mymessage.error('修复失败')
-            //     },
-            // })
-            $.ajax({
-                url: (http_head + '/Muti/'),
-                type: 'post',
-                dataType: 'json',
-                data: {
-                    method: 'deepseek_repair',
-                    file_id: that.currentFileId,
-                    task_id: that.taskid,
-                    code: that.details.source_code,
-                    vultype: that.details.vultype,
-                    model_name: 'deepseek-6.7b',
-                },
-                    success: function (res){
-                    console.log('修复1',res)
-                    that.repair2()
-                },
-                error: function (res){
-                    mymessage.error('修复失败')
-                },
-            })
+        //生成修复代码
+        xiufu(){
+            var that = this;
+
+            const currentId = this.currentFileId; // 保存当前文件ID
+            // 终止该文件之前的请求
+            if (this.repairXHRs[currentId]) {
+                this.repairXHRs[currentId].abort();
+            }
+
+            // 立即清空当前文件解析内容
+            this.$set(this.fileRepairs, currentId, '');
+            this.details.repair_code = this.fileRepairs[currentId] || '';
+
+            // 创建一个新的 XMLHttpRequest 对象来处理流式请求
+            var xhr = new XMLHttpRequest();
+            this.repairXHRs[currentId] = xhr; // 存储XHR实例
+
+
+            xhr.open('POST', http_head + '/Muti/', true);
+            xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded'); // 设置为表单提交的格式
+
+
+            // 当有新数据到达时触发该回调
+            var fullMessage = ''; // 用于存储完整的流式数据
+            xhr.onprogress = function (event) {
+
+                fullMessage = event.target.responseText
+                    .replace(/(\r\n|\n)?data:\s*/g, '')　　 // 过滤掉前面的 "data: " 前缀并拼接流式数据
+                    .replace(/^<think>\s*|<\/think>/g, '')　　// 去除 < think >和</think>
+                    // .replace(/\n+/g, '')　　　　//换行符
+                    // .replace(/\n{3,}/g, '\n\n')
+                    // .replace(/\s+/g, ' ')　　　　　//空白字符
+                    // .replace(/(\r\n|\n|\r)/gm, "<br>")
+                    .trim();　　　　　　　　　　　　　　　　　　　　　　　　//　　去掉字符串开头和结尾的空白字符
+
+                // console.log(fullMessage)
+                // 更新对应文件的解析内容
+                that.$set(that.fileRepairs, currentId, fullMessage);
+
+                // 仅当当前查看的是本文件时更新展示
+                if (that.currentFileId === currentId) {
+                    that.details.repair_code = fullMessage;
+                    that.$forceUpdate();
+                    that.scrollTop22();
+                }
+                // that.$forceUpdate(); // 强制 Vue 重新渲染列表
+                // that.scrollTop11()
+            };
+
+            xhr.onerror = function (err) {
+                console.log(err);
+                // that.loading = false;
+            };
+
+            xhr.onloadend = function () {
+                // console.log('加载结束');
+                delete that.repairXHRs[currentId]; // 清理已完成请求
+            };
+
+            // 将数据编码为表单格式并发送
+            const formData = `method=deepseek_repair&file_id=${encodeURIComponent(currentId)}&code=${encodeURIComponent(that.details.source_code)}&vultype=${encodeURIComponent(that.details.vultype)}&task_id=${encodeURIComponent(that.taskid)}&model_name=${encodeURIComponent('deepseek')}`;
+            xhr.send(formData); // 发送表单格式的数据
+
+
         },
+        // 处理滚动条一直保持最上方
+        scrollTop22() {
+            let div = document.getElementById("repairBox");
+            div.scrollTop = div.scrollHeight;
+        },
+
         //这个是获取修复代码
         repair2(){
             const that = this
+            const currentFileId = this.currentFileId;
             $.ajax({
                 url: (http_head + '/login/'),
                 type: 'post',
                 dataType: 'json',
                 data: {
                     method: 'get_repair_code',
-                    fileid: that.currentFileId,
+                    fileid: currentFileId,
                 },
                 success: function (res){
                     console.log('修复2',res)
-                    if (res[0]){
-                        that.details.repair_code = res[0].repair_code
+                    if (res[0].repair_code){
+                        that.details.repair_code = res[0].repair_code.replace(/^<think>\s*|<\/think>/g, '').replace(/^[\r\n]+/, '');
+                    } else {
+                        that.details.repair_code = ''
                     }
                     that.loading = false
                 },
                 error: function (res){
+                    // that.loading1 = false
                     mymessage.error('修复失败')
                 },
             })
@@ -603,23 +732,144 @@ var vm = new Vue({
 
                 },
                 error: function (res){
-                    mymessage.error('修复失败')
+                    mymessage.error('提交失败')
                 },
             })
         },
+        //获取代码解析
+        getCodeAnalysis(fileId){
+            // const that = this
+            const currentFileId = this.currentFileId;
+            $.ajax({
+                url: (http_head + '/login/'),
+                type: 'post',
+                dataType: 'json',
+                data: {
+                    method: 'get_Interpretation',
+                    id: currentFileId,
+                },
+                success: function (res){
+                    console.log('代码解析',res)
+                    // 仅处理当前选中文件
+                    // console.log(that.currentFileId,currentFileId)
+                    if (that.currentFileId === currentFileId) {
+                        if (res[0].Interpretation && res[0].Interpretation !== null) {
+                            // console.log('ok')
+                            that.stopPollingForFile(currentFileId); // 停止轮询
+                            that.$set(that.fileLoadingMap, currentFileId, false);
+                            //开头的回车
+                            that.details.Interpretation = res[0].Interpretation.replace(/^<think>\s*|<\/think>/g, '').replace(/^[\r\n]+/, '');
+
+                        } else {
+                            // console.log(000)
+                            // that.$set(that.fileLoadingMap, currentFileId, false);
+                            that.details.Interpretation = ''
+                        }
+                    }
+                    // console.log('get',that.fileLoadingMap)
+                },
+                error: function (res){
+                    that.stopPollingForFile(currentFileId);
+                    // that.loading1 = false
+                    that.$set(that.fileLoadingMap, currentFileId, false);
+                    // mymessage.error('获取失败')
+                },
+            })
+        },
+        // 生成代码解析  流式输出
+        getAnalysis() {
+            var that = this;
+            const currentId = this.currentFileId; // 保存当前文件ID
+            // 终止该文件之前的请求
+            if (this.fileXHRs[currentId]) {
+                this.fileXHRs[currentId].abort();
+            }
+
+            // 立即清空当前文件解析内容
+            this.$set(this.fileInterpretations, currentId, '');
+            this.details.Interpretation = this.fileInterpretations[currentId] || '';
+
+            // 创建一个新的 XMLHttpRequest 对象来处理流式请求
+            var xhr = new XMLHttpRequest();
+            this.fileXHRs[currentId] = xhr; // 存储XHR实例
+
+            xhr.open('POST', http_head + '/Muti/', true);
+            xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded'); // 设置为表单提交的格式
+
+            // 当有新数据到达时触发该回调
+            var fullMessage = ''; // 用于存储完整的流式数据
+            xhr.onprogress = function (event) {
+
+                fullMessage = event.target.responseText
+                    .replace(/(\r\n|\n)?data:\s*/g, '')　　 // 过滤掉前面的 "data: " 前缀并拼接流式数据
+                    .replace(/^<think>\s*|<\/think>/g, '')　　// 去除 < think >和</think>
+                    // .replace(/\n+/g, '')　　　　//换行符
+                    // .replace(/\n{3,}/g, '\n\n')    // 多个换行变两个
+                    // .replace(/\s+/g, ' ')　　　　　//空白字符
+                    // .replace(/(\r\n|\n|\r)/gm, "<br>")
+                    .trim();　　　　　　　　　　　　　　　　　　　　　　　　//　　去掉字符串开头和结尾的空白字符
+
+                // console.log(fullMessage)
+                // 更新对应文件的解析内容
+                that.$set(that.fileInterpretations, currentId, fullMessage);
+
+                // 仅当当前查看的是本文件时更新展示
+                if (that.currentFileId === currentId) {
+                    that.details.Interpretation = fullMessage;
+                    that.$forceUpdate();
+                    that.scrollTop11();
+                }
+            };
+
+            xhr.onerror = function (err) {
+                console.log(err);
+                // that.loading = false;
+            };
+
+            xhr.onloadend = function () {
+                // console.log('加载结束');
+                delete that.fileXHRs[currentId]; // 清理已完成请求
+            };
+
+            // 将数据编码为表单格式并发送
+            const formData = `method=deepseek_chat2&id=${encodeURIComponent(currentId)}&code=${encodeURIComponent(that.details.source_code)}&vultype=${encodeURIComponent(that.details.vultype)}&Sink=${encodeURIComponent(that.details.Sink)}`;
+            xhr.send(formData); // 发送表单格式的数据
+        },
+
+        // 处理滚动条一直保持最上方
+        scrollTop11() {
+            let div = document.getElementById("bigBox");
+            div.scrollTop = div.scrollHeight;
+        },
+        processText(text) {
+            // 替换其他 HTML 标签为转义字符，使其显示为纯文本
+            let safeText = text.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+            // 将 <br> 转换回原始的 HTML 标签
+            return safeText.replace(/&lt;br&gt;/g, "<br>");
+        },
+        filterNode(value, data) {
+            if (!value) return true;
+            return data.name.indexOf(value) !== -1;
+        }
+
 
     },
+    beforeDestroy() {
+
+    },
+    watch: {
+        filterText(val) {
+            this.$refs.tree.filter(val);
+        },
+        currentFileId(newVal) {
+            // 切换时立即显示该文件的已有内容
+            this.details.Interpretation = this.fileInterpretations[newVal] || '';
+
+            // 如果有进行中的请求，继续在后台更新fileInterpretations但不影响active
+        }
+    },
+
     mounted(){
-        this.getDetails()
-
-            // this.$nextTick(() => {
-            //     this.$refs.tabs.$children[0].$refs.tabs[1].style.display = 'none';
-            //     console.log(this.$refs.tabs.$children[0].$refs);
-            //     console.log(this.$refs.tabs.$children[0].$refs.tabs);
-            // })
-
 
     },
-
-
 })

@@ -114,10 +114,10 @@ def get_mac_addresses():
 
 def authorization_request():
     authorization_request = ''
-    # 获取并打印所有网卡的 MAC 地址
-    mac_addresses = get_mac_addresses()
-    for interface, mac in mac_addresses.items():
-        authorization_request += '<mac_split>' + mac + '</mac_split>'
+    # # 获取并打印所有网卡的 MAC 地址
+    # mac_addresses = get_mac_addresses()
+    # for interface, mac in mac_addresses.items():
+    #     authorization_request += '<mac_split>' + mac + '</mac_split>'
         #print(f"Interface: {interface}, MAC Address: {mac}")
 
     # 获取并打印硬盘序列号
@@ -137,46 +137,62 @@ def authorization_response(time, en_authorization_request):
     en_authorization_response = encrypt(authorization_response)
 
 
-def check():
-    while True:
-        if not os.path.exists('License'):
-            request = authorization_request()
-            print(f"""
+def check_license_validity(license_key):
+    """验证许可证是否有效"""
+    try:
+        decrypted_response = decrypt(license_key)
+    except Exception:
+        print('授权码无效或已过期！请重新获取授权码！')
+        return False
+    
+    decrypted_request = decrypt(authorization_request())
+    response_parts = decrypted_response.split("<process_split>")[0]
+    current_date = datetime.datetime.now().strftime("%Y-%m-%d")
+    
+    request_serials = decrypted_request.split('<serial_split>')
+    response_serials = response_parts.split('<time_split>')[0].split('<serial_split>')
+    
+    # 检查序列号是否匹配
+    is_serial_valid = any(serial in response_serials for serial in request_serials)
+    
+    # 检查日期是否有效
+    expiry_date = response_parts.split('<time_split>')[-1].split('/<time_split>')[0]
+    is_date_valid = expiry_date >= current_date
+    
+    return is_serial_valid and is_date_valid
+
+def request_activation():
+    """请求用户激活"""
+    request_code = authorization_request()
+    print(f"""
 该系统尚未授权，请按照以下步骤操作：
 1. 联系管理员。
 2. 发送请求码。
 3. 获取激活码。
-请求码：{request}""")
-            while True:
-                response = input('请输入激活码：')
-                try:
-                    de_response = decrypt(response)
-                except:
-                    print('授权码无效或已过期！请重新获取授权码！')
-                    break
-                de_request = decrypt(request)
-                now = datetime.datetime.now().strftime("%Y-%m-%d")
-                if de_response.split('<time_split>')[0] == de_request and de_response.split('<time_split>')[-1].split('/<time_split>')[0] >= now:
-                    with open('License', 'w', encoding='utf-8') as f:
-                        f.write(response)
-                    return
-                else:
-                    print('授权码无效或已过期！请重新获取授权码！')
+请求码：{request_code}""")
+    
+    while True:
+        activation_code = input('请输入激活码：')
+        if check_license_validity(activation_code):
+            with open('License', 'w', encoding='utf-8') as f:
+                f.write(activation_code)
+            return True
+        print('授权码无效或已过期！请重新获取授权码！')
+
+def check():
+    """主检查函数"""
+    while True:
+        if not os.path.exists('License'):
+            if request_activation():
+                return
         else:
             with open('License', 'r', encoding='utf-8') as f:
-                response = f.read()
-            request = authorization_request()
-            try:
-                de_response = decrypt(response)
-            except:
-                print('授权码无效或已过期！请重新获取授权码！')
+                license_key = f.read()
+            
+            if check_license_validity(license_key):
                 return
-            de_request = decrypt(request)
-            now = datetime.datetime.now().strftime("%Y-%m-%d")
-            if de_response.split('<time_split>')[0] == de_request and de_response.split('<time_split>')[-1].split('/<time_split>')[0] >= now:
-                return
-            else:
-                print('授权码无效或已过期！请重新获取授权码！')
-                os.remove('License')
+            
+            print('授权码无效或已过期！请重新获取授权码！')
+            #os.remove('License')
 
 

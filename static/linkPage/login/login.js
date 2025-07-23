@@ -17,30 +17,74 @@ var vm = new Vue({
                 this.$message({message: options, type: 'success'})
             },
         };
+        // this.url()
+
     },
     data() {
         return {
             loginForm:{
                 name:'',
-                password:'',
-                authorization:''
+                password:'',
+                captcha:'',
             },
-            rules:{
-                name: [
-                    { required: true, message: '请输入用户名', trigger: 'blur' },
-                    // { min: 3, max: 6, message: '用户名长度在 3 到 6 个字符', trigger: 'blur' }
-                ],
-                password: [
-                    { required: true, message: '请输入密码', trigger: 'blur' },
-                    // { min: 3, max: 6, message: '密码长度在 3 到 6 个字符', trigger: 'blur' }
-                ]
+            captchaText: '',
 
-            },
             logStatus:'',
         }
     },
 
     methods: {
+        // 生成验证码
+        generateCaptcha() {
+            const canvas = this.$refs.captchaCanvas;
+            const ctx = canvas.getContext('2d');
+
+            // 设置 canvas 宽高
+            canvas.width = 120;
+            canvas.height = 40;
+
+            // 清空画布
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // 生成随机验证码
+            const chars = '0123456789';
+            let captcha = '';
+            for (let i = 0; i < 4; i++) {
+                captcha += chars[Math.floor(Math.random() * chars.length)];
+            }
+            this.captchaText = captcha;
+
+            // 绘制背景
+            ctx.fillStyle = '#f0f0f0';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // 绘制随机线条
+            for (let i = 0; i < 3; i++) {
+                ctx.strokeStyle = this.getRandomColor();
+                ctx.beginPath();
+                ctx.moveTo(Math.random() * canvas.width, Math.random() * canvas.height);
+                ctx.lineTo(Math.random() * canvas.width, Math.random() * canvas.height);
+                ctx.stroke();
+            }
+
+            // 绘制验证码文本
+            for (let i = 0; i < captcha.length; i++) {
+                ctx.font = `${this.getRandomFontSize()}px Arial`; // 随机字体大小
+                ctx.fillStyle = this.getRandomColor();
+                ctx.fillText(captcha[i], 10 + i * 25, 30); // 每个字符间隔 25px
+            }
+        },
+        // 获取随机颜色
+        getRandomColor() {
+            const r = Math.floor(Math.random() * 256);
+            const g = Math.floor(Math.random() * 256);
+            const b = Math.floor(Math.random() * 256);
+            return `rgb(${r},${g},${b})`;
+        },
+        // 获取随机字体大小
+        getRandomFontSize() {
+            return Math.floor(Math.random() * 10) + 20; // 字体大小在 20-30px 之间
+        },
         // 点击登录
         confirm(){
             if (this.loginForm.name == "") {
@@ -51,10 +95,19 @@ var vm = new Vue({
                 alert("请输入您的登录密码！");
                 return false
             }
+            if (this.loginForm.captcha == "") {
+                alert("请输入验证码！");
+                return false
+            }
+            if(this.loginForm.captcha !== this.captchaText) {
+                alert("验证码错误！请重新输入");
+                this.generateCaptcha()
+                this.loginForm.captcha = ''
+                return false
+            }
             let flag1 = this.checkSqlsIn(this.loginForm.name);
             let flag2 = this.checkSqlsIn(this.loginForm.password);
-            
-            console.log(flag1,flag2)
+            // console.log(flag1,flag2)
             if(flag1 || flag2){
                 mymessage.error("存在非法输入！")
                 return
@@ -62,11 +115,22 @@ var vm = new Vue({
                 this.loginLog(this.logStatus)
             }
         },
+        reset(){
+            this.loginForm = {
+                name:'',
+                password: '',
+                captcha: '',
+            }
+        },
+        url(){
+            const currentUrl = window.location.href;
+            // console.log('当前网址链接:', currentUrl);
+        },
         loginLog(status){
             var that = this
 
             $.ajax({
-                url:  'http://10.99.16.24:8088/access_log/',
+                url:  http_head + '/access_log/',
                 data:{
                     method : 'access_log',
                     username: that.loginForm.name,
@@ -86,14 +150,13 @@ var vm = new Vue({
         },
         login(){
             var that = this
-            debugger
+            
             $.ajax({
-                url:  'http://10.99.16.24:8088/login/',
+                url:  http_head + '/login/',
                 data:{
                     method : 'login',
                     username: that.loginForm.name,
                     password: that.loginForm.password,
-                    authorization: that.loginForm.authorization
                 },
                 type : 'post',
                 dataType : 'JSON',
@@ -106,7 +169,7 @@ var vm = new Vue({
                         that.loginLog(that.logStatus)
                         debugger
                         // window.location.href = 'http://10.99.16.24:8088/static/python/index.html'
-                        window.location.href = 'http://10.99.16.24:8088/static/linkPage/login/index.html'
+                        window.location.href = http_head + '/static/linkPage/login/index.html'
                     }
                     else if(res.code == '500'){
                         mymessage.error("登陆失败")
@@ -145,6 +208,9 @@ var vm = new Vue({
             return invalid;
         },
 
+    },
+    mounted(){
+        this.generateCaptcha()
     }
 });
 

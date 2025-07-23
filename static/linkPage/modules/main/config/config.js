@@ -87,15 +87,15 @@ var vm = new Vue({
             const that = this
             if (this.config1){
                 // rule1，2，3需要选规则
-                if((this.config1 === 'rule1' || this.config1 === 'rule2' || this.config1 === 'rule3') && this.version == ''){
-                    mymessage.error("检测规范未选择！")
-                } else {
-                    if(this.config1 === 'rule1' || this.config1 === 'rule2' || this.config1 === 'rule3') {
-                        var policy = this.config1 + ',' + this.version[0] + ',' + this.version[1]
-                        // console.log(policy)
-                    } else {
+                // if((this.config1 === 'rule1' || this.config1 === 'rule2' || this.config1 === 'rule3') && this.version == ''){
+                //     mymessage.error("检测规范未选择！")
+                // } else {
+                //     if(this.config1 === 'rule1' || this.config1 === 'rule2' || this.config1 === 'rule3') {
+                //         var policy = this.config1 + ',' + this.version[0] + ',' + this.version[1]
+                //         // console.log(policy)
+                //     } else {
                         var policy = this.config1
-                    }
+                    // }
                     $.ajax({
                         url:  (http_head + '/login/'),
                         data:{
@@ -115,7 +115,7 @@ var vm = new Vue({
                             mymessage.error("保存失败")
                         }
                     })
-                }
+                // }
             } else { mymessage.error("模型未选择！") }
         },
         //获取之前保存的配置
@@ -131,18 +131,17 @@ var vm = new Vue({
                 dataType : 'JSON',
                 success : function (res){
 
-                    if(res) {
+                    if(res.policy) {
                         console.log('policy:',res.policy)
-                        var str = res.policy.split(',')
-                        if (str[0] === 'rule1' || str[0] === 'rule2' || str[0] === 'rule3') {
-                            that.ruuule = true
-                            that.config1 = str[0]     //模型
-                            that.version = str.slice(1)       //规范
+                        // var str = res.policy.split(',')
+                        // if (str[0] === 'rule1' || str[0] === 'rule2' || str[0] === 'rule3') {
+                        //     that.config1 = str[0]     //模型
+                        //     that.version = str.slice(1)       //规范
                             // console.log(that.version)
 
-                        } else {
+                        // } else {
                             that.config1 = res.policy
-                        }
+                        // }
 
                     }
                 },
@@ -157,14 +156,14 @@ var vm = new Vue({
             // console.log(this.version)
         },
         //模型选择
-        input(label){
-            // console.log(label)
-            if (label === 'rule1' || label === 'rule2' || label === 'rule3') {
-                this.ruuule = true
-            } else {
-                this.ruuule = false
-            }
-        },
+        // input(label){
+        //     // console.log(label)
+        //     if (label === 'rule1' || label === 'rule2' || label === 'rule3') {
+        //         this.ruuule = true
+        //     } else {
+        //         this.ruuule = false
+        //     }
+        // },
         // 重置
         reset(){
             this.config1 = ''

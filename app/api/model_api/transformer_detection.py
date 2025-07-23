@@ -82,13 +82,17 @@ def code_features_unix(model, code_text):
 
     return code_features
 
-model = UniXcoder("/home/public/project_XSY/project/unixcoder-base")
-model.to(small_model_device)
-    
-model.tokenizer.add_special_tokens({'pad_token': '[PAD]'})
+@lru_cache(maxsize=1)
+def load_unix():
+    model = UniXcoder("/home/public/project_XSY/project/unixcoder-base")
+    model.to(small_model_device)
+
+    model.tokenizer.add_special_tokens({'pad_token': '[PAD]'})
+    return model
 
 def extract_features(programtext):
     #features = code_features_gen(programtext)  # 1024维
+    model = load_unix()
     features = code_features_unix(model, programtext)  # 768维
     
     return features

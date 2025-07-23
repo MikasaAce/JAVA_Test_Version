@@ -57,6 +57,8 @@
         font-size: 16px;
         line-height: 30px;
         font-weight: 500;
+        white-space: pre-wrap; /* 保持空格和换行，但允许长行折行 */
+        word-wrap: break-word; /* 长单词也会换行 */
     }
       /*.el-menu-vertical-demo{*/
       /*    float: right;*/
@@ -137,6 +139,26 @@
         background: #a6a9ad;
         border: 1px solid #a6a9ad !important;
         color: #FFF;
+      }
+      .no-resize textarea{
+        resize: none !important;
+      }
+      .el-button--mini.is-round {
+        padding: 5px 15px !important;
+        background-color: #a6a9ad;
+        border-color: #a6a9ad;
+      }
+      .el-button--mini.is-round:hover {
+        background-color: #5a5e66;
+        border-color: #5a5e66;
+      }
+      .active-logic-btn {
+        background-color: #409EFF !important;
+        border-color: #409EFF !important;
+        color: white !important;
+      }
+      .el-button {
+        transition: all 0.3s ease;
       }
 
   </style>
@@ -237,7 +259,7 @@
                         <img class="touxiang" v-else src="./img/me.png"/>
                       </div>
                       <div class="border_text" >
-                        <span class="chatText" v-html="item.text"></span>
+                        <span class="chatText" >{{item.text}}</span>
                       </div>
 
                     </div>
@@ -245,10 +267,15 @@
                  
                 </div>
                 <div style="margin-top: 15px;display:flex;" >
-                  <el-input placeholder="请输入你的问题吧！" v-model="input3" class="input-with-select" :autofocus="true" ref="serachBox">
+                  <el-input type="textarea" :rows="5" placeholder="请输入你的问题吧！" v-model="input3" class="no-resize" :autofocus="true" ref="serachBox">
 
                   </el-input>
                   <el-button :loading="loading" @keydown.enter.native="handleMsg" slot="append" type="info" class="buttonDiv" @click="handleMsg">发送</el-button>
+                </div>
+                <div style="margin-top: 10px; text-align: left;">
+                  <el-button size="mini" round type="info" :class="{ 'active-logic-btn': isLogicVulnerabilityActive }" @click="toggleLogicVulnerability">
+                    逻辑漏洞
+                  </el-button>
                 </div>
               </template>
             </div>

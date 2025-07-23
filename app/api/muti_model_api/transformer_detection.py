@@ -23,6 +23,12 @@ from app.api.muti_model_api.get_feature import *
 from app.api.muti_model_api.split_code import *
 from app.api.muti_model_api.model import *
 
+# 获取py 文件所在目录
+current_path = os.path.dirname(__file__)
+
+# 把这个目录设置成工作目录
+os.chdir(current_path)
+
 # 构造数据集
 class getDataset(Dataset):
     def __init__(self, file_path, code, feature, line_start_to_end):

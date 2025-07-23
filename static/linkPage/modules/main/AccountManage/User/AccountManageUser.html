@@ -16,32 +16,13 @@
     </el-row>
 
     <el-row :gutter="10" style="margin: 10px">
-<!--      <el-col :span="4">-->
-<!--        <el-card class="box-card">-->
-<!--          <el-input-->
-<!--            placeholder="搜索团队"-->
-<!--            v-model="filterText">-->
-<!--          </el-input>-->
-
-<!--          <el-tree-->
-<!--            class="filter-tree"-->
-<!--            :data="data"-->
-<!--            :props="defaultProps"-->
-<!--            default-expand-all-->
-<!--            :filter-node-method="filterNode"-->
-<!--            ref="tree">-->
-<!--          </el-tree>-->
-<!--        </el-card>-->
-
-
-<!--      </el-col>-->
 
       <el-col :span="24">
         <el-card class="box-card">
           <template>
             <div style="margin-bottom: 20px">
               <el-form :inline="true" :model="query" class="demo-form-inline" method="post" >
-                <el-form-item label="用户名称">
+                <el-form-item label="用户名称:">
                   <el-input v-model="query.name" placeholder="请输入关键字"></el-input>
                 </el-form-item>
                 <el-form-item label="登录账号：">
@@ -68,7 +49,7 @@
                   <span v-else-if="scope.row.role==='1'">普通用户</span>
                 </template>
               </el-table-column>
-              <el-table-column prop="teamName" label="团队名称" ></el-table-column>
+<!--              <el-table-column prop="teamName" label="团队名称" ></el-table-column>-->
               <el-table-column label="操作" >
                 <template slot-scope="scope">
                   <el-button type="text" @click="handleEdit(scope.row)">编辑</el-button>
@@ -91,17 +72,39 @@
             </el-pagination>
 
             <el-dialog :title="addUserTitle" :visible.sync="addUserDialog" width="50%" >
-              <el-form ref="addform" :model="addform" label-width="100px" :rules="rules1">
-                <el-form-item label="用户名称:" prop="username">
+              <el-form ref="addform" :model="addform" label-width="100px" :rules="rules1" style="">
+                <el-form-item label="用户名称:" prop="username" style="">
                   <el-input v-model="addform.username"></el-input>
                 </el-form-item>
-                <el-form-item label="登录账号:" v-if="isshow=='1'" prop="account">
+                <el-form-item label="登录账号:" v-if="isshow=='1'" prop="account" style="">
                   <el-input v-model="addform.account"></el-input>
-                </el-form-item >
-                <el-form-item label="登录密码:" v-if="isshow=='1'" prop="password">
-                  <el-input v-model="addform.password" type="password" show-password autocomplete="off"></el-input>
                 </el-form-item>
+<!--                <div style="margin-left:150px;display: flex; align-items: center; ">-->
+                <el-form-item label="登录密码:" v-if="isshow=='1'" prop="password"  style="">
 
+                    <el-input
+                            v-model="addform.password"
+                            type="password"
+                            show-password
+                            autocomplete="off"
+                            placeholder="请输入8-20位字符，至少包含数字、大/小写字母、特殊字符中的两种"
+                            style="width: 100%;"
+                    ></el-input>
+
+
+                </el-form-item>
+<!--                <el-progress-->
+                <!--                        v-if="passwordPercent > 0"-->
+<!--                        :percentage="passwordPercent"-->
+<!--                        :color="customColors"-->
+<!--                        :format="formatPasswordStrength"-->
+<!--                        :stroke-width="5"-->
+<!--                        style="flex: 1;max-width:200px"-->
+<!--                ></el-progress>-->
+<!--               </div>-->
+                <el-form-item label="确认密码:" v-if="isshow=='1'" prop="confirmPassword" style="">
+                  <el-input v-model="addform.confirmPassword" type="password" show-password autocomplete="off" placeholder="请再次输入密码"></el-input>
+                </el-form-item>
                 <el-form-item>
                   <el-button type="primary" @click="createUser()" v-if="isshow=='1'">立即创建</el-button>
                   <el-button type="primary" @click="editUser()" v-else-if="isshow=='2'" >更新</el-button>
@@ -111,17 +114,20 @@
             </el-dialog>
 
             <el-dialog title="修改密码" :visible.sync="pwdDialog" width="50%" >
-              <el-form ref="changeform" :model="changeform" label-width="80px" :rules="rules2">
+              <el-form ref="changeform" :model="changeform" label-width="100px" :rules="rules2">
                 <el-form-item label="原密码:"  prop="pwd">
                   <el-input v-model="changeform.pwd" ></el-input>
                 </el-form-item>
-                <el-form-item label="新密码:" prop="pwdnew">
-                  <el-input v-model="changeform.pwdnew" type="password" show-password autocomplete="off"></el-input>
+                <el-form-item label="输入新密码:" prop="passNew">
+                  <el-input v-model="changeform.passNew" type="password" show-password placeholder="请输入8-20位字符，至少包含数字、大/小写字母、特殊字符中的两种" autocomplete="off"></el-input>
+                </el-form-item>
+                <el-form-item label="确认新密码:" prop="checkPassNew">
+                  <el-input v-model="changeform.checkPassNew" type="password" show-password autocomplete="off"></el-input>
                 </el-form-item>
 
                 <el-form-item>
                   <el-button type="primary" @click="changePwd()">确定修改</el-button>
-                  <el-button @click="pwdDialog = false">取消</el-button>
+                  <el-button @click="reset('changeform')">重置</el-button>
                 </el-form-item>
               </el-form>
             </el-dialog>

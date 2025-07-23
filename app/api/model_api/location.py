@@ -192,7 +192,8 @@ def loadLLM_deepseek(model_name):
 
         elif model_name == 'qwen-7b':
             print('使用qwen7b模型')
-            model_path = "/home/public/qwen/qwen2-7b-instruct"
+            #model_path = "/home/public/qwen/qwen2-7b-instruct"
+            model_path = '/home/public/model/deepseek-R1-qwen-14B'
             tokenizer = AutoTokenizer.from_pretrained(model_path, trust_remote_code=True)
             model = AutoModelForCausalLM.from_pretrained(model_path, trust_remote_code=True, torch_dtype=torch.bfloat16,
                                                          device_map='auto')

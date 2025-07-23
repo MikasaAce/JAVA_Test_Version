@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" style="height: 100%;overflow-y: hidden;">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport"
@@ -19,7 +19,8 @@
 
         .box-card1 {
             /*width: 300px;*/
-            margin: 10px 5px 5px 10px;
+            margin: 10px;
+            height: 100%;
         }
         .box-card2 {
             /*width: 160px;*/
@@ -28,6 +29,7 @@
         .box-card3 {
             /*width: 600px;*/
             margin: 10px;
+            height: 100%;
         }
         .card_Header {
             font-size: 20px;font-weight: bolder;
@@ -54,50 +56,93 @@
             margin-left: 8px;
             /*text-align: center;*/
         }
+        .el-card__body {
+            height: calc(100% - 60px); /* 根据 header 高度调整 */
+            padding:10px;
+            position: relative; /* 关键定位 */
+        }
+        #echarts1, #echarts2, #echarts3,
+        #echarts4, #echarts5, #echarts6 {
+            width: 100%;
+            height: 100% !important; /* 强制继承容器高度 */
+            /*min-height: 180px; !* 防止内容塌陷 *!*/
+        }
+        /*前三名的序号*/
+        .rank_position1 {
+            font-size: 1rem;
+            font-weight: bold;
+            margin-right: 20px;
+            color: #FF6701;
+        }
+        /*其他序号*/
+        .rank_position {
+            font-size: 1rem;
+            font-weight: bold;
+            margin-right: 20px;
+            color: #666666;
+        }
+        .rank_name {
+            font-size: 1rem;
+            /*font-weight: bold;*/
+        }
+        .rank_num {
+            font-size: 1rem;
+            color: #7a7a7a;
+            font-style: italic; /* 设置为斜体 */
+
+        }
+        /*.el-row {*/
+        /*    display: flex;*/
+        /*    flex-wrap: nowrap;*/
+        /*}*/
+        /*.el-col {*/
+        /*    display: flex;*/
+        /*    flex-direction: column;*/
+        /*}*/
 
     </style>
 </head>
-<body>
-<div id="app">
-    <template>
+<body style="height: 100%">
+<div id="app" style="overflow-x: hidden;height: 100%">
+    <template style="height: 100%;">
 
-        <el-row :gutter="20">
-            <el-col :span="6"><el-card class="box-card1"  shadow="never">
+        <el-row :gutter="20" style="height: 30%">
+            <el-col :span="6" style="height: 100%;"><el-card class="box-card1"  shadow="never" body-style="height:calc(100% - 50px);">
                 <div slot="header" class="clearfix" style="display: flex">
                     <span class="card_Header">项目总数图</span>
                 </div>
-                <el-container>
-                    <div id="echarts1" style="width: 100%;height: 180px;"></div>
-                </el-container>
+<!--                <el-container style="height: 100%;">-->
+                    <div id="echarts1" style="height:100%"></div>
+<!--                </el-container>-->
             </el-card></el-col>
-            <el-col :span="6"><el-card class="box-card1"  shadow="never">
+            <el-col :span="6" style="height: 100%;"><el-card class="box-card1"  shadow="never">
                 <div slot="header" class="clearfix">
                     <span class="card_Header">任务总数</span>
                 </div>
-                <el-container>
-                    <div id="echarts2" style="width: 100%;height: 180px;"></div>
+                <el-container style="height: 100%;">
+                    <div id="echarts2" style="width: 100%;height: calc(100% - 80px)"></div>
                 </el-container>
             </el-card></el-col>
-            <el-col :span="6"><el-card class="box-card1"  shadow="never">
+            <el-col :span="6" style="height: 100%;"><el-card class="box-card1"  shadow="never">
                 <div slot="header" class="clearfix">
                     <span class="card_Header">总代码量</span>
                 </div>
-                <el-container>
-                    <div id="echarts3" style="width: 100%;height: 180px;"></div>
+                <el-container style="height: 100%;">
+                    <div id="echarts3" style="width: 100%;height: calc(100% - 80px)"></div>
                 </el-container>
             </el-card></el-col>
-            <el-col :span="6"><el-card class="box-card1"  shadow="never">
+            <el-col :span="6" style="height: 100%;"><el-card class="box-card1"  shadow="never">
                 <div slot="header" class="clearfix">
                     <span class="card_Header">缺陷总数</span>
                 </div>
-                <el-container>
-                    <div id="echarts4" style="width: 100%;height: 180px;"></div>
+                <el-container style="height: 100%;">
+                    <div id="echarts4" style="width: 100%;height: calc(100% - 80px)"></div>
                 </el-container>
             </el-card></el-col>
         </el-row>
 
 
-        <el-row :gutter="20" style="margin: 10px">
+        <el-row :gutter="20" style="margin: 30px 0 20px 0" style="height: 100px">
             <el-col :span="5">
                 <div class="topData">
                     <div class="top_title">项目总数:</div>
@@ -131,22 +176,99 @@
 
         </el-row>
 
-        <el-row>
-            <el-col :span="12"><el-card class="box-card3"  shadow="never">
+        <el-row style="height: calc(60% - 150px)">
+            <el-col :span="12" style="height: 100%;"><el-card class="box-card3"  shadow="never">
                 <div slot="header" class="clearfix">
                     <span class="card_Header">检测任务新增趋势</span>
                 </div>
-                <el-container>
-                    <div id="echarts5" style="width: 100%;height: 300px;"></div>
+                <el-container style="height: 100%;">
+                    <div id="echarts5" style="width: 100%;height: calc(100% - 100px)"></div>
                 </el-container>
             </el-card></el-col>
-            <el-col :span="12"><el-card class="box-card3"  shadow="never">
+            <el-col :span="12" style="height: 100%;"><el-card class="box-card3"  shadow="never">
                 <div slot="header" class="clearfix">
-                    <span class="card_Header">缺陷等级分布</span>
+                    <span class="card_Header">检出漏洞TOP10</span>
                 </div>
-                <el-container>
-
-                    <div id="echarts6" style="width: 100%;height: 300px;"></div>
+                <el-container style="height: 100%">
+                    <div id="echarts6" style="width: 100%;height: calc(100% - 100px)"></div>
+<!--                    <div style="width: 50%;">-->
+<!--                        <div style="display: flex;flex-direction: column;justify-content: space-between;height: 100%;padding: 20px">-->
+<!--                            <div style="display: flex;justify-content: space-between;">-->
+<!--                                <div>-->
+<!--                                    <span class="rank_position1">1</span>-->
+<!--                                    <span class="rank_name">{{topName[0].vultype}}</span>-->
+<!--                                </div>-->
+<!--                                <span class="rank_num">{{topName[0].vul_num}}</span>-->
+<!--                            </div>-->
+<!--                            <div style="display: flex;justify-content: space-between;">-->
+<!--                                <div>-->
+<!--                                    <span class="rank_position1">2</span>-->
+<!--                                    <span class="rank_name">{{topName[1].vultype}}</span>-->
+<!--                                </div>-->
+<!--                                <span class="rank_num">{{topName[1].vul_num}}</span>-->
+<!--                            </div>-->
+<!--                            <div style="display: flex;justify-content: space-between;">-->
+<!--                                <div>-->
+<!--                                    <span class="rank_position1">3</span>-->
+<!--                                    <span class="rank_name">{{topName[2].vultype}}</span>-->
+<!--                                </div>-->
+<!--                                <span class="rank_num">{{topName[2].vul_num}}</span>-->
+<!--                            </div>-->
+<!--                            <div style="display: flex;justify-content: space-between;">-->
+<!--                                <div>-->
+<!--                                    <span class="rank_position">4</span>-->
+<!--                                    <span class="rank_name">{{topName[3].vultype}}</span>-->
+<!--                                </div>-->
+<!--                                <span class="rank_num">{{topName[3].vul_num}}</span>-->
+<!--                            </div>-->
+<!--                            <div style="display: flex;justify-content: space-between;">-->
+<!--                                <div>-->
+<!--                                    <span class="rank_position">5</span>-->
+<!--                                    <span class="rank_name">{{topName[4].vultype}}</span>-->
+<!--                                </div>-->
+<!--                                <span class="rank_num">{{topName[4].vul_num}}</span>-->
+<!--                            </div>-->
+<!--                        </div>-->
+<!--                    </div>-->
+<!--                    <div style="width: 50%">-->
+<!--                        <div style="display: flex;flex-direction: column;justify-content: space-between;height: 100%;padding: 20px">-->
+<!--                            <div style="display: flex;justify-content: space-between;">-->
+<!--                                <div>-->
+<!--                                    <span class="rank_position">6</span>-->
+<!--                                    <span class="rank_name">{{topName[5].vultype}}</span>-->
+<!--                                </div>-->
+<!--                                <span class="rank_num">{{topName[5].vul_num}}</span>-->
+<!--                            </div>-->
+<!--                            <div style="display: flex;justify-content: space-between;">-->
+<!--                                <div>-->
+<!--                                    <span class="rank_position">7</span>-->
+<!--                                    <span class="rank_name">{{topName[6].vultype}}</span>-->
+<!--                                </div>-->
+<!--                                <span class="rank_num">{{topName[6].vul_num}}</span>-->
+<!--                            </div>-->
+<!--                            <div style="display: flex;justify-content: space-between;">-->
+<!--                                <div>-->
+<!--                                    <span class="rank_position">8</span>-->
+<!--                                    <span class="rank_name">{{topName[7].vultype}}</span>-->
+<!--                                </div>-->
+<!--                                <span class="rank_num">{{topName[7].vul_num}}</span>-->
+<!--                            </div>-->
+<!--                            <div style="display: flex;justify-content: space-between;">-->
+<!--                                <div>-->
+<!--                                    <span class="rank_position">9</span>-->
+<!--                                    <span class="rank_name">{{topName[8].vultype}}</span>-->
+<!--                                </div>-->
+<!--                                <span class="rank_num">{{topName[8].vul_num}}</span>-->
+<!--                            </div>-->
+<!--                            <div style="display: flex;justify-content: space-between;">-->
+<!--                                <div>-->
+<!--                                    <span class="rank_position">10</span>-->
+<!--                                    <span class="rank_name">{{topName[9].vultype}}</span>-->
+<!--                                </div>-->
+<!--                                <span class="rank_num">{{topName[9].vul_num}}</span>-->
+<!--                            </div>-->
+<!--                        </div>-->
+<!--                    </div>-->
                 </el-container>
             </el-card></el-col>
         </el-row>

@@ -1,3 +1,4 @@
+import asyncio
 import datetime
 import shlex
 import subprocess
@@ -5,6 +6,8 @@ import tarfile
 import time
 import uuid
 import zipfile
+from io import StringIO
+
 import javalang
 import importlib
 import traceback
@@ -12,6 +15,7 @@ import esprima
 from urllib.request import urlopen
 from django.http import StreamingHttpResponse, JsonResponse
 from multiprocessing import Process, Queue, Semaphore
+from javalang.tokenizer import LexerError
 
 import math
 import py7zr
@@ -30,8 +34,11 @@ from app.api.model_api.fortify_detection import *
 from app.api.model_api.transformer_detection import *
 from app.api.config.config import *
 
-csv_dir = '/home/public/JAVA_gf/app/static/csv_temp'
-csv_path = '/home/public/JAVA_gf/app/static/csv_temp'
+import multiprocessing
+from multiprocessing import Pool
+
+csv_dir = '/home2/JAVA_Test_Version/app/static/csv_temp'
+csv_path = '/home2/JAVA_Test_Version/app/static/csv_temp'
 import_path = '/var/lib/neo4j/import/'
 node_path = '/var/lib/neo4j/import/nodes_CALL_cypher.csv'
 edge_path = '/var/lib/neo4j/import/edges_CALL_cypher.csv'
@@ -132,6 +139,69 @@ def get_file(folder_path, task_name):
 
     return folder_path
 
+def get_file_rule1(folder_path, task_name, language):
+    """提取项目下指定编程语言的文件并处理。"""
+    # 定义所有支持的编程语言及其对应的文件扩展名
+    language_extensions = {
+        "java": [".java"],
+        "android": [".kt"],
+        "javascript": [".js"],
+        "objective-c": [".m", ".h"],
+        "go": [".go"],
+        "python": [".py"],
+        "c/c++": [".c",".cpp"],
+        "php": [".php"],
+        "ruby": [".rb"],
+        "sql": [".sql"]
+    }
+
+    # 检查传入的 language 是否支持
+    if language not in language_extensions:
+        raise ValueError(f"不支持的语言类型: {language}。支持的语言类型为: {list(language_extensions.keys())}")
+
+    # 获取目标语言的扩展名
+    target_extensions = language_extensions[language]
+
+    # 存储符合条件的文件路径
+    target_file_list = []
+
+    # 遍历文件夹，筛选出符合条件的文件
+    for root, sub_dirs, file_names in os.walk(folder_path):
+        for file_name in file_names:
+            file_extension = os.path.splitext(file_name)[1].lower()  # 获取文件扩展名并转为小写
+            if file_extension in target_extensions:
+                target_file_list.append(os.path.join(root, file_name))
+
+    # 生成新的文件夹路径
+    item_name = os.path.basename(os.path.dirname(folder_path))
+    folder_name = f"{os.path.basename(folder_path)}_s"
+    new_folder_path = os.path.join(file_save_path, item_name, task_name, folder_name)
+
+    # 如果目标文件夹已存在，则删除
+    if os.path.exists(new_folder_path):
+        shutil.rmtree(new_folder_path)
+
+    # 创建新的文件夹
+    os.makedirs(new_folder_path, exist_ok=True)
+
+    # 复制符合条件的文件到新文件夹
+    for file in target_file_list:
+        if not os.path.isfile(file):
+            print(f'文件路径错误: {file}')
+            continue
+        shutil.copy(file, os.path.join(new_folder_path, os.path.basename(file)))
+
+    # 删除原始文件夹
+    shutil.rmtree(folder_path)
+
+    # 如果新文件夹路径以 "_s" 结尾，去掉 "_s"
+    if new_folder_path.endswith("_s"):
+        folder_path = new_folder_path.rstrip("_s")
+
+    # 重命名新文件夹
+    os.rename(new_folder_path, folder_path)
+
+    return folder_path
 
 def get_current_time():
     """获取当前时间并返回格式化的字符串。"""
@@ -200,17 +270,58 @@ def decompress_file(req):
     folder_name, file_extension = os.path.splitext(uploaded_file.name)
     file_extension = file_extension.lstrip('.').lower()
 
+
     base_path = os.path.join(processed_file_save_path, item_name)
     unique_folder_path = get_unique_folder_name(base_path, folder_name)
+
+    print(f"base_path:{base_path}\n unique_folder_path:{unique_folder_path}")
 
     os.makedirs(unique_folder_path, exist_ok=True)
     print(f"Path '{unique_folder_path}' created.")
 
     try:
-        if file_extension in ['zip', 'tar', 'rar', '7z']:
-            if file_extension == 'zip':
+        if file_extension in ['zip', 'tar', 'rar', '7z', 'jar', 'war']:
+            if file_extension in ['zip', 'jar', 'war']:
                 with zipfile.ZipFile(uploaded_file) as zip_file:
-                    zip_file.extractall(unique_folder_path)
+                    print("Extracting files from ZIP...")
+
+                    # 先整体解压（可选，如果不需要可以删除）
+                    try:
+                        zip_file.extractall(unique_folder_path)
+                    except Exception as e:
+                        print(f"Warning: Could not extract all files due to: {e}")
+
+                    # 逐个文件解压，遇到错误则跳过
+                    for file in zip_file.namelist():
+                        print("Processing file:", file)
+
+                        try:
+                            # 尝试 UTF-8 解码文件名
+                            try:
+                                file_name = file.encode('cp437').decode('utf-8')
+                                print("Decoded (UTF-8):", file_name)
+                            except UnicodeDecodeError:
+                                # 如果 UTF-8 失败，尝试 GBK 解码
+                                file_name = file.encode('cp437').decode('gbk')
+                                print("Decoded (GBK):", file_name)
+
+                            # 解压单个文件
+                            zip_file.extract(file, unique_folder_path)
+
+                            # 重命名文件（仅当文件名解码成功时）
+                            original_path = os.path.join(unique_folder_path, file)
+                            new_path = os.path.join(unique_folder_path, file_name)
+
+                            if os.path.exists(original_path):
+                                os.rename(original_path, new_path)
+                                print(f"Successfully extracted and renamed: {file_name}")
+                            else:
+                                print(f"Warning: File not found after extraction: {file}")
+
+                        except Exception as e:
+                            print(f"Error processing file '{file}': {e}")
+                            print("Skipping this file and continuing...")
+                            continue  # 跳过当前文件，继续下一个
             elif file_extension == 'tar':
                 with tarfile.TarFile(uploaded_file) as tar_file:
                     tar_file.extractall(unique_folder_path)
@@ -312,10 +423,18 @@ def clone_git_repository(req):
     gitlab_url = req.POST['url']
     access_token = req.POST['token']
     item_name = req.POST['item_name']
+    username = req.POST['username']
+    password = req.POST['password']
+    folder_path = req.POST['folder_path']
+    branch = req.POST['branch']
 
     base_path = os.path.join(processed_file_save_path, item_name)
     download_directory = get_unique_folder_name(base_path, 'git_task')
 
+    if username != '' and password != '':
+        gitlab_url = 'http://' + username + ':' + password + '@' + gitlab_url.split('http://')[-1]
+
+    print(gitlab_url)
     projects = fetch_gitlab_projects(gitlab_url, access_token, download_directory)
     print(projects)
 
@@ -323,7 +442,7 @@ def clone_git_repository(req):
         project_url, storage_path = projects[0]
         print("项目URL:", project_url)
         print("存储路径:", storage_path)
-        return JsonResponse({'code': '200', 'msg': '拉取文件成功', 'folder_name': storage_path})
+        return JsonResponse({'code': '200', 'msg': '拉取文件成功', 'folder_name': storage_path, 'url_git': gitlab_url, 'branch': branch})
     else:
         return JsonResponse({"error": "拉取失败", "code": "500"})
 
@@ -529,26 +648,6 @@ def deepseek_detection(req):
     else:
         return JsonResponse({"msg": "漏洞信息页面数据插入错误", "code": "500"})
 
-
-def deepseek_repair(req):
-    """修复漏洞。"""
-    file_id = req.POST['file_id']
-    task_id = req.POST['task_id']
-    code = req.POST['code']
-    vultype = req.POST['vultype']
-    model_name = req.POST['model_name']
-    detection_type = 'repair'
-
-    try:
-        result = getLLM_deepseek2(code, vultype, model_name, detection_type)
-        repair_code = result['response']
-        code_location = get_location(code, repair_code)
-
-        vulfile_update(task_id, file_id, repair_code, str(code_location))
-
-        return JsonResponse({"msg": "修复信息修改成功", "code": "200"})
-    except Exception as e:
-        return JsonResponse({"msg": "修复失败", "code": "500", "error": str(e)})
 
 
 def copy_java_files_with_label_one(json_path, vul_directory):
@@ -972,22 +1071,802 @@ def fortify_01_detection(req):
 #    except Exception as e:
 #        return JsonResponse({"msg": "聊天信息返回失败", "code": "500", "error": str(e)})
 #
+
+
+# def deepseek_chat(req):
+#     """聊天/生成。"""
+#     prompt = req.GET.get('prompt', '')
+#     model_name = 'deepseek-6.7b'
+#     try:
+#         def stream_generator():
+#             result = deepseek_chat3(prompt, model_name)
+#             for chunk in result:
+#                 if chunk == '':
+#                     break
+#                 yield f"data: {chunk}\n\n"
+#
+#         return StreamingHttpResponse(stream_generator(), content_type='text/event-stream')
+#     except Exception as e:
+#         return JsonResponse({"msg": "聊天信息返回失败", "code": "500", "error": str(e)})
+
 def deepseek_chat(req):
     """聊天/生成。"""
-    prompt = req.GET.get('prompt', '')
-    model_name = 'deepseek-6.7b'
+    prompt = req.POST['prompt']
+    key = req.POST['key']
+
+    response = deepseek_chat3(prompt, key)
+
+    return StreamingHttpResponse(response, content_type='text/event-stream')
+
+# def deepseek_chat2(req):
+#     """聊天/生成。"""
+#     id = req.POST['id']
+#     code = req.POST['code']
+#     vultype = req.POST['vultype']
+#     model_name = 'deepseek-14b'
+#
+#     async def get_response(code, vultype):
+#         try:
+#             result = await deepseek_chat6(code, vultype)
+#             print(3)
+#             print(result)
+#             return result
+#         except Exception as e:
+#             print(f"读取流式响应时出错: {e}")
+#             return None
+#
+#     try:
+#         full_response = asyncio.run(get_response(code, vultype))
+#         # 生成结束后打印完整内容
+#         #print("完整生成内容：", full_response)
+#         try:
+#             update_Interpretation(id, full_response)
+#             return JsonResponse({"msg": "代码解析返回成功", "data": full_response, "code": "200"})
+#         except Exception as e:
+#             return JsonResponse({"msg": "代码解析插入失败", "code": "500", "error": str(e)})
+#     except Exception as e:
+#         return JsonResponse({"msg": "代码解析返回失败", "code": "500", "error": str(e)})
+
+# def deepseek_chat2(req):
+#     """聊天/生成。"""
+#     id = req.POST['id']
+#     code = req.POST['code']
+#     vultype = req.POST['vultype']
+#     model_name = 'deepseek-14b'
+#
+#     async def get_response(code, vultype):
+#         try:
+#             result = await deepseek_chat6(code, vultype)
+#             full_response = ""  # 用于存储完整的生成内容
+#             # 使用 async for 读取流式响应
+#             async for chunk in result:
+#                 if chunk:  # 只发送非空内容
+#                     if isinstance(chunk, bytes):  # 如果 chunk 是字节类型
+#                         chunk = chunk.decode("utf-8")  # 解码为字符串
+#                     full_response = json.loads(chunk)['content'].encode("utf-8").decode("utf-8")  # 添加到完整内容中
+#             return full_response
+#         except Exception as e:
+#             print(f"读取流式响应时出错: {e}")
+#             return None
+#
+#     try:
+#         full_response = asyncio.run(get_response(code, vultype))
+#         # 生成结束后打印完整内容
+#         # print("完整生成内容：", full_response)
+#         try:
+#             update_Interpretation(id, full_response)
+#             return JsonResponse({"msg": "代码解析返回成功", "data": full_response, "code": "200"})
+#         except Exception as e:
+#             return JsonResponse({"msg": "代码解析插入失败", "code": "500", "error": str(e)})
+#     except Exception as e:
+#         return JsonResponse({"msg": "代码解析返回失败", "code": "500", "error": str(e)})
+# # 封装队列和标志位
+# from threading import Thread, Event
+# from queue import Queue
+# # 确保导入 queue 模块
+# import queue
+# class QueueProcessor:
+#     def __init__(self):
+#         self.q = Queue()
+#         self.flag = Event()  # 使用 Event 替代 flag
+#         self.stop_event = Event()
+#         self.thread = Thread(target=self.process_queue, daemon=True)
+#         self.thread.start()
+#
+#     def process_queue(self):
+#         while not self.stop_event.is_set():
+#             try:
+#                 current = self.q.get(timeout=3)  # 设置超时避免忙等待
+#                 if current['detection_type'] == 'repair':
+#                     response = deepseek_repair(current)
+#                     repair_code = response
+#                     code_location = get_location(current['code'], repair_code)
+#                     vulfile_update(current['task_id'], current['file_id'], repair_code, str(code_location))
+#                 else:
+#                     response = deepseek_chat2(current)
+#                     update_Interpretation(current['id'], response)
+#                 self.q.task_done()
+#             except queue.Empty:
+#                 continue
+#             except Exception as e:
+#                 # 记录错误日志
+#                 print(f"处理队列时出错: {e}")
+#
+#     def add_to_queue(self, item):
+#         self.q.put(item)
+#
+#     def stop(self):
+#         self.stop_event.set()
+#         self.thread.join()
+#
+# # 全局实例
+# processor = QueueProcessor()
+#
+# def create_queue_deepseek(request):
+#     try:
+#         arg = json.loads(request.POST['arg'])
+#         processor.add_to_queue(arg)
+#         return JsonResponse({"msg": "已加入到队列", "code": "200"})
+#     except json.JSONDecodeError:
+#         return JsonResponse({"msg": "无效的 JSON", "code": "400"}, status=400)
+#     except KeyError:
+#         return JsonResponse({"msg": "缺少参数 'arg'", "code": "400"}, status=400)
+# @lru_cache(maxsize=1)
+# def process_queue():
+#     global flag
+#     while True:
+#         if q.qsize() >= 1:
+#             print(f'正在监听，当前队列长度为{q.qsize()}')
+#         if not q.empty() and flag:
+#             flag = False
+#             current = q.get()
+#             q.put(current)
+#             # print(current)
+#             if current['detection_type'] == 'repair':
+#                 response = deepseek_repair(current)
+#                 repair_code = response
+#                 code_location = get_location(current['code'], repair_code)
+#
+#                 vulfile_update(current['task_id'], current['file_id'], repair_code, str(code_location))
+#             else:
+#                 response = deepseek_chat2(current)
+#                 update_Interpretation(current['id'], response)
+#                 print(1232132131231)
+#
+#             q.get()
+#             flag = True
+#
+#         time.sleep(3)
+#
+#
+# q = Queue()
+# flag = True
+# def create_queue_deepseek(req):
+#     arg = json.loads(req.POST['arg'])
+#
+#     q.put(arg)
+#     print("已加入到队列")
+#     print(f"当前队列数{q.qsize()}")
+#     process_queue()
+#
+#     return JsonResponse({"msg": "已加入到队列", "code": "200"})
+
+    # if detection_type == 'repair':
+    #     response = deepseek_repair(arg)
+    # else:
+    #     response = deepseek_chat2(arg)
+    #
+    # current = q.get()
+    # #print(current)
+    # try:
+    #     if current['detection_type'] == 'repair':
+    #         repair_code = response
+    #         code_location = get_location(current['code'], repair_code)
+    #
+    #         vulfile_update(current['task_id'], current['file_id'], repair_code, str(code_location))
+    #     else:
+    #         update_Interpretation(current['id'], response)
+    #     return JsonResponse({"msg": "大模型调用成功", "code": "200"})
+    # except Exception as e:
+    #     print(f"大模型调用失败: {e}")
+    #     return JsonResponse({"msg": "大模型调用失败", "code": "500", "error": str(e)})
+from openai import OpenAI
+
+# def deepseek_chat(req):
+#     """聊天/生成。"""
+#     prompt = req.GET.get('prompt', '')
+#     model_name = 'deepseek-6.7b'
+#     try:
+#         def stream_generator():
+#             result = deepseek_chat3(prompt, model_name)
+#             for chunk in result:
+#                 if chunk == '':
+#                     break
+#                 yield f"data: {chunk}\n\n"
+#
+#         return StreamingHttpResponse(stream_generator(), content_type='text/event-stream')
+#     except Exception as e:
+#         return JsonResponse({"msg": "聊天信息返回失败", "code": "500", "error": str(e)})
+
+def deepseek_chat2(req):
+    """聊天/生成。"""
+    id = req.POST['id']
+    code = req.POST['code']
+    vultype = req.POST['vultype']
+    model_name = 'deepseek-14b'
+    sink = req.POST['Sink']
+
+    response = deepseek_chat6(id, code, vultype,sink)
+  
+
+    return StreamingHttpResponse(response, content_type='text/event-stream')
+
+def deepseek_repair(req):
+    """修复漏洞。"""
+
+    file_id = req.POST['file_id']
+    task_id = req.POST['task_id']
+    code = req.POST['code']
+    vultype = req.POST['vultype']
+    model_name = req.POST['model_name']
+    detection_type = 'repair'
+
+    response = getLLM_deepseek3(task_id, file_id, code, vultype, model_name, detection_type)
+
+    return StreamingHttpResponse(response, content_type='text/event-stream')
+
+@lru_cache(maxsize=1024)
+def read_file_cached(filepath):
+    # 读取文件内容
     try:
-        def stream_generator():
-            result = deepseek_chat3(prompt, model_name)
-            for chunk in result:
-                if chunk == '':
-                    break
-                yield f"data: {chunk}\n\n"
+        with open(filepath, 'r', encoding='utf-8') as f:
+            return f.read()
+    except FileNotFoundError:
+        return None
 
-        return StreamingHttpResponse(stream_generator(), content_type='text/event-stream')
+def process_result(result):
+    """处理单个结果的函数"""
+    try:
+        record_id = result['id']
+        filepath = result['filepath']
+        vultype = result['vultype']
+
+        # 读取文件内容
+        code = read_file_cached(result['filepath'])
+        if not code:
+            return False
+
+        # 调用大模型判断误报
+        if deepseek_chat7(code, vultype) == False:
+            if not delete_by_id(record_id):
+                print(f"删除记录 ID 为 {record_id} 失败")
+                return False
+            else:
+                print(f"成功删除记录 ID 为 {record_id}")
+                return True
+        else:
+            print(f"记录 ID 为 {record_id} 未被判定为误报")
+            return True
+
+    except FileNotFoundError:
+        print(f"文件未找到: {filepath}")
+        return False
     except Exception as e:
-        return JsonResponse({"msg": "聊天信息返回失败", "code": "500", "error": str(e)})
+        print(f"处理记录 ID 为 {result['id']} 时发生错误: {e}")
+        return False
 
+def deepseek_False(taskid):
+    """降低误报，使用多进程并行处理"""
+    num_processes = 10  # 定义进程数
+    print('正在获取任务文件!')
+    results = get_info_taskid(taskid)
+    print("文件:", results)
+    if results is None:
+        return True
+    if len(results) < num_processes:
+        num_processes = len(results)
+    print(f"新建{num_processes}进程")
+
+    # 创建进程池
+    with Pool(processes=num_processes) as pool:
+        # 使用 tqdm 显示进度条
+        with tqdm(total=len(results), desc="扫描进度") as pbar:
+            success_list = []
+            for result in pool.imap(process_result, results):
+                success_list.append(result)
+                pbar.update(1)  # 更新进度条
+
+    # 检查所有任务是否成功
+    return all(success_list)
+
+def deepseek_scan(task_id, file_path_lists, xml_list):
+    """使用多进程并行处理"""
+    num_processes = 10  # 定义进程数
+    print('正在获取任务文件')
+    if len(file_path_lists) + len(xml_list) < num_processes:
+        num_processes = len(file_path_lists) + len(xml_list)
+    print(f"并行扫描新建{num_processes}进程")
+
+    if not file_path_lists and not xml_list:
+        print(f"该任务文件为空")
+        return False
+
+    args = []
+    for file_path in file_path_lists:
+        args.append({
+            "task_id": task_id,
+            "file_path": file_path
+        })
+    for file_path in xml_list:
+        args.append({
+            "task_id": task_id,
+            "file_path": file_path
+        })
+
+    print('\n\n\n\n\n\n\n\n')
+    print(args)
+
+    # 创建进程池
+    with Pool(processes=num_processes) as pool:
+        # 使用 tqdm 显示进度条
+        with tqdm(total=len(args), desc="扫描进度") as pbar:
+            success_list = []
+            for result in pool.imap(deepseek_scan_result, args):
+                success_list.append(result)
+                pbar.update(1)  # 更新进度条
+
+    print('\n\n\n\n\n\n\n\n')
+    print(success_list)
+    # 检查所有任务是否成功
+    return all(success_list)
+
+def deepseek_scan_result(args):
+    temp_response = ""
+    file_name = os.path.basename(args["file_path"])
+    temp_result = ""
+    if file_name.endswith(".java"):
+        try:
+            # 读取文件内容
+            code = read_file_cached(args["file_path"])
+
+            if not code:
+                return False
+
+            response = deepseek_chat8(code)
+            print("222===")
+            think = response.split("</think>")[0]
+            response2 = response.split("</think>")[-1]
+            #调别人的api用下面的，并把上面的注释掉
+            #response2 = response.split("###")[0].strip()
+            response2 = response2.replace("json\n", "").replace("\n```", "")
+            #response2 = response2.replace("```json\n", "").replace("\n```", "").strip()
+
+            response2 = json.loads(response2)
+            #print(response2)
+            temp_response = response2
+
+            try:
+                result = find_code_position(code, response2["爆发点"])
+                line_number = str([result["start_line"], result["start_line"]])
+            except:
+                line_number = ""
+
+            id_vul = {
+                  "CWE-798": "硬编码凭证",
+                  "CWE-643": "XPath注入",
+                  "CWE-918": "服务器端请求伪造",
+                  "CWE-079": "跨站脚本：反射型",
+                  "CWE-089": "SQL注入",
+                  "CWE-022": "路径遍历",
+                  "CWE-078": "命令注入",
+                  "CWE-400": "拒绝服务",
+                  "CWE-117": "日志伪造",
+                  "CWE-203": "登录接口错误提示",
+                  "CWE-284": "拦截器放行策略",
+                  "CWE-862": "接口授权校验",
+                  "CWE-494": "文件上传安全",
+                  "CWE-307": "暴力破解",
+                  "CWE-308": "短信安全",
+                  "CWE-434": "未对上传的压缩文件进行安全检查",
+                  "CWE-999": "下载漏洞",
+                  "CWE-779": "访问控制"
+            }
+            vul_name = id_vul[response2["漏洞类型"]]
+            test_result = [{
+                'filename': os.path.basename(args["file_path"]),
+                'file_path': args["file_path"],
+                'cwe_id': response2["漏洞类型"],
+                'vul_name': vul_name,
+                'code': '',
+                'line_number': line_number,
+                'risk_level': '',
+                'repair_code': '',
+                'new_line_number': '',
+                'repair_status': '未修复',
+                'is_question': '是问题',
+                'model': '',
+                'Sink': response2["爆发点"],
+                'Enclosing_Method': response2["爆发点函数"],
+                'Source': response2["缺陷源"],
+                # 'Interpretation':think
+            }]
+
+            temp_result = test_result
+            #print(test_result)
+            file_id = get_id('fileId', 'vulfile')
+
+            if is_insert(file_id, test_result):
+                vulfile_insert(args["task_id"], file_id, test_result)
+            else:
+                vulfile_insert(args["task_id"], file_id, test_result)
+
+            return True
+        except Exception as e:
+            print(f"错误: {e}")
+            print(temp_response)
+            print(file_name)
+            return False
+    elif file_name.endswith(".xml"):
+        try:
+            # 读取文件内容
+            code = read_file_cached(args["file_path"])
+
+            if not code:
+                return False
+
+            response = deepseek_chat9(code)
+            think = response.split("</think>")[0]
+            response2 = response.split("</think>")[-1]
+            response2 = response2.replace("json\n", "").replace("\n```", "")
+
+            response2 = json.loads(response2)
+            # print(response2)
+            temp_response = response2
+
+            try:
+                result = find_code_position(code, response2["爆发点"])
+                line_number = str([result["start_line"], result["start_line"]])
+            except:
+                line_number = ""
+
+            id_vul = {
+                "CWE-611": "XML外部实体注入（XXE）",
+                "CWE-776": "XML炸弹（Billion Laughs）",
+                "CWE-643": "XPath注入",
+                "CWE-502": "不安全的反序列化",
+                "CWE-827": "未受控的命名空间绑定",
+                "CWE-838": "DTD校验绕过",
+                "CWE-176": "字符集编码漏洞",
+            }
+            vul_name = id_vul[response2["漏洞类型"]]
+            test_result = [{
+                'filename': os.path.basename(args["file_path"]),
+                'file_path': args["file_path"],
+                'cwe_id': response2["漏洞类型"],
+                'vul_name': vul_name,
+                'code': '',
+                'line_number': line_number,
+                'risk_level': '',
+                'repair_code': '',
+                'new_line_number': '',
+                'repair_status': '未修复',
+                'is_question': '是问题',
+                'model': '',
+                'Sink': response2["爆发点"],
+                'Enclosing_Method': response2["解析器配置"],
+                'Source': response2["缺陷源"],
+                # 'Interpretation':think
+            }]
+
+            temp_result = test_result
+            # print(test_result)
+            file_id = get_id('fileId', 'vulfile')
+
+            if is_insert(file_id, test_result):
+                vulfile_insert(args["task_id"], file_id, test_result)
+            else:
+                vulfile_insert(args["task_id"], file_id, test_result)
+
+            return True
+        except Exception as e:
+            print(f"错误: {e}")
+            print(temp_response)
+            print(file_name)
+            return False
+
+def find_code_position(full_code, code_snippet):
+    """
+    查找代码片段在完整代码中的位置（行号范围）
+    支持跨行匹配且保持行号准确性
+
+    参数:
+        full_code (str): 完整代码
+        code_snippet (str): 要查找的代码片段
+
+    返回:
+        dict: {
+            'found': bool,
+            'start_line': int,  # 起始行号(1-based)
+            'end_line': int,    # 结束行号
+            'matched_code': str # 实际匹配的原始代码
+        } 或 None (未找到时)
+    """
+
+    def normalize_line(line):
+        """标准化单行：移除空格和制表符"""
+        return line.replace(" ", "").replace("\t", "")
+
+    # 预处理完整代码
+    full_lines = full_code.splitlines()
+    norm_full_lines = [normalize_line(line) for line in full_lines]
+    norm_full = "".join(norm_full_lines)  # 连接所有标准化行
+
+    # 预处理代码片段
+    norm_snippet = normalize_line(code_snippet)
+
+    # 在标准化完整代码中查找
+    start_pos = norm_full.find(norm_snippet)
+    if start_pos == -1:
+        return None
+
+    # 计算行号
+    start_line = 1
+    end_line = len(full_lines)
+    current_pos = 0
+
+    # 计算起始行号
+    for i, line in enumerate(norm_full_lines, 1):
+        current_pos += len(line)
+        if current_pos > start_pos:
+            start_line = i
+            break
+
+    # 计算结束行号
+    remaining_chars = len(norm_snippet)
+    matched_lines = []
+
+    for i in range(start_line - 1, len(full_lines)):
+        line = full_lines[i]
+        norm_line = norm_full_lines[i]
+
+        # 计算当前行贡献的匹配字符数
+        if i == start_line - 1:
+            # 第一行可能只匹配部分
+            chars_needed = len(norm_line) - (current_pos - start_pos)
+        else:
+            chars_needed = len(norm_line)
+
+        if remaining_chars <= chars_needed:
+            matched_lines.append(line)
+            end_line = i + 1
+            break
+        else:
+            matched_lines.append(line)
+            remaining_chars -= chars_needed
+
+    return {
+        'found': True,
+        'start_line': start_line,
+        'end_line': end_line,
+        'matched_code': '\n'.join(matched_lines)
+    }
+
+
+def get_info_taskid(taskid):
+    """根据taskid获取该任务下所有文件的信息"""
+    try:
+        with pymysql.connect(**config) as conn:
+            with conn.cursor() as cursor:
+                # 固定执行 taskid 查询，移除 vul_name 相关逻辑
+                sql = """SELECT id, filepath, vultype FROM vulfile WHERE taskid = %s"""
+                cursor.execute(sql, (taskid,))
+
+                data = cursor.fetchall()
+                if data:
+                    # 动态获取字段名，构造字典列表
+                    columns = [column[0] for column in cursor.description]
+                    result = [dict(zip(columns, row)) for row in data]
+                    return result
+                else:
+                    return None  # 明确返回空值
+    except pymysql.MySQLError as e:
+        print(f"MySQL Error: {e}")  # 移除 vul_name 引用
+        return None  # 保持返回类型一致
+    except Exception as e:
+        print(f"Unexpected error: {e}")
+        return None
+
+def delete_by_id(id):
+    # 根据id删除vulfile中的记录
+    sql = "delete from vulfile where id = %s"
+
+    try:
+        with pymysql.connect(**config) as conn:
+            with conn.cursor() as cursor:
+                cursor.execute(sql, (id,))
+                conn.commit()
+        return True
+    except Exception as e:
+        print(f"提交出错\n: {e}")
+        conn.rollback()
+        return False
+
+# 最终版本，暂时注释
+# def deepseek_chat2(args):
+#     """聊天/生成。"""
+#     id = args['id']
+#     code = args['code']
+#     vultype = args['vultype']
+#     model_name = 'deepseek-14b'
+#
+#     # id = req.POST['id']
+#     # code = req.POST['code']
+#     # vultype = req.POST['vultype']
+#     # model_name = 'deepseek-14b'
+#
+#     try:
+#         result = deepseek_chat6(model_name, code, vultype)
+#         full_response = ""  # 用于存储完整的生成内容
+#         for chunk in result:
+#             if chunk:  # 只发送非空内容
+#                 full_response += chunk  # 将每个 chunk 添加到完整内容中
+#         # 生成结束后打印完整内容
+#         return full_response
+#     except Exception as e:
+#         return False
+#
+#
+# def deepseek_repair(args):
+#     """修复漏洞。"""
+#     file_id = args['file_id']
+#     task_id = args['task_id']
+#     code = args['code']
+#     vultype = args['vultype']
+#     model_name = 'deepseek-14b'
+#     # file_id = req.POST['file_id']
+#     # task_id = req.POST['task_id']
+#     # code = req.POST['code']
+#     # vultype = req.POST['vultype']
+#     # model_name = req.POST['model_name']
+#     detection_type = 'repair'
+#
+#     try:
+#         result = getLLM_deepseek3(code, vultype, model_name, detection_type)
+#         full_response = ""  # 用于存储完整的生成内容
+#         for chunk in result:
+#             if chunk:  # 只发送非空内容
+#                 full_response += chunk  # 将每个 chunk 添加到完整内容中
+#
+#         return full_response
+#     except Exception as e:
+#         return False
+
+
+
+# def deepseek_chat2(args):
+#     """聊天/生成。"""
+#     id = args['id']
+#     code = args['code']
+#     vultype = args['vultype']
+#     model_name = 'deepseek-14b'
+#
+#     # id = req.POST['id']
+#     # code = req.POST['code']
+#     # vultype = req.POST['vultype']
+#     # model_name = 'deepseek-14b'
+#
+#     try:
+#         result = deepseek_chat6(model_name, code, vultype)
+#         full_response = ""  # 用于存储完整的生成内容
+#         for chunk in result:
+#             if chunk:  # 只发送非空内容
+#                 full_response += chunk  # 将每个 chunk 添加到完整内容中
+#         # 生成结束后打印完整内容
+#         # print("完整生成内容：", full_response)
+#         try:
+#             update_Interpretation(id, full_response)
+#             return JsonResponse({"msg": "代码解析返回成功", "data": full_response, "code": "200"})
+#         except Exception as e:
+#             return JsonResponse({"msg": "代码解析插入失败", "code": "500", "error": str(e)})
+#     except Exception as e:
+#         return JsonResponse({"msg": "代码解析返回失败", "code": "500", "error": str(e)})
+#
+# def deepseek_repair(args):
+#     """修复漏洞。"""
+#     file_id = args['file_id']
+#     task_id = args['task_id']
+#     code = args['code']
+#     vultype = args['vultype']
+#     model_name = args['model_name']
+#     # file_id = req.POST['file_id']
+#     # task_id = req.POST['task_id']
+#     # code = req.POST['code']
+#     # vultype = req.POST['vultype']
+#     # model_name = req.POST['model_name']
+#     detection_type = 'repair'
+#
+#     try:
+#         result = getLLM_deepseek3(code, vultype, model_name, detection_type)
+#         full_response = ""  # 用于存储完整的生成内容
+#         for chunk in result:
+#             if chunk:  # 只发送非空内容
+#                 full_response += chunk  # 将每个 chunk 添加到完整内容中
+#         repair_code = full_response
+#         code_location = get_location(code, repair_code)
+#
+#         vulfile_update(task_id, file_id, repair_code, str(code_location))
+#
+#         return JsonResponse({"msg": "修复信息修改成功", "code": "200"})
+#     except Exception as e:
+#         return JsonResponse({"msg": "修复失败", "code": "500", "error": str(e)})
+
+
+# def deepseek_repair(req):
+#     """修复漏洞。"""
+#     file_id = req.POST['file_id']
+#     task_id = req.POST['task_id']
+#     code = req.POST['code']
+#     vultype = req.POST['vultype']
+#     model_name = req.POST['model_name']
+#     detection_type = 'repair'
+#
+#     async def get_response(code, vultype):
+#         try:
+#             result = await getLLM_deepseek3(code, vultype, model_name, detection_type)
+#             full_response = ""  # 用于存储完整的生成内容
+#             # 使用 async for 读取流式响应
+#             async for chunk in result.body_iterator:
+#                 if chunk:  # 只发送非空内容
+#                     if isinstance(chunk, bytes):  # 如果 chunk 是字节类型
+#                         chunk = chunk.decode("utf-8")  # 解码为字符串
+#                     full_response = json.loads(chunk)['content'].encode("utf-8").decode("utf-8")  # 添加到完整内容中
+#             return full_response
+#         except Exception as e:
+#             print(f"读取流式响应时出错: {e}")
+#             return None
+#
+#     try:
+#         result = asyncio.run(get_response(code, vultype))
+#         code_location = get_location(code, str(result))
+#
+#         vulfile_update(task_id, file_id, result, str(code_location))
+#
+#         return JsonResponse({"msg": "修复信息修改成功", "code": "200"})
+#     except Exception as e:
+#         return JsonResponse({"msg": "修复失败", "code": "500", "error": str(e)})
+
+
+def vulfile_detail(id):
+    # 连接数据库
+    conn = pymysql.connect(**config)
+    cursor = conn.cursor()
+
+    # 定义 SQL 查询
+    sql = """SELECT filepath, vultype, location FROM vulfile WHERE id = %s"""
+
+    # 确保连接有效
+    conn.ping(reconnect=True)
+
+    # 执行查询
+    cursor.execute(sql, (id,))
+
+    # 获取列名
+    row_headers = [x[0] for x in cursor.description]
+
+    # 获取查询结果
+    data = cursor.fetchall()
+
+    # 关闭游标和连接
+    cursor.close()
+    conn.close()
+
+    # 将查询结果转换为字典列表
+    result = []
+    for row in data:
+        result.append(dict(zip(row_headers, row)))
+
+    # 返回字典形式的结果
+    return result
 
 def fortify_only(req):
     """只使用fortify扫描"""
@@ -1038,14 +1917,14 @@ def fortify_only(req):
         run_fortify(folder_path, template, version)  # fortify扫描全部文件
         folder_name = os.path.basename(os.path.normpath(folder_path))  # 获取文件夹的名字
         pdf_file_path = os.path.join(folder_path, folder_name + '.pdf')  # 获取fortify扫描得到的pdf文件的路径
-        print(pdf_file_path)
+        #print(pdf_file_path)
         if template != "Developer Workbook":
             result_list = location_fortify(folder_path, pdf_file_path, template)  # fortify扫描得到的结果列表
         else:
             result_list = location_fortify_3(folder_path, pdf_file_path)  # fortify扫描得到结果列表，只不过是Developer Workbook规范
-            print("*************************************")
-            print(result_list)
-            print("*************************************")
+            #print("*************************************")
+            #print(result_list)
+            #print("*************************************")
         for result in result_list:
             test_result = []
             file_id = get_id('fileId', 'vulfile')
@@ -2041,7 +2920,7 @@ def rule_detection(req):
     task_name = req.POST['task_name']
     language = req.POST['language']
     start_time = get_current_time()
-    template = None
+
 
     check_result = check_task_name(task_name, item_id)
     if check_result:
@@ -2063,7 +2942,7 @@ def rule_detection(req):
 
     vulnerability_detail = vuldetail_insert(task_id, item_id, task_name, detection_type, 0, 0, 0, code_size, file_size,
                                             file_num, current_status,
-                                            start_time, 0, 0, review_status, template)
+                                            start_time, 0, 0, review_status)
     if vulnerability_detail.status_code == 500:
         return JsonResponse({"msg": "漏洞信息页面数据插入错误", "code": "500"})
 
@@ -2098,7 +2977,7 @@ def rule_detection(req):
                 try:
                     print(path)
                     ast = javalang.parse.parse(data_filter)  # 将java代码转为AST
-                except javalang.parser.JavaSyntaxError as e:
+                except (javalang.parser.JavaSyntaxError, LexerError) as e:
                     # 如果转换AST失败，记录错误并跳过该文件
                     print(f"Failed to parse {path} to AST: {e}")
                     continue
@@ -2141,12 +3020,21 @@ def rule_detection(req):
                     file_id = get_id('fileId', 'vulfile')
                     filename = os.path.basename(path)
                     vulnerability_name = result['漏洞类型']
-                    line_number = result['行号']
+                    vulnerability_name_CN = get_chinese(vulnerability_name)
+                    line_number = result['行号'] if type(result['行号']) == int else 0
+                    if 1 <= line_number <= len(code_lines):
+                        Sink = code_lines[line_number - 1]
+                        Enclosing_Method = code_lines[line_number - 1]
+                        Source = code_lines[line_number - 1]
+                    else:
+                        Sink = ''
+                        Enclosing_Method = ''
+                        Source = ''
                     test_result.append({
                         'filename': filename,
                         'file_path': path,
                         'cwe_id': '',
-                        'vul_name': vulnerability_name,
+                        'vul_name': vulnerability_name_CN,
                         'code': '',
                         'line_number': line_number,
                         'risk_level': '',
@@ -2154,7 +3042,10 @@ def rule_detection(req):
                         'new_line_number': '',
                         'repair_status': '未修复',
                         'is_question': '是问题',
-                        'model': ''
+                        'model': '',
+                        'Sink':Sink,
+                        'Enclosing_Method':Enclosing_Method,
+                        'Source':Source
                     })
                     vulfile_insert(task_id, file_id, test_result)
                     vul_name = vulnerability_name
@@ -2215,25 +3106,29 @@ def load_rules():
     """
 
     # 将 rules.py 所在目录添加到 sys.path
-    sys.path.append("/home/public/JAVA_gf/app/api/main_app")
+    sys.path.append("/home2/JAVA_Test_Version/app/api/main_app")
 
     rows = get_rule_function_name()
+    #print(rows)
 
     # 动态加载规则函数
-    rules_module = importlib.import_module("rules")
-    rules = []
+    try:
+        rules_module = importlib.import_module("rules")
+        rules = []
+    except Exception as e:
+        print(e)
     for row in rows:
+        #print(row)
         function_name = row["function_name"]
         if function_name is not None and function_name != "":
-            #print("function_name:" + function_name)
+            # print("function_name:" + function_name)
             if hasattr(rules_module, function_name):
                 rules.append({
                     "function_name": function_name,
                     "function": getattr(rules_module, function_name)
                 })
-    #print(rules)
+    #print("所有的规则:",rules)
     return rules
-
 def is_sanitization_present(clean_func_list, code):
     """
     检查代码中是否存在清洁函数调用
@@ -2241,16 +3136,14 @@ def is_sanitization_present(clean_func_list, code):
     # 如果 clean_func_list 为空，直接返回 False
     if not clean_func_list:
         return False
-
     # 构建正则表达式来匹配清洁函数的调用
-    sanitization_pattern = re.compile(rf'\b({"|".join(clean_func_list)})\s*\(')
+    #sanitization_pattern = re.compile(rf'\b({"|".join(clean_func_list)})\s*\(')
+    # 使用正则表达式匹配函数名
+    match = re.search(r'public\s+\w+\s+(\w+)\(', code)
+    if match:
+      extracted_func_name = match.group(1)
+      return extracted_func_name in clean_func_list
 
-    # 检查代码行中是否存在匹配的清洁函数调用
-    for line in code:
-        if sanitization_pattern.search(line):
-            return True
-
-    return False
 
 def detect_vulnerabilities_with_strings(vuln_rules_list, code):
     """
@@ -2317,6 +3210,8 @@ def index(req):
         return get_xml(req)
     elif method == 'rule_detection':
         return rule_detection(req)
+    # elif method== 'create_queue_deepseek':
+    #     return create_queue_deepseek(req)
     # elif method == 'query_for_vul':
     #     return query_for_vul(req)
     else:

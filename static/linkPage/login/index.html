@@ -7,7 +7,7 @@
  <!--   <meta http-equiv="content-security-policy" content="same-origin">-->
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
     <link rel="SHORTCUT ICON" href="/static/assets/images/favicon2.ico" />
-    <title>代码安全大模型</title>
+    <title>静态代码安全扫描系统</title>
     <link rel="stylesheet" href="/static/assets/libs/layui/css/layui.css" />
     <link rel="stylesheet" href="/static/assets/libs/layui/css/theme-red.css" />
     <link rel="stylesheet" href="/static/assets/module/admin.css?v=318" />
@@ -44,52 +44,78 @@
             margin-left: 20px;
         }
 
-        /* 消息列表样式 */
-        .message-list {
-            display: none; /* 默认隐藏 */
+        /* 消息图标样式 */
+        .message-icon {
+            position: relative;
+            margin-right: 10px;
+            cursor: pointer;
+        }
+
+        .message-icon .layui-icon {
+            font-size: 50px;
+            color: #fff;
+        }
+
+        .message-badge {
             position: absolute;
-            top: 70px;
-            left: -80px;
-            width: 240px;
-            max-height: 280px;
+            top: 52px;
+            right: -8px;
+            font-size: 10px;
+            padding: 2px 2px;
+            border-radius: 50%;
+            min-width: 8px;
+            text-align: center;
+            line-height: 1;
+        }
+
+        .message-badge.unread {
+            background-color: #ff4d4f; /* 红色背景 */
+            color: #fff; /* 白色文字 */
+        }
+
+        .message-badge.read {
+            background-color: #fff; /* 白色背景 */
+            color: #999; /* 灰色文字 */
+            border: 1px solid #ddd; /* 边框 */
+        }
+
+        .message-popup-content {
+            padding: 20px;
+            font-size: 15px;
+            line-height: 1.6;
+            max-height: 550px;
             overflow-y: auto;
-            background-color: #fff;
-            border: 1px solid #ddd;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-            z-index: 9999;
+            background-color: #f3f3f3;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
         }
 
         .message-item {
-            display: flex; /* 使用 flex 布局 */
-            align-items: center; /* 垂直居中 */
-            height: 40px;
-            line-height: 40px;
-            padding: 0 10px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            cursor: pointer;
+            padding: 20px;
             border-bottom: 1px solid #eee;
-            color: #000;
+            color: #333;
+            background-color: #fff;
+            margin-bottom: 10px;
+            border-radius: 6px;
+            transition: background-color 0.3s ease;
         }
 
         .message-item:hover {
-            background-color: #f5f5f5;
+            background-color: #f9f9f9;
         }
 
         .message-text {
-            width: 140px; /* 调整宽度 */
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
+            white-space: normal;
+            word-break: break-word;
+            font-size: 14px;
+            color: #333;
+            margin-bottom: 5px;
         }
 
         .message-time {
-            width: 60px; /* 调整宽度 */
-            margin-left: 15px; /* 调整间距 */
+            color: #999;
+            font-size: 13px;
             text-align: right;
-            color: #000;
-            text-overflow: ellipsis;
         }
 
         .no-message {
@@ -98,39 +124,21 @@
             cursor: default;
         }
 
-        /* 弹窗样式 */
-        #message-detail {
-            padding: 40px; /* 内边距，使内容不紧贴边框 */
-            background-color: #fff; /* 背景颜色为白色 */
-            border: 1px solid #ddd;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-            color: #000; /* 文字颜色为黑色 */
-            max-height: 800px; /* 最大高度为 800px */
-            overflow-y: auto; /* 启用垂直滚动 */
-            display: flex;
-            align-items: center; /* 内容垂直居中 */
-            justify-content: center; /* 内容水平居中 */
+        .message-item.unread-item {
+            position: relative;
         }
 
-        .message-detail-content {
-            padding: 30px;
-            font-size: 16px;
-            line-height: 30px;
-            max-height: 560px; /* 设置最大高度 */
-            overflow-y: auto; /* 启用垂直滚动 */
-
-        }
-
-        .message-text1 {
-            white-space: normal; /* 允许换行 */
-            word-break: break-all; /* 长单词换行 */
-            margin-bottom: 10px; /* 与时间的间距 */
-        }
-
-        .message-time1 {
-            color: #999; /* 时间颜色 */
-            font-size: 14px;
-            text-align: right; /* 时间右对齐 */
+        .message-item.unread-item::after {
+            content: '';
+            position: absolute;
+            top: 0px;
+            right: -5px;
+            width: 0;
+            height: 0;
+            border-left: 8px solid transparent;
+            border-right: 8px solid transparent;
+            border-bottom: 8px solid #ff4d4f;
+            transform: rotate(45deg);
         }
     </style>
 </head>
@@ -150,7 +158,7 @@
                     <a ew-event="refresh" title="刷新"><i class="layui-icon layui-icon-refresh-3"></i></a>
                 </li>
             </ul>
-            <span class="centerTitleDiv">代码安全大模型</span>
+            <span class="centerTitleDiv">静态代码安全扫描系统</span>
             <ul class="layui-nav layui-layout-right">
                 <!--            <li class="layui-nav-item" lay-unselect>-->
                 <!--                <a ew-event="message" title="消息">-->
@@ -165,9 +173,7 @@
             <li class="layui-nav-item" lay-unselect>
                 <div class="message-icon">
                     <i class="layui-icon layui-icon-notice"></i> <!-- 消息图标 -->
-                    <div class="message-list">
-                        <!-- 消息列表内容通过 JavaScript 动态渲染 -->
-                    </div>
+                    <span class="message-badge">0</span>
                 </div>
             </li>
                             <li class="layui-nav-item" lay-unselect>
@@ -182,7 +188,7 @@
 <!--                        <dd lay-unselect><a href="#/template/user-info">个人中心</a></dd>-->
                         <!--                    <dd lay-unselect><a ew-event="psw">修改密码</a></dd>-->
 <!--                        <hr>-->
-                        <dd lay-unselect><a ew-event="logout" data-url="http://10.99.16.24:8088/static/linkPage/login/login.html">退出</a></dd>
+                        <dd lay-unselect><a ew-event="logout" data-url="http://10.99.16.24:8089/static/linkPage/login/login.html">退出</a></dd>
                     </dl>
                 </li>
                 <li class="layui-nav-item layui-hide-xs" lay-unselect>
@@ -212,10 +218,6 @@
         <!--    </div>-->
     </div>
 
-    <!-- 弹窗结构 -->
-<div id="message-detail" class="layui-hide">
-    <div class="message-detail-content"></div>
-</div>
 
 
     

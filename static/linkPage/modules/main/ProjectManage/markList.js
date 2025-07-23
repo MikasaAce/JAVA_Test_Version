@@ -17,7 +17,7 @@ var vm = new Vue({
         this.$message({message: options, type: 'success'})
       },
     };
-    this.isload = JSON.parse(sessionStorage.getItem('source') || '本地')
+    this.isload = JSON.parse(sessionStorage.getItem('source') || '本地上传')
     this.currentPage = JSON.parse(sessionStorage.getItem('project_page2') || '1')
     this.pageSize = JSON.parse(sessionStorage.getItem('project_rows2') || '10')
     this.itemname = JSON.parse(sessionStorage.getItem('itemname') || '')
@@ -31,15 +31,17 @@ var vm = new Vue({
   },
   data() {
     return {
+      pullSvnSuccess:false,
       language:'',
       query:{
         project_name:''
       },
-      isload :'本地',
+      isload :'本地上传',
       tableData: [],
       currentPage: 1, //当前页 刷新后默认显示第一页
+      oldcurrentPage: 1,
       pageSize: 10, //每一页显示的数据量 此处每页显示6条数据
-      count:10,
+      count:0,
       itemname:'',
       itemName:'',
       itemid:'',
@@ -48,12 +50,26 @@ var vm = new Vue({
       idshowtext:'',
       getAlert:false,
       pullSuccess:false,
-      pullSvnsuccess:false,
+      pullFtpSuccess:false,
+
       form:{
         taskName:'',
         description:'',
         language: 'java',
         source:'本地',
+        url_git:'',
+        key_git:'',
+        branch:'',
+        taskName:'',
+        description:'',
+        url_svn:'',
+        zhanghao:'',
+        key_svn:'',
+        taskName:'',
+        description:'',
+        username_git:'',
+        password_git:'',
+
 
       },
       uploadURL:http_head + '/Muti/',
@@ -68,54 +84,61 @@ var vm = new Vue({
         taskName: [
           { required: true, message: '请输入任务名称', trigger: 'blur' },
         ],
-        language: [
-          { required: true, message: '请选择代码语言', trigger: 'blur' },
+        // language: [
+        //   { required: true, message: '请选择代码语言', trigger: 'blur' },
+        // ],
+        // source: [
+        //   { required: true, message: '请选择代码来源', trigger: 'blur' },
+        // ],
+        url_git: [
+          { required: true, message: '请输入URL', trigger: 'blur' },
         ],
-        source: [
-          { required: true, message: '请选择代码来源', trigger: 'blur' },
-        ],
-      },
-      loading:false,
-      form2:{
-        url:'',
-        key:'',
-        branch:'',
-        taskName:'',
-        description:'',
-      },
-      folder_name_git:'',
-
-      rules2:{
-        url: [
-          { required: true, message: '请输入地址', trigger: 'blur' },
-        ],
-        key: [
-          { required: true, message: '请输入密钥', trigger: 'blur' },
-        ],
-        taskName: [
-          { required: true, message: '请输入任务名', trigger: 'blur' },
-        ]
-      },
-
-      form3:{
-        url:'',
-        zhanghao:'',
-        key:'',
-        taskName:'',
-        description:''
-      },
-      folder_name_svn:'',
-      rules3:{
-        url: [
-          { required: true, message: '请输入地址', trigger: 'blur' },
+        // key_git: [
+        //   { required: true, message: '请输入密码', trigger: 'blur' },
+        // ],
+        url_svn: [
+          { required: true, message: '请输入URL', trigger: 'blur' },
         ],
         zhanghao: [
           { required: true, message: '请输入账号', trigger: 'blur' },
         ],
-        key: [
+        key_svn: [
           { required: true, message: '请输入密码', trigger: 'blur' },
-        ]
+        ],
+
+        source_ftp_host: [
+          { required: true, message: '请输入主机地址', trigger: 'blur' },
+        ],
+        source_ftp_user: [
+          { required: true, message: '请输入用户名', trigger: 'blur' },
+        ],
+        source_ftp_password: [
+          { required: true, message: '请输入密码', trigger: 'blur' },
+        ],
+        source_remote_directory: [
+          { required: true, message: '请输入路径', trigger: 'blur' },
+        ],
+        source_file_name: [
+          { required: true, message: '请输入文件名', trigger: 'blur' },
+        ],
+        target_ftp_host: [
+          { required: true, message: '请输入目标主机地址', trigger: 'blur' },
+        ],
+        target_ftp_user: [
+          { required: true, message: '请输入用户名', trigger: 'blur' },
+        ],
+        target_ftp_password: [
+          { required: true, message: '请输入密码', trigger: 'blur' },
+        ],
+        target_remote_directory: [
+          { required: true, message: '请输入路径', trigger: 'blur' },
+        ],
+
       },
+      loading:false,
+      folder_name_git:'',
+      folder_name_svn:'',
+      folder_name_ftp:'',
       logVisible:false,
       auditLog:[],
       logQuery:{
@@ -126,7 +149,9 @@ var vm = new Vue({
       currentLog_id:'',
       pollingInterval: null, // 定时器变量
       isRequestInProgress: false, // 是否有请求正在进行
-
+      existingItem:[],
+      ifDeepSeek:'false',
+      delFlag:false,
     }
   },
   methods: {
@@ -134,7 +159,6 @@ var vm = new Vue({
       sessionStorage.removeItem('config');
       sessionStorage.removeItem('itemname');
       window.location.href = 'ProjectList.html'
-
     },
     //上传文件
     getUpload(){
@@ -151,7 +175,6 @@ var vm = new Vue({
       this.getTableData()
       this.ifidshowtag=true;
     },
-
     //获取保存的配置策略
     getConfig() {
       const that = this
@@ -192,104 +215,49 @@ var vm = new Vue({
       return this.$confirm(`确定移除 ${ file.name }？`);
     },
 
+    // 返回文件路径
+    getPath(){
+      var folder_path = ''
+      if (this.isload == '本地上传') {
+        folder_path = this.folder_name
+      } else if (this.isload == 'SVN下载') {
+        folder_path = this.folder_name_svn
+      } else if (this.isload == 'Git下载') {
+        folder_path = this.folder_name_git
+      } else if (this.isload == 'FTP下载') {
+        folder_path = this.form.target_remote_directory
+      }
+      return folder_path
+    },
     // 点击“立即创建”
-    createLocal(){
+    clickCreate(){
+      var folder_path = this.getPath()
+      console.log(folder_path)
       var strategy = this.policy.split(',')
-      // console.log(strategy)
-      if(strategy[0] === 'rule1' || strategy[0] === 'rule2' || strategy[0] === 'rule0'){
-        this.genScan()
-      } else if(strategy[0] === 'rule3') {
-        this.ruleScan()
-      }else if(strategy[0] === 'deepSeek' || strategy[0] === 'deepSeek_6.7b' || strategy[0] === 'rule4') {
-        this.deepScan()
-      } else if (strategy[0] === 'rule5') {
-        this.customRule()
-      } else if (strategy[0] === 'Muti_transformer') {
+      if (strategy[0] === 'Muti_transformer') {
         this.Muti_detection()
       } else {
-        this.smallScan()
+        // console.log(this.language)
+          this.Muti_cus_detection(strategy[0])
       }
     },
-    //创建SVN任务
-    createSVN(){
-      var strategy = this.policy.split(',')
-      console.log(strategy)
-      if(strategy[0] === 'rule1' || strategy[0] === 'rule2' || strategy[0] === 'rule0'){
-        this.genScansvn()
-      } else if(strategy[0] === 'rule3') {
-        this.ruleScansvn()
-      }else if(strategy[0] === 'deepSeek' || strategy[0] === 'deepSeek_6.7b' || strategy[0] === 'rule4') {
-        this.deepScansvn()
-      } else if (strategy[0] === 'rule5') {
-        this.customRule()
-      } else {
-        this.smallScan()
-      }
-    },
-    //fortify扫描   svn
-    ruleScansvn(){
-      var that = this
-      var str = this.policy.split(',')
-      var str1 = str[1]
-      var str2 = str[2]
-      this.$refs.form3.validate((valid) => {
-        if (valid) {
-          $.ajax({
-            url:  (http_head + '/Muti/'),
-            data:{
-              method: 'fortify_only',
-              template: str1,
-              version: str2,
-              folder_path: that.folder_name_svn,
-              item_id: that.itemid,
-              task_name: that.form3.taskName ? that.form3.taskName : '',
-              model_name: '1',
-            },
-            type : 'post',
-            dataType : 'JSON',
-            success : function (res){
-              console.log(res)
-              // mymessage.success("创建成功")
-              if(res.code === '500'){
-                that.ifSuccess = false      //?????这个东西哪来的
-                mymessage.error(res.msg)
-              }
-            },
-            error: function (err) {
-              console.log(err)
-              mymessage.error("创建失败")
-            }
-          })
-          setTimeout(() => {
-            if (this.ifSuccess === true){
-              this.getTableData();
-              this.getAlert = false;
-            }
-            this.ifSuccess = true     //不然直接改名字之后，ifSuccess值还是false，弹窗不会消失
-          }, 200);
 
-        } else {
-          mymessage.error("请先填写信息");
-          return false;
-        }
-
-      })
-    },
-    //fortify扫描   本地
+//纯fortify扫描
     ruleScan(){
       var that = this
-      var str = this.policy.split(',')
-      var str1 = str[1]
-      var str2 = str[2]
+      // var str = this.policy.split(',')
+      // var str1 = str[1]
+      // var str2 = str[2]
+      var folder_path = this.getPath()
       this.$refs.form.validate((valid) => {
         if (valid) {
           $.ajax({
             url:  (http_head + '/Muti/'),
             data:{
               method: 'fortify_only',
-              template: str1,
-              version: str2,
-              folder_path: that.folder_name,
+              template: 'Developer Workbook',    //没有配置选择界面后，固定传参，这是所有类型的漏洞
+              version: 'Developer Workbook',
+              folder_path: folder_path,
               item_id: that.itemid,
               task_name: that.form.taskName ? that.form.taskName : '',
               model_name: '1',
@@ -312,10 +280,10 @@ var vm = new Vue({
           setTimeout(() => {
             if (this.ifSuccess === true){
               this.getTableData();
-              this.getAlert = false;
+              // this.getAlert = false;
             }
             this.ifSuccess = true     //不然直接改名字之后，ifSuccess值还是false，弹窗不会消失
-          }, 200);
+          }, 500);
 
         } else {
           mymessage.error("请先填写信息");
@@ -324,122 +292,11 @@ var vm = new Vue({
 
       })
     },
-    // codegen扫描  svn
-    genScansvn(){
-      var that = this
-      var str = this.policy.split(',')
-      if(str[0] === 'rule1') {
-        var modelName = '0'
-      } else if(str[0] === 'rule2') {
-        var modelName = '1'
-      } else if(str[0] === 'rule0') {
-        var modelName = '2'
-      }
-      var str1 = str[1]
-      var str2 = str[2]
-      this.$refs.form3.validate((valid) => {
-        if (valid) {
-          $.ajax({
-            url:  (http_head + '/Muti/'),
-            data:{
-              method: 'fortify_01_detection',
-              template: str1 ? str1 : '',
-              version: str2 ? str2 : '',
-              folder_path: that.folder_name_svn,
-              item_id: that.itemid,
-              task_name: that.form3.taskName ? that.form3.taskName : '',
-              model_name: modelName,
-            },
-            type : 'post',
-            dataType : 'JSON',
-            success : function (res){
-              console.log(res)
-              // mymessage.success("创建成功")
-              if(res.code === '500'){
-                that.ifSuccess = false
-                mymessage.error(res.msg)
-                // mymessage.error("任务名称已存在，请修改任务名")
-              }
-            },
-            error: function (err) {
-              console.log(err)
-              mymessage.error("创建失败")
-            }
-          })
-          setTimeout(() => {
-            if (this.ifSuccess === true){
-              this.getTableData();
-              this.getAlert = false;
-            }
-            this.ifSuccess = true     //不然直接改名字之后，ifSuccess值还是false，弹窗不会消失
-          }, 200);
 
-        } else {
-          mymessage.error("请先填写信息");
-          return false;
-        }
 
-      })
-    },
-    // codegen扫描  本地
-    genScan(){
-      var that = this
-      var str = this.policy.split(',')
-      if(str[0] === 'rule1') {
-        var modelName = '0'
-      } else if(str[0] === 'rule2') {
-        var modelName = '1'
-      } else if(str[0] === 'rule0') {
-        var modelName = '2'
-      }
-      var str1 = str[1]
-      var str2 = str[2]
-      this.$refs.form.validate((valid) => {
-        if (valid) {
-          $.ajax({
-            url:  (http_head + '/Muti/'),
-            data:{
-              method: 'fortify_01_detection',
-              template: str1 ? str1 : '',
-              version: str2 ? str2 : '',
-              folder_path: that.folder_name,
-              item_id: that.itemid,
-              task_name: that.form.taskName ? that.form.taskName : '',
-              model_name: modelName,
-            },
-            type : 'post',
-            dataType : 'JSON',
-            success : function (res){
-              console.log(res)
-              // mymessage.success("创建成功")
-              if(res.code === '500'){
-                that.ifSuccess = false
-                mymessage.error(res.msg)
-                // mymessage.error("任务名称已存在，请修改任务名")
-              }
-            },
-            error: function (err) {
-              console.log(err)
-              mymessage.error("创建失败")
-            }
-          })
-          setTimeout(() => {
-            if (this.ifSuccess === true){
-              this.getTableData();
-              this.getAlert = false;
-            }
-            this.ifSuccess = true     //不然直接改名字之后，ifSuccess值还是false，弹窗不会消失
-          }, 200);
-
-        } else {
-          mymessage.error("请先填写信息");
-          return false;
-        }
-
-      })
-    },
-    // 自定义规则单独扫描  本地
-    customRule(){
+// 自定义规则单独扫描
+    async customRule(){
+      var folder_path = this.getPath()
       var that = this
       this.$refs.form.validate((valid) => {
         if (valid) {
@@ -447,7 +304,7 @@ var vm = new Vue({
             url:  (http_head + '/Muti/'),
             data:{
               method: 'rule_detection',
-              folder_name: that.folder_name,
+              folder_name: folder_path,
               item_id: that.itemid,
               task_name: that.form.taskName ? that.form.taskName : '',
               language:that.language,
@@ -468,68 +325,22 @@ var vm = new Vue({
               mymessage.error("创建失败")
             }
           })
-          setTimeout(() => {
-            if (this.ifSuccess === true){
-              this.getTableData();
-              this.getAlert = false;
-            }
-            this.ifSuccess = true     //不然直接改名字之后，ifSuccess值还是false，弹窗不会消失
-          }, 200);
-
         } else {
           mymessage.error("请先填写信息");
           return false;
         }
-
       })
-    },
-    //最开始的模型
-    smallScan(){
-      var that = this
-      this.$refs.form.validate((valid) => {
-        if (valid) {
-          $.ajax({
-            url:  (http_head + '/Muti/'),
-            data:{
-              method:'upload',
-              type: that.policy,
-              item_name: that.itemname,
-              item_id: that.itemid,
-              task_name:that.form.taskName ? that.form.taskName : '',
-              folder_name:that.folder_name,
-            },
-            type : 'post',
-            dataType : 'JSON',
-            success : function (res){
-              console.log(res)
-              // mymessage.success("创建成功")
-              if(res.code === '500'){
-                that.ifSuccess = false
-                mymessage.error("任务名称已存在，请修改任务名")
-              }
-            },
-            error: function (err) {
-              console.log(err)
-              mymessage.error("创建失败")
-            }
-          })
-          setTimeout(() => {
-            if (this.ifSuccess === true){
-              this.getTableData();
-              this.getAlert = false;
-            }
-            this.ifSuccess = true     //不然直接改名字之后，ifSuccess值还是false，弹窗不会消失
-          }, 200);
+      try {
+        await this.getTableData();
+        this.getAlert = false;
+      } catch (err) {
 
-        } else {
-          mymessage.error("请先填写信息");
-          return false;
-        }
-
-      })
+      }
     },
+
 // 多分类检测
     Muti_detection(){
+      var folder_path = this.getPath()
       var that = this
       this.$refs.form.validate((valid) => {
         if (valid) {
@@ -537,7 +348,7 @@ var vm = new Vue({
             url:  (http_head + '/Muti_transformer/'),
             data:{
               method:'muti_transformer_detection',
-              folder_path:that.folder_name,
+              folder_path: folder_path,
               item_id: that.itemid,
               task_name:that.form.taskName ? that.form.taskName : '',
               language:that.language,
@@ -549,7 +360,7 @@ var vm = new Vue({
               // mymessage.success("创建成功")
               if(res.code === '500'){
                 that.ifSuccess = false
-                mymessage.error("任务名称已存在，请修改任务名")
+                mymessage.error(res.msg)
               }
             },
             error: function (err) {
@@ -560,7 +371,7 @@ var vm = new Vue({
           setTimeout(() => {
             if (this.ifSuccess === true){
               this.getTableData();
-              this.getAlert = false;
+              // this.getAlert = false;    //弹窗消失后form的数据就消失了
             }
             this.ifSuccess = true     //不然直接改名字之后，ifSuccess值还是false，弹窗不会消失
           }, 200);
@@ -569,31 +380,108 @@ var vm = new Vue({
           mymessage.error("请先填写信息");
           return false;
         }
-
       })
     },
-    //git拉取 GITGITGITGITGITGITGITGITGITGITGITGITGITGITGITGITGITGITGITGITGITGITGITGITGITGITGITGITGITGITGITGIT
+// 多分类模型和自定义规则和fortify合并   now
+    async Muti_cus_detection(type) {
+      var folder_path = this.getPath();
+      var that = this;
+      if (this.form.taskName == '') {
+        mymessage.error("尚未填写任务名！");
+        return false;
+      }
+
+      let model = '';
+      let deepseek = 'false';
+      if (type === 'rule3') {
+        model = 'fortify';
+      } else
+      if (type === 'rule5') {
+        deepseek = 'false';
+        model = 'rule'
+      } else if (type === 'rule6') {
+        deepseek = 'true';
+        model = 'rule'
+      } else if (type === 'Muti_transformer') {
+        model = 'small_model'
+        deepseek = 'false'
+      } else if (type === 'rule7') {
+        model = 'r4'
+        deepseek = 'true'
+      }
+
+      this.$refs.form.validate(async (valid) => {
+        if (valid) {
+          try {
+            // 在调用 $.ajax 之前设置 setTimeout
+            setTimeout(async () => {
+              await that.getTableData();
+              // 在 getTableData 完成后执行 this.getAlert = false
+              that.getAlert = false;
+            }, 500); // 0.5 秒
+
+            // 调用 $.ajax
+            const res = await $.ajax({
+              url: http_head + '/create_process/',
+              data: {
+                method: 'create_queue',
+                folder_path: folder_path,
+                item_id: that.itemid,
+                task_name: that.form.taskName ? that.form.taskName : '',
+                template: 'Developer Workbook',
+                version: 'Developer Workbook',
+                language: that.language,
+                branch: that.form.branch ? that.form.branch : '',
+                deepseek: deepseek,
+                model: model,
+              },
+              type: 'post',
+              dataType: 'JSON',
+            });
+
+            console.log(res);
+            if (res.code === '500') {
+              that.ifSuccess = false;
+              mymessage.error(res.msg);
+            }
+          } catch (err) {
+            console.log(err);
+            mymessage.error("创建失败");
+          }
+        } else {
+          mymessage.error("请先填写信息");
+          return false;
+        }
+      });
+    },
+//git拉取
     pull_git() {
       this.loading = true
       var that = this
+      var folder_path = this.getPath();
       $.ajax({
         url:  (http_head + '/Muti/'),
         data:{
-          method:'git_clone',
-          url: that.form2.url,
-          token: that.form2.key,
-          branch: that.form2.branch,
+          method:'clone_git_repository',
+          url: that.form.url_git,
+          folder_path: folder_path,
+          token: that.form.key_git,    //密钥
+          branch: that.form.branch,   //分支
+          username:that.form.username_git,   //账号
+          password:that.form.password_git,   //密码
           item_name: that.itemname,   //项目名
         },
         type : 'post',
         dataType : 'JSON',
         success : function (res){
+          console.log('form: ',that.form)
           console.log(res)
           // mymessage.success("创建成功")
           that.loading = false
           that.pullSuccess = true   //拉取成功之后才可以填任务名称和任务描述
           mymessage.success("拉取成功！")
           that.folder_name_git = res.folder_name
+          that.url_git = res.url_git
         },
         error: function (err) {
           console.log(err)
@@ -609,22 +497,21 @@ var vm = new Vue({
         url:  (http_head + '/Muti/'),
         data:{
           method:'clone_svn_repository',
-          url: that.form3.url,
-          username: that.form3.zhanghao,
-          password: that.form3.key,
+          url: that.form.url_svn,
+          username: that.form.zhanghao,
+          password: that.form.key_svn,
           item_name: that.itemname,   //项目名
         },
         type : 'post',
         dataType : 'JSON',
         success : function (res){
           console.log(res)
-          // mymessage.success("创建成功")
           that.loading = false
-          if(res.code==="200"){
+          if(res.code === '200'){
             mymessage.success("拉取成功！")
             that.pullSvnSuccess = true
+            that.folder_name_svn = res.folder_name
           }
-          that.folder_name_svn = res.folder_name
         },
         error: function (err) {
           console.log(err)
@@ -632,64 +519,80 @@ var vm = new Vue({
         }
       })
     },
-    //git 创建
-    create_git(){
+    // ftp传输
+    pull_ftp(){
+      this.loading = true
       var that = this
-      this.$refs.form2.validate((valid) => {
-        if (valid) {
-          $.ajax({
-            url:  (http_head + '/Muti/'),
-            data:{
-              method:'upload',
-              type: that.policy,
-              item_name: that.itemname,
-              item_id: that.itemid,
-              task_name:that.form2.taskName ? that.form2.taskName : '',
-              folder_name:that.folder_name_git,
-            },
-            type : 'post',
-            dataType : 'JSON',
-            success : function (res){
-              console.log(res)
-
-              if(res.code === '500'){
-                that.ifSuccess = false
-                if (res.msg === 'Error!No sample.') {
-                  mymessage.error("代码语言错误！")
-                } else {
-                  mymessage.error("任务名称已存在，请修改任务名")
-                }
-              }
-            },
-            error: function (err) {
-              console.log(err)
-              mymessage.error("创建失败")
-            }
-          })
-          setTimeout(() => {
-            if (this.ifSuccess === true){
-              this.getTableData();
-              this.getAlert = false;
-            }
-            this.ifSuccess = true     //不然直接改名字之后，ifSuccess值还是false，弹窗不会消失
-          }, 200);
-
-        } else {
-          mymessage.error("请先填写信息");
-          return false;
+      $.ajax({
+        url:  (http_head + '/login/'),
+        data:{
+          method:'transfer_file_via_ftp',
+          source_ftp_host: that.form.source_ftp_host,
+          source_ftp_user: that.form.source_ftp_user,
+          source_ftp_password: that.form.source_ftp_password,
+          source_remote_directory: that.form.source_remote_directory,
+          source_file_name: that.form.source_file_name,
+          target_ftp_host: that.form.target_ftp_host,
+          target_ftp_user: that.form.target_ftp_user,
+          target_ftp_password: that.form.target_ftp_password,
+          target_remote_directory: that.form.target_remote_directory,
+        },
+        type : 'post',
+        dataType : 'JSON',
+        success : function (res){
+          console.log(res)
+          that.loading = false
+          if(res.msg === '文件传输成功'){
+            mymessage.success(res.msg)
+            that.pullFtpSuccess = true
+          } else {
+            mymessage.error(res.msg)
+          }
+        },
+        error: function (err) {
+          console.log(err)
+          mymessage.error("创建失败")
         }
-
       })
-
     },
-    //deepSeekdeepSeekdeepSeekdeepSeekdeepSeekdeepSeekdeepSeekdeepSeekdeepSeekdeepSeekdeepSeekdeepSeekdeepSeekdeepSeek
+
     resetForm() {   //不刷新页面再次点击时不会出现上一次填的内容
       this.form = {
-        taskName: '',
-        description: '',
+        taskName:'',
+        description:'',
+        language: '',
+        source:'',
+        url_git:'',
+        key_git:'',
+        branch:'',
+        taskName:'',
+        description:'',
+        url_svn:'',
+        zhanghao:'',
+        key_svn:'',
+        taskName:'',
+        description:'',
+        username_git:'',
+        password_git:'',
+
+        source_ftp_host:'',
+        source_ftp_user:'',
+        source_ftp_password:'',
+        source_remote_directory:'',
+        source_file_name:'',
+        target_ftp_host:'',
+        target_ftp_user:'',
+        target_ftp_password:'',
+        target_remote_directory:'',
       }
       this.uploadFileList = []
+      this.pullSuccess = false
+
     },
+
+
+    //deepSeekdeepSeekdeepSeekdeepSeekdeepSeekdeepSeekdeepSeekdeepSeekdeepSeekdeepSeekdeepSeekdeepSeekdeepSeekdeepSeek
+
     // deepSeek扫描 svn
     deepScansvn(){
       var that = this
@@ -707,7 +610,7 @@ var vm = new Vue({
           method:'deepseek_detection',
           folder_name: that.folder_name_svn,
           item_id: that.itemid,
-          task_name: that.form3.taskName ? that.form3.taskName : '',   //任务名
+          task_name: that.form.taskName ? that.form.taskName : '',   //任务名
           model_name: modelName,
         },
         type : 'post',
@@ -730,7 +633,7 @@ var vm = new Vue({
       setTimeout(() => {
         if (this.ifSuccess === true){
           this.getTableData();
-          this.getAlert = false;
+          // this.getAlert = false;
         }
         this.ifSuccess = true
         // debugger
@@ -777,7 +680,7 @@ var vm = new Vue({
       setTimeout(() => {
         if (this.ifSuccess === true){
           this.getTableData();
-          this.getAlert = false;
+          // this.getAlert = false;
         }
         this.ifSuccess = true
         // debugger
@@ -801,7 +704,7 @@ var vm = new Vue({
           method:'deepseek_detection',
           folder_name: that.folder_name_git,
           item_id: that.itemid,
-          task_name: that.form2.taskName ? that.form2.taskName : '',   //任务名
+          task_name: that.form.taskName ? that.form.taskName : '',   //任务名
           model_name: modelName,
         },
         type : 'post',
@@ -817,84 +720,32 @@ var vm = new Vue({
       })
       setTimeout(() => {
         this.getTableData();
-        this.getAlert = false;
+        // this.getAlert = false;
       }, 200);
     },
 
-    //获取项目列表
-    // getTableData() {
-    //   var that = this
-    //   $.ajax({
-    //     url: (http_head + '/login/'),
-    //     data:{
-    //       method : 'task_list',
-    //       taskid : '',
-    //       taskname : that.query.project_name ,
-    //       itemid : that.itemid,
-    //       itemname : '',
-    //       language : '',
-    //       type : '',
-    //       review_status : '',
-    //       source : '',
-    //       creator : '',
-    //       starttime : '',
-    //       page : that.currentPage,
-    //       rows : that.pageSize,
-    //     },
-    //     type: 'post',
-    //     dataType: 'JSON',
-    //     success: function (res){
-    //       console.log(res)
-    //       that.itemName = that.itemname
-    //       if(res.count > 0){
-    //         that.tableData = res.data
-    //         that.count = res.count
-    //         that.idshowtext=res.data[0].taskid
-    //         //有文件没检测完成就一直刷新
-    //         for (let i = 0; i < that.tableData.length; i++){
-    //           if (that.tableData[i].statues === "检测完成" || that.tableData[i].statues === "检测失败") {
-    //             // console.log(i)
-    //
-    //           }  else {
-    //             setTimeout(() => {
-    //               that.getTableData()
-    //             }, 5000)
-    //           }
-    //         }
-    //       } else if(res.count === 0) {    //只有一条数据时删除之后要赋值才能刷新
-    //         that.tableData = []
-    //       }
-    //     },
-    //     error: function (err) {
-    //       console.log(err)
-    //       mymessage.error("项目列表获取失败")
-    //     }
-    //   })
-    // },
-
     getTableData() {
       var that = this;
-
       function stopPolling() {
         if (that.pollingInterval) {
           clearInterval(that.pollingInterval); // 清除定时器
           that.pollingInterval = null; // 重置变量
         }
       }
-
       function startPolling() {
         stopPolling(); // 先停止任何现有的定时器
         that.pollingInterval = setInterval(() => {
           that.getTableData(); // 定期调用函数
         }, 5000); // 每5秒调用一次
       }
+      // 从 localStorage 获取进度
+      const savedProgress = JSON.parse(localStorage.getItem("taskProgress") || "{}");
       // 防止并发请求
       if (this.isRequestInProgress) {
         console.log("已有请求进行中，跳过本次调用");
         return;
       }
       this.isRequestInProgress = true; // 标记请求开始
-
       $.ajax({
         url: (http_head + '/login/'),
         data: {
@@ -919,27 +770,63 @@ var vm = new Vue({
           that.isRequestInProgress = false; // 标记请求结束
           // that.itemName = that.itemname; // 确保 this.itemname 是正确的
           if (res.count > 0) {
-            const newData = res.data;
-
+            const newData = res.data.map((item) => {
+              // 如果任务已经存在于当前数据中，保留其 progress
+              const existingItem = that.tableData.find((t) => t.taskid === item.taskid);
+              if (existingItem) {
+                item.progress = existingItem.progress;
+                item.interval = existingItem.interval;
+              } else {
+                // 从本地存储恢复进度
+                item.progress = savedProgress[item.taskid] || 0;
+              }
+              return item;
+            });
             // 深度比较新数据与当前数据
             // if (JSON.stringify(newData) !== JSON.stringify(that.tableData)) {
             // 浅比较
-            if (!that.tableData || that.tableData.length !== newData.length ||
+            if (!that.tableData || that.tableData.length !== newData.length || that.delFlag === true || that.oldcurrentPage != that.currentPage ||
                 that.tableData.some((item, index) => item.statues !== newData[index].statues)) {
-              console.log("数据发生变化，更新表格");
+              // console.log("数据发生变化，更新表格");
               that.tableData = newData; // 只有在数据变化时更新
               that.count = res.count;
               that.idshowtext = newData[0].taskid;
+              that.oldcurrentPage = that.currentPage;
             } else {
               console.log("数据未发生变化，无需更新表格");
             }
-
-
+            that.delFlag = false
+            // 更新进度条
+            newData.forEach((item) => {
+              if (item.statues === "正在检测") {
+                if (!item.interval) {
+                  item.interval = setInterval(() => {
+                    if (item.progress < 95) {
+                      item.progress += 1; // 增加进度
+                      // 保存进度到 localStorage
+                      savedProgress[item.taskid] = item.progress;
+                      localStorage.setItem("taskProgress", JSON.stringify(savedProgress));
+                      // console.log(`任务 ${item.taskid} 进度: ${item.progress}`);
+                    } else if (item.statues === "检测完成") {
+                      item.progress = 100; // 设置为100%
+                      clearInterval(item.interval);
+                      item.interval = null;
+                      savedProgress[item.taskid] = item.progress;
+                      localStorage.setItem("taskProgress", JSON.stringify(savedProgress));
+                    }
+                  }, 5000); // 每秒更新一次
+                }
+              } else {
+                item.progress = item.statues === "检测完成" ? 100 : 0;
+                clearInterval(item.interval);
+                item.interval = null;
+              }
+            });
             // 检查是否有未完成的任务
             const hasIncompleteTasks = newData.some(
                 (item) => item.statues !== "检测完成" && item.statues !== "检测失败"
             );
-            console.log('是否有正在检测', hasIncompleteTasks);
+            // console.log('是否有正在检测', hasIncompleteTasks);
 
             // 根据是否有未完成的任务来启动或停止轮询
             if (hasIncompleteTasks) {
@@ -949,13 +836,19 @@ var vm = new Vue({
             }
           } else {
             that.tableData = [];
+            that.count = 0
             stopPolling(); // 确保在没有数据时停止轮询
           }
+          if (res.code === '500') {
+            stopPolling(); // 扫描出错时停止轮询
+          }
+          // that.getAlert = false;
         },
         error: function (err) {
+          that.getAlert = false;
           that.isRequestInProgress = false;
           console.log(err);
-          mymessage.error("项目列表获取失败");
+          mymessage.error("任务列表获取失败");
           stopPolling(); // 在出错时也停止轮询
         }
       });
@@ -975,6 +868,7 @@ var vm = new Vue({
     //结果审核
     result(row){
       sessionStorage.setItem('taskid_result',JSON.stringify(row.taskid))
+      // localStorage.removeItem("taskProgress")
       window.location.href = 'resultReview.html'
     },
     //任务详情
@@ -985,6 +879,12 @@ var vm = new Vue({
       sessionStorage.setItem('project_page2',JSON.stringify(this.currentPage))
       sessionStorage.setItem('project_rows2',JSON.stringify(this.pageSize))
       window.open('ProjectDetail.html')
+    },
+
+    //跳转到圈复杂度页面
+    gotoCCN(row){
+      sessionStorage.setItem('taskid',JSON.stringify(row.taskid))
+      window.location.href = '../ccn/taskCCN.html'
     },
 
     //删除
@@ -1016,12 +916,17 @@ var vm = new Vue({
         success : function (res){
           console.log(res);
           if (res.code == '200'){
-
             mymessage.success(res.msg)
+            //删除之后下一个新增的任务,任务id和上一个一样，会保持删掉的任务的进度，所以得置0
+            const savedProgress = JSON.parse(localStorage.getItem("taskProgress") || "{}");
+            savedProgress[row.taskid] = 0;
+            localStorage.setItem("taskProgress", JSON.stringify(savedProgress));
           }else{
             mymessage.error(res.msg)
           }
+          that.delFlag = true
           that.getTableData()
+
         },
         error: function (err) {
           console.log(err)
@@ -1029,6 +934,74 @@ var vm = new Vue({
         }
       })
     },
+
+    // 重新扫描
+    doubleScan(row){
+      console.log(row)
+      let ds, md;
+      try {
+        const type = JSON.parse(row.type.replace(/'/g, '"'));
+        if (Array.isArray(type) && type.length >= 2) {
+          if (type[0] === 'true' || type[0] === 'false'){
+            ds = type[0];
+            md = type[1];
+          } else {
+            ds = type[1];
+            md = type[0];
+          }
+        } else {
+          console.warn('策略返回错误');
+          return;
+          // 可以在这里设置默认值
+          ds = null;
+          md = null;
+        }
+      } catch (e) {
+        mymessage.error("当前任务不支持重新扫描！")
+        return
+        // 解析失败时的处理
+        ds = null;
+        md = null;
+      }
+      console.log('deepseek,model:',ds,md)
+      if (row.folder_path === '' || row.itemid === '' || row.taskname === '' || row.language === '' || !row.folder_path) {
+        mymessage.error("当前任务不支持重新扫描！")
+        return;
+      }
+      if (ds !== 'true' && ds !== 'false') {
+        mymessage.error("当前任务不支持重新扫描！")
+        return;
+      }
+      var that = this;
+      $.ajax({
+        url: http_head + '/create_process/',
+        data: {
+          method: 'create_queue',
+          folder_path: row.folder_path,
+          item_id: row.itemid,
+          task_name: row.taskname + ' (' + getCurrentDate(2) + ')重新扫描',
+          template: 'Developer Workbook',
+          version: 'Developer Workbook',
+          language: row.language,
+          branch: '',
+          model: md,
+          deepseek: ds,
+        },
+        type: 'post',
+        dataType: 'JSON',
+        success : function (res){
+          console.log(res)
+          that.getTableData()
+          // mymessage.success("创建成功")
+        },
+        error: function (err) {
+          // console.log(err)
+          mymessage.error("创建失败")
+        }
+      })
+
+    },
+
     // 点击任务日志
     clickLog(row){
       this.currentLog_id = row.taskid;
@@ -1117,4 +1090,6 @@ function getCurrentDate(format) {
     time = year + "-" + month + "-" + date+ " " + hour + ":" + minu + ":" + sec;
   }
   return time;
-}
+};
+
+

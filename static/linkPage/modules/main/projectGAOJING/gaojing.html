@@ -21,7 +21,11 @@
       }
       /* 自定义弹窗样式 */
       .custom-dialog .el-dialog__body {
-          max-height: 300px; /* 设置弹窗内容的最大高度 */
+          max-height: 350px; /* 设置弹窗内容的最大高度 */
+          overflow-y: auto; /* 如果内容超出高度，显示滚动条 */
+      }
+      .custom-dialog1 .el-dialog__body {
+          max-height: 580px; /* 设置弹窗内容的最大高度 */
           overflow-y: auto; /* 如果内容超出高度，显示滚动条 */
       }
       /* 联系人列表行间距 */
@@ -55,8 +59,8 @@
       }
 
       .box {
-          width: 60%;
-          height: 700px; /* 将高度改为固定值 1000px */;
+          width: 94%;
+          height: 800px; /* 将高度改为固定值 1000px */;
           background: #ffffff;
           border: 1px solid #EBEEF5;
           border-radius: 5px;
@@ -80,6 +84,7 @@
           padding: 10px 30px;
           border-bottom: 1px solid #EBEEF5;
           box-sizing: border-box;
+
       }
       .supplement {
           font-size: 15px;
@@ -125,6 +130,7 @@
 
 
 
+
   </style>
 </head>
 
@@ -151,6 +157,9 @@
         <span class="title1">
           告警内容
           <span class="supplement">（请选择想要发送告警信息的项目）</span>
+          <el-button type="primary" @click="openManualInputDialog" style="margin-left: 50px;">
+                自定义告警信息
+          </el-button>
         </span>
         <el-table
             ref="multipleTable"
@@ -164,7 +173,7 @@
           <el-table-column prop="export_name" label="项目名称" width="300"></el-table-column>
           <el-table-column prop="itemname" label="扫描语言"></el-table-column>
           <el-table-column prop="fileType" label="创建时间"></el-table-column>
-          <el-table-column prop="account" label="缺陷统计(高中低)" width="250">
+          <el-table-column prop="account" label="缺陷统计(高中低)" width="350">
             <template slot-scope="scope">
               <el-tag effect="dark" type="danger" class="inline-tag">
                 {{ scope.row.high }}
@@ -190,7 +199,7 @@
           title="选择企业微信群"
           :visible.sync="wechatDialogVisible"
           :modal="false"
-          width="40%"
+          width="30%"
           custom-class="custom-dialog"
       >
         <el-radio-group v-model="selectedWechatContacts" class="contact-list">
@@ -214,7 +223,7 @@
           title="选择邮箱收件人"
           :visible.sync="emailDialogVisible"
           :modal="false"
-          width="40%"
+          width="30%"
           custom-class="custom-dialog"
       >
         <el-radio-group v-model="selectedEmailRecipients" class="contact-list">
@@ -237,7 +246,7 @@
           title="选择站内收件人"
           :visible.sync="DialogVisible"
           :modal="false"
-          width="40%"
+          width="30%"
           custom-class="custom-dialog"
       >
         <el-radio-group v-model="selectedRecipients" class="contact-list">
@@ -256,12 +265,70 @@
         </span>
       </el-dialog>
 
-      <!-- 新建联系人弹窗 -->
+<!--      &lt;!&ndash; 原新建联系人弹窗 &ndash;&gt;-->
+<!--      <el-dialog-->
+<!--          title="新建联系人"-->
+<!--          :visible.sync="contactDialogVisible"-->
+<!--          width="60%"-->
+<!--          :modal="false"-->
+<!--      >-->
+<!--        <div>-->
+<!--          &lt;!&ndash; 单选框：选择联系人类型 &ndash;&gt;-->
+<!--          <el-radio-group v-model="contactType">-->
+<!--            <el-radio label="wechat">企业微信</el-radio>-->
+<!--            <el-radio label="email">邮箱</el-radio>-->
+<!--          </el-radio-group>-->
+
+<!--          &lt;!&ndash; 动态录入组件 &ndash;&gt;-->
+<!--          <div style="margin-top: 20px;">-->
+<!--            &lt;!&ndash; 微信联系人录入 &ndash;&gt;-->
+<!--            <div v-if="contactType === 'wechat'">-->
+<!--              <el-input-->
+<!--                  v-model="wechatName"-->
+<!--                  placeholder="请输入企业微信群名"-->
+<!--                  style="margin-bottom: 10px;"-->
+<!--              ></el-input>-->
+<!--              <el-input-->
+<!--                  v-model="webhookUrl"-->
+<!--                  placeholder="请输入微信url地址（示例：https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=e81933fa-651a-4d4c-a7e0-a7c25997db59）"-->
+<!--              ></el-input>-->
+<!--              &lt;!&ndash; 添加小字提示 &ndash;&gt;-->
+<!--              <div style="font-size: 14px; color: #999; margin-top: 10px;margin-left: 10px;">-->
+<!--                进入需要发送消息的群聊，点击右上角的群设置。<br>-->
+<!--                找到「群机器人」，点击「添加机器人」。<br>-->
+<!--                设置机器人名称，创建后会生成一个 Webhook URL。-->
+<!--              </div>-->
+<!--            </div>-->
+
+<!--            &lt;!&ndash; 邮箱联系人录入 &ndash;&gt;-->
+<!--            <div v-if="contactType === 'email'">-->
+<!--              <el-input-->
+<!--                  v-model="emailName"-->
+<!--                  placeholder="请输入邮箱用户名"-->
+<!--                  style="margin-bottom: 10px;"-->
+<!--              ></el-input>-->
+<!--              <el-input-->
+<!--                  v-model="receiverEmail"-->
+<!--                  placeholder="请输入邮箱地址（示例：1500861482@qq.com）"-->
+<!--              ></el-input>-->
+<!--            </div>-->
+<!--          </div>-->
+<!--        </div>-->
+
+<!--        <span slot="footer" class="dialog-footer">-->
+<!--          <el-button @click="contactDialogVisible = false">取消</el-button>-->
+<!--          <el-button type="primary" @click="saveContact">保存</el-button>-->
+<!--        </span>-->
+<!--      </el-dialog>-->
+
+      <!-- 弹窗：新建联系人及显示历史联系人 -->
       <el-dialog
           title="新建联系人"
           :visible.sync="contactDialogVisible"
-          width="50%"
+          width="60%"
           :modal="false"
+          top="10px"
+          custom-class="custom-dialog1"
       >
         <div>
           <!-- 单选框：选择联系人类型 -->
@@ -271,7 +338,7 @@
           </el-radio-group>
 
           <!-- 动态录入组件 -->
-          <div style="margin-top: 20px;">
+          <div style="margin-top: 5px;">
             <!-- 微信联系人录入 -->
             <div v-if="contactType === 'wechat'">
               <el-input
@@ -304,13 +371,96 @@
               ></el-input>
             </div>
           </div>
+
+          <!-- 已有联系人列表 -->
+          <div style="margin-top: 10px; border-top: 1px solid #EBEEF5; padding-top: 10px;">
+            <h4 style="font-size: 16px; margin-bottom: 15px; color: #606266;">
+              {{ contactType === 'wechat' ? '企业微信' : '邮箱' }}已有联系人
+            </h4>
+
+            <!-- 企业微信联系人列表 -->
+            <div v-if="contactType === 'wechat' && wechatContacts.length > 0">
+              <el-table
+                  :data="wechatContacts"
+                  style="width: 100%; max-height: 200px;overflow-y: auto; /* 如果内容超出高度，显示滚动条 */"
+                  border
+                  size="small"
+              >
+                <el-table-column
+                    prop="wechat_name"
+                    label="群名称"
+                    width="180">
+                </el-table-column>
+                <el-table-column
+                    prop="webhook_url"
+                    label="Webhook地址"
+                    show-overflow-tooltip>
+                </el-table-column>
+              </el-table>
+            </div>
+
+            <!-- 邮箱联系人列表 -->
+            <div v-if="contactType === 'email' && emailRecipients.length > 0">
+              <el-table
+                  :data="emailRecipients"
+                  style="width: 100%;max-height: 180px;overflow-y: auto; "
+                  border
+                  size="small"
+              >
+                <el-table-column
+                    prop="email_name"
+                    label="联系人"
+                    width="180">
+                </el-table-column>
+                <el-table-column
+                    prop="receiver_email"
+                    label="邮箱地址">
+                </el-table-column>
+              </el-table>
+            </div>
+
+            <!-- 无联系人提示 -->
+            <div v-if="(contactType === 'wechat' && wechatContacts.length === 0) ||
+                 (contactType === 'email' && emailRecipients.length === 0)"
+                 style="text-align: center; padding: 20px; color: #909399;">
+              <i class="el-icon-info" style="margin-right: 5px;"></i>
+              暂无{{ contactType === 'wechat' ? '企业微信' : '邮箱' }}联系人
+            </div>
+          </div>
         </div>
 
         <span slot="footer" class="dialog-footer">
-          <el-button @click="contactDialogVisible = false">取消</el-button>
-          <el-button type="primary" @click="saveContact">保存</el-button>
-        </span>
+    <el-button @click="contactDialogVisible = false">取消</el-button>
+    <el-button type="primary" @click="saveContact">保存</el-button>
+  </span>
       </el-dialog>
+
+      <!-- 弹窗：手动录入告警信息 -->
+      <el-dialog
+          title="自定义告警信息"
+          :visible.sync="manualInputDialogVisible"
+          width="35%"
+          :modal="false"
+      >
+        <el-form :model="manualInputForm" label-width="80px">
+          <el-form-item label="标题">
+            <el-input v-model="manualInputForm.summary" placeholder="请输入告警摘要"></el-input>
+          </el-form-item>
+          <el-form-item label="内容">
+            <el-input
+                type="textarea"
+                v-model="manualInputForm.content"
+                placeholder="请输入告警内容"
+                :rows="6"
+            ></el-input>
+          </el-form-item>
+        </el-form>
+        <span slot="footer" class="dialog-footer">
+        <el-button @click="manualInputDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="confirmManualInput">确定</el-button>
+      </span>
+      </el-dialog>
+
 
     </div>
   </template>

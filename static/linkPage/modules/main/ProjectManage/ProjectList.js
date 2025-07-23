@@ -1,14 +1,4 @@
 let mymessage = {}
-//
-// const mask = { template: '/python/linkPage/modules/main/ProjectManage/markList.html' }
-// let router = new VueRouter({
-//     mode:"history",
-//     routes:[{
-//         path:'/TaskManage',
-//         component: mask
-//     },]
-// })
-
 
 var vm = new Vue({
     el: "#app",
@@ -34,7 +24,6 @@ var vm = new Vue({
         sessionStorage.removeItem('project_rows1')
         this.getTableData()
         this.getInfoData()
-        // this.getModelList()
     },
     data() {
         return {
@@ -50,20 +39,13 @@ var vm = new Vue({
             tableData: [],
             currentPage: 1, //当前页 刷新后默认显示第一页
             pageSize: 10, //每一页显示的数据量 此处每页显示6条数据
-            count:10,
+            count:0,
 
             configs: false,
             config1:'',
             tableConfig:[],
             selectedModel:'',
-            // currentRow: '',
-            currentRow: {cwe_id: "{'CWE0': 0, 'CWE113': 1, 'CWE129': 2, 'CWE134': 3, 'CWE190': 4, 'CWE191': 5, 'CWE197': 6, 'CWE200': 7, 'CWE022': 8, 'CWE369': 9, 'CWE400': 10, 'CWE476': 11, 'CWE789': 12, 'CWE080': 13, 'CWE089': 14}",
-                model_id: "2",
-                model_name: "模型1",
-                model_path: "/home/public/JAVA/python/static/DATA_new_M/model/模型1.model",
-                model_train_end: "2024-03-22 15:36:22",
-                model_train_start: "2024-03-22 15:36:16",
-                remarks: null},
+
             highlightedRow:'',
 
             getAlert:false,
@@ -71,9 +53,10 @@ var vm = new Vue({
                 item_name:'',
                 description:'',
                 language: 'java',
-                source:'本地',
+                source:'本地上传',
 
             },
+            languages: scanLanguages,
             rules:{
                 item_name: [
                     { required: true, message: '请输入项目名称', trigger: 'blur' },
@@ -85,6 +68,7 @@ var vm = new Vue({
                     { required: true, message: '请选择代码来源', trigger: 'blur' },
                 ],
             },
+            countLoading:false
 
         }
 
@@ -114,7 +98,7 @@ var vm = new Vue({
                     description : that.form.description,
                     creator_id : localUser.accountId,
                     url:'',
-                    createTime : getCurrentDate(1),
+                    createTime : getCurrentDate(2),
                     creator: localUser.username,
                 },
                 type: 'post',
@@ -127,7 +111,7 @@ var vm = new Vue({
                         that.getAlert = false
                     }
                     if(res.msg === '项目名称已存在，请修改项目名之后新增'){
-                        mymessage.error("项目名称已存在，请修改项目名")
+                        mymessage.error("项目名称已存在，请修改项目名后新增")
                     }
 
                 },
@@ -137,41 +121,15 @@ var vm = new Vue({
                 }
             })
         },
-        //"配置策略“
-        config(){
-            this.configs = true
-            this.getConfig()
-            // this.getModelList()
+
+        resetForm() {
+            this.form = {
+                item_name: '',
+                description: '',
+                language: 'java',
+                source: '本地上传',
+            }
         },
-        // //获取已有的模型
-        // getModelList() {
-        //     const that = this
-        //     $.ajax({
-        //         url:  (http_head + '/login/'),
-        //         type:'post',
-        //         dataType: 'JSON',
-        //         data:{
-        //             method:'get_model_id',
-        //         },
-        //         success:function (res){
-        //             // console.log(res);
-        //             if (res){
-        //                 var descriptions = [];
-        //                 //选择模型策略
-        //                 that.tableConfig = res
-        //                 //模型迭代
-        //                 var result2 = descriptions.map((description, index) => ({ description, model: models[index] }));
-        //                 result2 = result2.map(item => ({ description: `${item.description}: ${item.model}`, model: item.model}));
-        //                 that.options = result2
-        //                 // console.log(that.options)
-        //             }
-        //         },
-        //         error: function (err) {
-        //             console.log(err)
-        //             mymessage.error("获取失败")
-        //         }
-        //     })
-        // },
         //获取策略选中的模型
         handleTableChange(val) {
             this.currentRow = val;
@@ -185,51 +143,9 @@ var vm = new Vue({
             // highlightedRowElement.removeAttribute('style')
             // console.log(highlightedRowElement.backgroundColor)
         },
-        //高亮选中的配置（模型选择）
-        rowClassName({ row }) {
-            // 根据条件返回不同的类名
-            // console.log(this.highlightedRow.model)
-            // console.log(row)
-            // if (row.model === this.highlightedRow.model){
-            //     // console.log(row.model)
-            //     return 'highlighted-row'
-            // }
-            // return '';
 
-        },
         setCurrent(row) {
             this.$refs.singleTable.setCurrentRow(row);
-        },
-        //保存配置
-        save() {
-            // console.log(username)
-            const that = this
-            this.configs = false
-            console.log(that.config1,that.currentRow)
-            if(that.config1 && that.selectedModel){
-                $.ajax({
-                    url:  (http_head + '/login/'),
-                    data:{
-                        method: 'insert_Pol',
-                        account: localUser.account,
-                        policy: that.config1,
-                        model: that.selectedModel,
-                    },
-
-                    type : 'post',
-                    dataType : 'JSON',
-                    success : function (res){
-                        console.log(res);
-                        mymessage.success("保存成功")
-                    },
-                    error: function (err) {
-                        console.log(err)
-                        mymessage.error("保存失败")
-                    }
-                })
-            } else { mymessage.error("配置或模型未选择！") }
-
-            this.getConfig()
         },
         //获取之前保存的配置
         getConfig() {
@@ -264,6 +180,7 @@ var vm = new Vue({
 
         //获取项目统计信息
         getInfoData() {
+            this.countLoading = true
             var that = this
             $.ajax({
                 url: (http_head + '/login/'),
@@ -273,7 +190,7 @@ var vm = new Vue({
                 type: 'post',
                 dataType: 'JSON',
                 success: function (res){
-                    console.log(res)
+                    // console.log(res)
                     if(res){
                         that.data1 = res[0].itemnum
                         that.data2 = res[1].tasknum
@@ -282,10 +199,12 @@ var vm = new Vue({
                         that.data5 = res[4].detected
                         that.data6 = res[5].Detection_failed
                     }
+                    that.countLoading = false
                 },
                 error: function (err) {
                     console.log(err)
-                    mymessage.error("获取失败")
+                    that.countLoading = false
+                    // mymessage.error("获取失败")
                 }
             })
         },
@@ -309,10 +228,24 @@ var vm = new Vue({
                 type: 'post',
                 dataType: 'JSON',
                 success: function (res){
-                    console.log(res)
-                    if(res){
+                    // console.log(res)
+                    if(res.count > 0){
+                        res.data.forEach(item => {
+                            if (item.high == null) {
+                                item.high = 0
+                            }
+                            if (item.med == null) {
+                                item.med = 0
+                            }
+                            if (item.low == null) {
+                                item.low = 0
+                            }
+                        })
                         that.tableData = res.data
                         that.count = res.count
+                    } else {
+                        that.tableData = [];
+                        that.count = 0
                     }
                 },
                 error: function (err) {
@@ -375,18 +308,19 @@ var vm = new Vue({
                 url:  (http_head + '/login/'),
                 data:{
                     method : 'project_delete',
-                    itemid     : row.itemid,
+                    itemid : row.itemid,
                 },
                 type : 'post',
                 dataType : 'JSON',
                 success : function (res){
                     console.log(res);
-                    if (res.code == '200'){
-                        that.getTableData()
+                    if (res.code === '200'){
                         mymessage.success(res.msg)
                     }else{
                         mymessage.error(res.msg)
                     }
+                    that.getTableData()
+                    that.getInfoData()
                 },
                 error: function (err) {
                     console.log(err)

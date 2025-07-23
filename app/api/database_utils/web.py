@@ -1,6 +1,9 @@
 import base64
 import json
 import os
+import traceback
+from collections import defaultdict
+from pathlib import Path
 
 import chardet
 import pymysql
@@ -9,6 +12,7 @@ from Crypto.Cipher import AES
 from django.http import HttpResponse, JsonResponse
 from app.api.database_utils.mysql_util import config
 from app.api.database_utils.export_pdf import Graphs
+from app.api.database_utils.export_word import Graphs_word
 from datetime import datetime
 import requests
 # 本设置作用是将默认相对路径设为本文件夹路径
@@ -20,8 +24,10 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from datetime import datetime
-
+from ftplib import FTP, error_perm
 from pip._internal import req
+from app.api.database_utils.export_excel import export_excel1
+
 
 # 获取py 文件所在目录
 current_path = os.path.dirname(__file__)
@@ -99,9 +105,9 @@ def login(request):
                 response = HttpResponse(
                     json.dumps({'code': '200', 'msg': '登录成功'}, ensure_ascii=False)
                 )
-                # 设置cookie时间限制为24小时
+                # 设置cookie时间限制为24小时->30分钟
                 response.set_cookie(
-                    'username', username, max_age=86400, path='/static/'
+                    'username', username, max_age=1800, path='/static/'
                 )
                 response['Access-Control-Allow-Origin'] = '*'
                 return response
@@ -622,7 +628,7 @@ def TaskNum_Time(req):  # 接口4_1
     year = req.POST['year']
     conn = pymysql.connect(**config)  # 使用pymysql库建立与数据库的连接，config是一个包含数据库连接配置的字典
     cursor = conn.cursor()  # 创建游标对象，用于执行sql语句
-    sql = """SELECT YEAR(startTime) AS year, MONTH(startTime) AS month, COUNT(*) AS task_count FROM vuldetail WHERE YEAR(startTime)=%s GROUP BY YEAR(startTime),MONTH(startTime) ORDER BY YEAR(startTime),MONTH(startTime)"""
+    sql = """SELECT YEAR(startTime) AS year, MONTH(startTime) AS month, COUNT(*) AS task_count,high_risk + med_risk + low_risk AS total_vul FROM vuldetail WHERE YEAR(startTime)=%s GROUP BY YEAR(startTime),MONTH(startTime) ORDER BY YEAR(startTime),MONTH(startTime)"""
     conn.ping(reconnect=True)  # 每次连接之前，会检查当前连接是否已关闭，如果连接关闭则会重新进行连接
     cursor.execute(sql, (year,))  # 执行sql语句,传入年份
     row_headers = [x[0] for x in cursor.description]
@@ -638,34 +644,34 @@ def TaskNum_Time(req):  # 接口4_1
     return HttpResponse(json.dumps(jsondata, ensure_ascii=False))
 
 
-def TaskNum_Time(request):
-    """
-    获取每月任务数量统计
-    """
-    try:
-        year = request.POST['year']
-    except KeyError:
-        return HttpResponse(json.dumps({'msg': '请提供年份', 'msg-code': '400'}, ensure_ascii=False))
-
-    with pymysql.connect(**config) as conn:
-        with conn.cursor() as cursor:
-            sql = """
-                SELECT 
-                    YEAR(startTime) AS year, 
-                    MONTH(startTime) AS month, 
-                    COUNT(*) AS task_count
-                FROM vuldetail 
-                WHERE YEAR(startTime) = %s
-                GROUP BY YEAR(startTime), MONTH(startTime)
-                ORDER BY YEAR(startTime), MONTH(startTime)
-            """
-            cursor.execute(sql, (year,))
-            data = [dict(zip(('year', 'month', 'task_count'), row)) for row in cursor.fetchall()]
-
-    if not data:
-        return HttpResponse(json.dumps({'msg': '统计结果为空', 'msg-code': '200'}, ensure_ascii=False))
-    else:
-        return HttpResponse(json.dumps(data, ensure_ascii=False))
+# def TaskNum_Time(request):
+#     """
+#     获取每月任务数量统计
+#     """
+#     try:
+#         year = request.POST['year']
+#     except KeyError:
+#         return HttpResponse(json.dumps({'msg': '请提供年份', 'msg-code': '400'}, ensure_ascii=False))
+#
+#     with pymysql.connect(**config) as conn:
+#         with conn.cursor() as cursor:
+#             sql = """
+#                 SELECT
+#                     YEAR(startTime) AS year,
+#                     MONTH(startTime) AS month,
+#                     COUNT(*) AS task_count
+#                 FROM vuldetail
+#                 WHERE YEAR(startTime) = %s
+#                 GROUP BY YEAR(startTime), MONTH(startTime)
+#                 ORDER BY YEAR(startTime), MONTH(startTime)
+#             """
+#             cursor.execute(sql, (year,))
+#             data = [dict(zip(('year', 'month', 'task_count'), row)) for row in cursor.fetchall()]
+#
+#     if not data:
+#         return HttpResponse(json.dumps({'msg': '统计结果为空', 'msg-code': '200'}, ensure_ascii=False))
+#     else:
+#         return HttpResponse(json.dumps(data, ensure_ascii=False))
 
 
 def LevelNum_Time(req):  # 接口4_2
@@ -708,7 +714,7 @@ def get_all_vultype_files(request):
     with pymysql.connect(**config) as conn:
         with conn.cursor() as cursor:
             sql = """
-                SELECT vultype, fileid, filename
+                SELECT vultype, id, filename
                 FROM vulfile
                 WHERE taskId = %s
                 ORDER BY vultype
@@ -741,7 +747,7 @@ def vulfile_update(task_id, file_id, repair_code, code_location):  # 修复后�
         conn.ping(reconnect=True)  # 每次连接之前，会检查当前连接是否已关闭，如果连接关闭则会重新进行连接
         print(task_id, file_id, repair_code, code_location)
 
-        sql = """update vulfile set repair_code = %s, repair_status = '已修复',code_location = %s where taskid = %s and fileid = %s"""
+        sql = """update vulfile set repair_code = %s, repair_status = '已修复',code_location = %s where taskid = %s and id = %s"""
         cursor.execute(sql, (repair_code, code_location, task_id, file_id))
         conn.commit()  # 提交事务
 
@@ -785,7 +791,7 @@ def VulType_get(req):  # 接口6_2
     vul_id = req.POST['fileid']
     conn = pymysql.connect(**config)
     cursor = conn.cursor()
-    sql = """select * from vulfile where fileid = %s"""
+    sql = """select * from vulfile where id = %s"""
     conn.ping(reconnect=True)
     cursor.execute(sql, (vul_id))
     row_headers = [x[0] for x in cursor.description]
@@ -800,10 +806,22 @@ def VulType_get(req):  # 接口6_2
             if "[" in result_dict['location'] and "]" in result_dict['location']:
                 # 如果包含 "[" 和 "]"，执行 generate_sequence 函数
                 result_dict['location'] = generate_sequence(json.loads(result_dict['location']))
-            else:
-                result_dict['location'] = f'"{result_dict["location"]}"'
+            # else:
+            #     result_dict['location'] = f'"{result_dict["location"]}"'
 
             result_dict['code_location'] = result_dict['location']
+
+            if "[" in result_dict['src_location'] and "]" in result_dict['src_location']:
+                # 如果包含 "[" 和 "]"，执行 generate_sequence 函数
+                result_dict['src_location'] = generate_sequence(json.loads(result_dict['src_location']))
+
+            result_dict['src_location'] = result_dict['src_location']
+
+            if "[" in result_dict['func_location'] and "]" in result_dict['func_location']:
+                # 如果包含 "[" 和 "]"，执行 generate_sequence 函数
+                result_dict['func_location'] = generate_sequence(json.loads(result_dict['func_location']))
+
+            result_dict['func_location'] = result_dict['func_location']
 
             if 'filepath' in result_dict:
                 file_path = result_dict['filepath']
@@ -821,12 +839,15 @@ def Task_Detail_1(req):  # 接口5_1
     task_id = req.POST['task_id']
     conn = pymysql.connect(**config)
     cursor = conn.cursor()
-    sql = """SELECT vuldetail.taskname,itemdetail.itemname,itemdetail.language,vuldetail.type,vuldetail.file_size,vuldetail.code_size,vuldetail.lasttime,vuldetail.review_status,itemdetail.source,vuldetail.file_num,itemdetail.creator,vuldetail.startTime,itemdetail.url
+    sql = """SELECT vuldetail.taskname,itemdetail.itemname,itemdetail.language,vuldetail.type,vuldetail.file_size,vuldetail.code_size,vuldetail.lasttime,
+    vuldetail.review_status,itemdetail.source,vuldetail.file_num,itemdetail.creator,vuldetail.ccn,vuldetail.startTime,vuldetail.url_git,vuldetail.branch
 from itemdetail left join vuldetail on itemdetail.itemid = vuldetail.itemid where vuldetail.taskid = %s""" % (task_id)
     conn.ping(reconnect=True)
     cursor.execute(sql)
     row_headers = [x[0] for x in cursor.description]
+    print(row_headers)
     data = cursor.fetchall()
+    print(data)
     jsondata = []
     if len(data) == 0:
         jsondata = {'msg': '统计结果为空', 'msg-code': '200'}
@@ -912,22 +933,23 @@ def file_detail(req):  # 接口7
     conn = pymysql.connect(**config)
     cursor = conn.cursor()
     sql = """SELECT
-                cwelist.NAME,
-                vulfile.repair_status,
-                itemdetail.LANGUAGE,
-                vulfile.risk_level,
-                vulfile.filepath,
-                vuldetail.startTime,
-                cwelist.description,
-                cwelist.example,
-                cwelist.repairPlan 
+                    vulfile.vultype,
+                    subVulList.NAME_CN as NAME,
+                    vulfile.repair_status,
+                    itemdetail.LANGUAGE,
+                    subVulList.level as risk_level,
+                    vulfile.filepath,
+                    vuldetail.startTime,
+                    subVulList.description,
+                    subVulList.example,
+                    subVulList.repairPlan 
             FROM
-                vulfile
-                LEFT JOIN vuldetail ON vulfile.taskId = vuldetail.taskid
-                LEFT JOIN itemdetail ON vuldetail.itemid = itemdetail.itemid
-                LEFT JOIN cwelist ON vulfile.vultype = cwelist.number 
+                    vulfile
+                    LEFT JOIN vuldetail ON vulfile.taskId = vuldetail.taskid
+                    LEFT JOIN itemdetail ON vuldetail.itemid = itemdetail.itemid
+                    LEFT JOIN subVulList ON vulfile.vultype = subVulList.name_CN 
             WHERE
-                vulfile.fileid = %s"""
+                vulfile.id = %s"""
     conn.ping(reconnect=True)
     cursor.execute(sql, file_id)
     row_headers = [x[0] for x in cursor.description]
@@ -960,18 +982,16 @@ def vul_statistics(req):  # 接口9
     offset = (page - 1) * results_per_page
 
     # 查询总结果数量
-    count_sql = """SELECT COUNT(*) 
-                   from vulfile left join cwelist on vulfile.vultype = cwelist.number left join vuldetail on vulfile.taskid = vuldetail.taskid  """
+    count_sql = """SELECT COUNT(*) from vulfile left join subVulList on vulfile.vultype = subVulList.name_CN left join vuldetail on vulfile.taskid = vuldetail.taskid  """
 
-    sql = """select cwelist.name,vulfile.filename,vulfile.risk_level,vulfile.repair_status,vulfile.remarks
-             from vulfile left join cwelist on vulfile.vultype = cwelist.number left join vuldetail on vulfile.taskid = vuldetail.taskid"""
+    sql = """select subVulList.name_CN as name,vulfile.filename,vulfile.risk_level,vulfile.repair_status,vulfile.remarks from vulfile left join subVulList on vulfile.vultype = subVulList.name_CN left join vuldetail on vulfile.taskid = vuldetail.taskid"""
 
     conditions = []
     if itemid:
         conditions.append("vuldetail.itemid like '%%%s%%'" % itemid)
 
     if vulname:
-        conditions.append("cwelist.name like '%%%s%%'" % vulname)
+        conditions.append("subVulList.name_CN like '%%%s%%'" % vulname)
 
     if filename:
         conditions.append("vulfile.filename like '%%%s%%'" % filename)
@@ -1230,6 +1250,7 @@ def task_list(req):
     row_headers = [x[0] for x in cursor.description]
     data = cursor.fetchall()
 
+
     jsondata = {'count': total_count}
     if total_count == 0:
         jsondata['msg'] = '统计结果为空'
@@ -1238,11 +1259,55 @@ def task_list(req):
         jsondata['data'] = []
         for result in data:
             jsondata['data'].append(dict(zip(row_headers, result)))
+    if "data" in jsondata:
+        for item in jsondata['data']:
+            sql = """SELECT filepath
+                    FROM vulfile
+                    WHERE vulfile.taskId = %s"""
 
+            cursor.execute(sql, item["taskid"])
+            try:
+                data = cursor.fetchall()
+                paths = [item[0] for item in data]
+                filepath = find_common_max_parent(paths)
+            except:
+                filepath = ""
+            item["folder_path"] = filepath
+ 
     cursor.close()
     conn.close()
     return HttpResponse(json.dumps(jsondata, ensure_ascii=False))
 
+
+def find_common_max_parent(paths):
+    """
+    找出多个文件路径的共同最大父目录
+
+    参数:
+        paths: 包含多个文件路径的列表
+
+    返回:
+        共同的最大目录路径字符串，如果没有共同目录则返回None
+    """
+    if not paths:
+        return None
+
+    # 将所有路径转换为绝对路径并分割为各部分
+    path_parts = [Path(os.path.abspath(p)).parts for p in paths]
+
+    # 找出所有路径共有的前缀部分
+    common_parts = []
+    for parts in zip(*path_parts):
+        if len(set(parts)) == 1:  # 所有路径在当前层级都相同
+            common_parts.append(parts[0])
+        else:
+            break
+
+    if not common_parts:
+        return None
+
+    # 重建路径
+    return os.path.join(*common_parts)
 
 def get_id(column, table):
     conn = pymysql.connect(**config)
@@ -1336,6 +1401,34 @@ def vuldetail_insert(task_id, item_id, task_name, type, high, mid, low, code_siz
         jsondata = {'msg': '插入失败', 'code': '500'}
     return HttpResponse(json.dumps(jsondata, ensure_ascii=False))
 
+def vuldetail_insert2(task_id, item_id, task_name, type, high, mid, low, code_size, file_size, file_num, statues,
+                     start_time, end_time, last_time, review_status, branch, version=None):
+    conn = pymysql.connect(**config)
+    cursor = conn.cursor()
+    conn.ping(reconnect=True)  # 每次连接之前，会检查当前连接是否已关闭，如果连接关闭则会重新进行连接
+
+    sql = """insert into vuldetail(taskId, itemId, taskname, type, high_risk, med_risk, low_risk, code_size, file_size, file_num, statues, startTime, endTime, lastTime, review_status, version, branch) values(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) """
+
+    conn = pymysql.connect(**config)
+    cursor = conn.cursor()
+    conn.ping(reconnect=True)  # 每次连接之前，会检查当前连接是否已关闭，如果连接关闭则会重新进行连接
+    try:
+        flag = cursor.execute(sql, [task_id, item_id, task_name, type, high, mid, low, code_size, file_size, file_num,
+                                    statues, start_time, end_time, last_time, review_status, version, branch])
+        conn.commit()
+    except Exception as e:
+        flag = False
+        print("提交出错\n:", e)
+        # 如果出错要回滚
+        conn.rollback()
+    cursor.close()
+    conn.close()
+    if flag:
+        jsondata = {'msg': '插入成功', 'code': '200'}
+    else:
+        jsondata = {'msg': '插入失败', 'code': '500'}
+    return HttpResponse(json.dumps(jsondata, ensure_ascii=False))
+
 
 # 创建全局数据库连接
 conn = pymysql.connect(**config)
@@ -1344,7 +1437,7 @@ cursor = conn.cursor()
 def vulfile_insert(task_id, file_id, combine_list):
     global conn, cursor
 
-    sql = """insert into vulfile(taskId, fileId, filename, filepath, vultype, location, source_code, code_location, repair_code, risk_level, repair_status, is_question, Sink, Enclosing_Method, Source) values(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) """
+    sql = """insert into vulfile(taskId, fileId, filename, filepath, vultype, location, source_code, code_location, repair_code, risk_level, repair_status, is_question, Sink, Enclosing_Method, Source, src_location, func_location) values(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) """
 
     flag = True
 
@@ -1367,22 +1460,56 @@ def vulfile_insert(task_id, file_id, combine_list):
         risk_level = data['risk_level']
         repair_status = data['repair_status']
         is_question = data['is_question']
+        src_location = data['src_line_number']
+        func_location = data['func_line_number']
         try:
             flag = cursor.execute(sql, [task_id, file_id, file_name, file_path, vultype, location, code, code_location,
                                         repair_code, risk_level, repair_status, is_question, Sink, Enclosing_Method,
-                                        Source])
+                                        Source, src_location, func_location])
             conn.commit()
         except Exception as e:
             flag = False
             print("提交出错\n:", e)
             # 如果出错要回滚
             conn.rollback()
- 
+
     if flag:
         jsondata = {'msg': '插入成功', 'code': '200'}
     else:
         jsondata = {'msg': '插入失败', 'code': '500'}
     return HttpResponse(json.dumps(jsondata, ensure_ascii=False))
+
+def is_insert(file_id, test_result):
+    conn = pymysql.connect(**config)
+    cursor = conn.cursor()
+    conn.ping(reconnect=True)  # 每次连接之前，会检查当前连接是否已关闭，如果连接关闭则会重新进行连接
+    sql = """SELECT COUNT(*) FROM vulfile WHERE fileId = %s and vultype = %s"""
+
+    cursor.execute(sql, (file_id, test_result[0]["vul_name"]))
+    data = cursor.fetchone()[0]
+    conn.commit()
+    cursor.close()
+    conn.close()
+    if data == 0:
+        return True
+    else:
+        return False
+
+def update_Inter(fileId,full_response):
+    sql = """update vulfile set Interpretation = %s where fileId = %s """
+    conn = pymysql.connect(**config)
+    cursor = conn.cursor()
+    conn.ping(reconnect=True)  # 每次连接之前，会检查当前连接是否已关闭，如果连接关闭则会重新进行连接
+    try:
+        flag = cursor.execute(sql, [full_response, fileId])
+        conn.commit()
+    except Exception as e:
+        flag = False
+        print("提交出错\n:", e)
+        # 如果出错要回滚
+        conn.rollback()
+    cursor.close()
+    conn.close()
 
 
 def task_delete(req):  # 删除任务
@@ -1403,7 +1530,73 @@ def task_delete(req):  # 删除任务
     try:
         cursor.execute(sql, taskid)
         conn.commit()
-        path = os.path.join(file_save_path, itemname, task_data[0][3])
+        # path = os.path.join(file_save_path, itemname, task_data[0][3])
+        # print(path)
+        # shutil.rmtree(path)
+    except Exception as e:
+        print("提交出错\n:", e)
+        # 如果出错要回滚
+        conn.rollback()
+        jsondata = {'msg': '删除失败', 'code': '500'}
+        return HttpResponse(json.dumps(jsondata, ensure_ascii=False))
+    cursor.close()
+    conn.close()
+    jsondata = {'msg': '删除成功', 'code': '200'}
+    return HttpResponse(json.dumps(jsondata, ensure_ascii=False))
+
+def tasks_batch_delete(taskids):
+    conn = pymysql.connect(**config)
+    cursor = conn.cursor()
+    conn.ping(reconnect=True)
+    sql = """DELETE vuldetail,vulfile FROM vuldetail left join vulfile on vuldetail.taskid = vulfile.taskid WHERE vuldetail.taskid in ({})""".format(
+        ','.join(['%s'] * len(taskids)))
+    try:
+        cursor.execute(sql, tuple(taskids))
+        conn.commit()
+        jsondata = {'msg': '删除成功', 'code': '200'}
+    except Exception as e:
+        print("提交出错\n:", e)
+        # 如果出错要回滚
+        conn.rollback()
+        jsondata = {'msg': '删除失败', 'code': '500'}
+    cursor.close()
+    conn.close()
+    return jsondata
+
+def tasks_batch_delete_req(req):
+    taskid_list = req.POST['taskid_list'].split(',')
+
+    if not taskid_list:
+        jsondata = {'msg': 'taskid_list参数不能为空', 'code': '400'}
+        return HttpResponse(json.dumps(jsondata, ensure_ascii=False))
+
+    taskids = [int(id.strip()) for id in taskid_list if id.strip().isdigit()]
+
+    jsondata = tasks_batch_delete(taskids)
+    return HttpResponse(json.dumps(jsondata, ensure_ascii=False))
+
+def project_delete(req):  # 删除项目
+    itemid = req.POST['itemid']
+    conn = pymysql.connect(**config)
+    cursor = conn.cursor()
+    conn.ping(reconnect=True)  # 每次连接之前，会检查当前连接是否已关闭，如果连接关闭则会重新进行连接
+    sql2 = """select taskId from vuldetail where itemId = %s"""
+    cursor.execute(sql2, itemid)
+    data = cursor.fetchall()
+    if data:
+        taskids = [id[0] for id in data]
+        tasks_batch_delete(taskids)
+        print('成功删除项目内的所有任务')
+    sql = """delete from itemdetail where itemid = %s """
+    sql3 = """ select * from itemdetail where itemid = %s"""
+    cursor.execute(sql3, itemid)
+    item_data = cursor.fetchall()
+    print(item_data)
+    try:
+        cursor.execute(sql, itemid)
+        conn.commit()
+
+        path = os.path.join(file_save_path, item_data[0][2])
         print(path)
         shutil.rmtree(path)
     except Exception as e:
@@ -1417,30 +1610,38 @@ def task_delete(req):  # 删除任务
     jsondata = {'msg': '删除成功', 'code': '200'}
     return HttpResponse(json.dumps(jsondata, ensure_ascii=False))
 
+def projects_batch_delete(req):
+    itemid_list = req.POST['itemid_list'].split(',')
 
-def project_delete(req):  # 删除项目
-    itemid = req.POST['itemid']
+    # 1.itemid_list -> itemids
+    if not itemid_list:
+        jsondata = {'msg': 'itemid_list参数不能为空', 'code': '400'}
+        return HttpResponse(json.dumps(jsondata, ensure_ascii=False))
+
+    # 这里就不能一起删了，因为要先把里面的任务删干净，所以这里最好要一个一个删除
     conn = pymysql.connect(**config)
     cursor = conn.cursor()
-    conn.ping(reconnect=True)  # 每次连接之前，会检查当前连接是否已关闭，如果连接关闭则会重新进行连接
-    sql2 = """ select count(*) from vuldetail where itemId = %s"""
-    cursor.execute(sql2, itemid)
-    data = cursor.fetchall()
-    if data[0][0] != 0:
-        jsondata = {'msg': '删除失败,请先删掉项目内的所有任务', 'code': '500'}
-        return HttpResponse(json.dumps(jsondata, ensure_ascii=False))
-    sql = """delete from itemdetail where itemid = %s """
+    conn.ping(reconnect=True)
+    sql = """select taskId from vuldetail where itemId = %s"""
+    sql2 = """delete from itemdetail where itemid = %s """
     sql3 = """ select * from itemdetail where itemid = %s"""
-    cursor.execute(sql3, itemid)
-    item_data = cursor.fetchall()
-    print(item_data)
     try:
-        cursor.execute(sql, itemid)
-        conn.commit()
+        for itemid in itemid_list:
+            # 删除项目中所有任务
+            cursor.execute(sql, itemid)
+            taskIds = cursor.fetchall()
+            taskIds = [int(id[0]) for id in taskIds]
+            tasks_batch_delete(taskIds)
 
-        path = os.path.join(file_save_path, item_data[0][2])
-        print(path)
-        shutil.rmtree(path)
+            # 获取文件存储位置
+            cursor.execute(sql3, (itemid,))
+            item_data = cursor.fetchall()
+            # 删除项目文件和数据
+            cursor.execute(sql2, (itemid,))
+            conn.commit()
+            path = os.path.join(file_save_path, item_data[0][2])
+            print(path)
+            shutil.rmtree(path)
     except Exception as e:
         print("提交出错\n:", e)
         # 如果出错要回滚
@@ -1533,7 +1734,7 @@ def review_update(req):  # 更新审核状态
     try:
         for id in fileid:  # 确保 fileid 是一个可迭代对象
             # 查询当前记录的原始值和文件信息
-            sql_select = 'SELECT risk_level, filename, filepath FROM vulfile WHERE taskid = %s AND fileid = %s'
+            sql_select = 'SELECT risk_level, filename, filepath FROM vulfile WHERE taskid = %s AND id = %s'
             cursor.execute(sql_select, (taskid, id))
             result = cursor.fetchone()
             original_risk_level = result[0]  # 获取原始的 risk_level
@@ -1547,8 +1748,12 @@ def review_update(req):  # 更新审核状态
                 conditions.append("is_question = '%s' " % is_question)
             if is_fp:
                 conditions.append("is_fp = '%s' " % is_fp)
+            else:
+                conditions.append("is_fp = '%s' " % '')
             if risk_level:
                 conditions.append("risk_level = '%s' " % risk_level)
+            else:
+                conditions.append("risk_level = '%s' " % '')
             if remarks:
                 conditions.append("remarks = '%s' " % remarks)
             if data1:
@@ -1556,7 +1761,7 @@ def review_update(req):  # 更新审核状态
 
             if conditions:
                 sql += ', '.join(conditions)
-                sql += ' WHERE taskid = %s AND fileid = %s'
+                sql += ' WHERE taskid = %s AND id = %s'
                 cursor.execute(sql, (taskid, id))
                 conn.commit()
 
@@ -2026,7 +2231,7 @@ def get_repair_code(req):
     conn = pymysql.connect(**config)
     cursor = conn.cursor()
 
-    sql = """ SELECT repair_code FROM vulfile WHERE fileId = %s """
+    sql = """ SELECT repair_code FROM vulfile WHERE id = %s """
     jsondata = []
 
     conn.ping(reconnect=True)
@@ -2113,12 +2318,36 @@ def negative_insert(fileid, filename, filepath, vultype, upload_time):
 def repair_update(req):
     fileId = req.POST['fileId']
     repair_feedback = req.POST['repair_feedback']
-    sql = """update vulfile set repair_feedback=%s where fileid=%s """
+    sql = """update vulfile set repair_feedback=%s, repair_status = '已修复' where id = %s """
     conn = pymysql.connect(**config)
     cursor = conn.cursor()
     conn.ping(reconnect=True)  # 每次连接之前，会检查当前连接是否已关闭，如果连接关闭则会重新进行连接
     try:
         flag = cursor.execute(sql, [repair_feedback, fileId])
+        conn.commit()
+    except Exception as e:
+        flag = False
+        print("提交出错\n:", e)
+        # 如果出错要回滚
+        conn.rollback()
+    cursor.close()
+    conn.close()
+    if flag:
+        jsondata = {'msg': '更新成功', 'msg-code': '200'}
+    else:
+        jsondata = {'msg': '更新失败', 'msg-code': '500'}
+    return HttpResponse(json.dumps(jsondata, ensure_ascii=False))
+
+
+def status_update(req):
+    fileId = req.POST['fileId']
+    status = req.POST['status']
+    sql = """update vulfile set repair_status = %s where id = %s """
+    conn = pymysql.connect(**config)
+    cursor = conn.cursor()
+    conn.ping(reconnect=True)  # 每次连接之前，会检查当前连接是否已关闭，如果连接关闭则会重新进行连接
+    try:
+        flag = cursor.execute(sql, [status, fileId])
         conn.commit()
     except Exception as e:
         flag = False
@@ -2151,17 +2380,21 @@ def check_task_name(task_name, item_id):
 def export_pdf(request):  # 导出PDF
     taskId = request.POST['taskId']
     itemId = request.POST['itemId']
-    # teamName = request.POST['teamName']
-    itemName = request.POST['itemName']
+#    itemName = request.POST['itemName']
+    itemName = request.POST.get('itemName', 'default_value')
     pdf_Time = request.POST['pdf_Time']  # 创建pdf的时间
-    zipName = request.POST['zipName']
+#    zipName = request.POST['zipName']
+    zipName = request.POST.get('zipName', 'default_value')
     vulFileNumber = request.POST['vulFileNumber']
-    language = request.POST['language']
-    detect_type = request.POST['type']
+#    language = request.POST['language']
+    language = request.POST.get('language', 'default_value')
+    # detect_type = request.POST['type']
     # createTime = request.POST['createTime']
     startTime = request.POST['startTime']
-    lastTime = request.POST['lastTime']
+#    lastTime = request.POST['lastTime']
+    lastTime = request.POST['startTime']
     vuls = request.POST['vuls']  # 检测文件的所有漏洞类型
+    code_size = request.POST['code_size']
 
     conn = pymysql.connect(**config)
     cursor = conn.cursor()
@@ -2170,6 +2403,136 @@ def export_pdf(request):  # 导出PDF
     # sql = """ select (@rownum:=@rownum+1) AS num,name,count(*) as count from vulfile,(SELECT @rownum:=0) r,cwelist  where taskId = %s and lower(vulType)=number group by vulType order by num """  #只展示漏洞知识库列表有的漏洞
     # sql = """ select (@rownum:=@rownum+1) AS num,IFNULL(name,vulType) as cweName,count(*) as count from (SELECT @rownum:=0) r,
     # vulfile left join cwelist on lower(vulType)=number where vulId = '%s'  group by vulType order by num"""  # 展示所有的漏洞
+    sql = """select (@rownum:=@rownum+1) AS num,vulType as cweName,count(*) as count from (SELECT @rownum:=0) r,vulfile where taskId = %s group by vulType order by vulType"""
+    cursor.execute(sql, taskId)
+    vul_number = cursor.fetchall()
+    sql2 = """ select type from vuldetail where taskId = %s"""
+    cursor.execute(sql2, taskId)
+    type_ = cursor.fetchall()[0][0]
+    if 'r4' in type_:
+        type_ = '思考模式'
+    elif 'r3' in type_:
+        type_ = '降误报模式'
+    elif 'r2' in type_:
+        type_ = '快速模式'
+    else:
+        type_ = '快速模式'
+    sql3 = """ select fileName,lower(vulType),location,source_code,repair_code,Sink,Enclosing_Method,Source,filepath from vulfile where taskId = %s order by vulType """
+    cursor.execute(sql3, taskId)
+    file_location = cursor.fetchall()
+    sql4 = """ select lower(vulType),count(*) as count from vulfile where taskId = %s group by vulType order by vulType """
+    cursor.execute(sql4, taskId)
+    number = cursor.fetchall()
+    sql5 = """ select version from vuldetail where taskId = %s"""
+    cursor.execute(sql5, taskId)
+    version = cursor.fetchall()
+    version = version[0][0]
+    sql6 = """ select vulfile.vultype, subVulList.level from vulfile left join subVulList on vulfile.vultype = subVulList.name_CN where vulfile.taskId = %s"""
+    cursor.execute(sql6, taskId)
+    risk_level = cursor.fetchall()
+    risk_level_dict = {row[0]: row[1] for row in risk_level}
+    sql7 = """select lower(name_CN), level, description, repairPlan from subVulList"""
+    cursor.execute(sql7)
+    vul_infos = {
+        vul: (level, description, repairPlan)
+        for vul, level, description, repairPlan in cursor.fetchall()
+    }
+
+    # 使用字典按漏洞类型分组
+    grouped_results = defaultdict(list)
+    for row in file_location:
+        grouped_results[row[1]].append(row)
+
+    # 还是按元组来分组
+    final_results = []
+    for vul_type, file_list in grouped_results.items():  # 保持 grouped_results 的顺序
+        if vul_type in vul_infos:
+            level, description, repairPlan = vul_infos[vul_type]
+            final_results.append((vul_type, level, description, repairPlan, file_list))
+        else:
+            final_results.append((vul_type, '高危', '', '', file_list))
+
+    final_results = tuple(final_results)
+
+    sql8 = """select data1, risk_level, is_fp, repair_status from vulfile where taskId = %s"""
+    cursor.execute(sql8, taskId)
+    bar_data = cursor.fetchall()
+    data1 = len(bar_data)
+    data2, data3, data4, data5 = 0, 0, 0, 0
+    for item in bar_data:
+        if item[0] is not None:
+            data2 += 1
+        if item[1] in ['高危', '中危', '低危']:
+            data3 += 1
+        if item[2] == '是误报':
+            data4 += 1
+        if item[3] == '已修复':
+            data5 += 1
+    if data4 > data2 - data2:
+        data4 = data2 - data3
+
+    bar_info = [
+        ['漏洞总数', '已审核', '确认问题', '误报', '已修复'],
+        [data1, data2, data3, data4, data5],
+    ]
+
+    sql9 = '''select high_risk, med_risk, low_risk from vuldetail where taskId = %s'''
+    cursor.execute(sql9, taskId)
+    pie_data = cursor.fetchone()
+    pie_info = [
+        ['高危', '中危', '低危'],
+        [int(pie_data[0]), int(pie_data[1]), int(pie_data[2])],
+
+    ]
+
+    sql10 = '''select url_git, branch from vuldetail where taskId = %s'''
+    cursor.execute(sql10, taskId)
+    git_data = cursor.fetchone()
+    git_info = [git_data[0], git_data[1]]
+
+    try:
+        pdfName = Graphs.export_pdf(itemName, pdf_Time, zipName, language, type_,
+                                    startTime, lastTime, vul_number, vuls, file_location, final_results, number, version, risk_level_dict,bar_info, pie_info, code_size, git_info)
+#        print(f"itemName:{itemName}\n\n, pdf_Time:{pdf_Time}\n\n, zipName:{zipName}\n\n, vulFileNumber:{vulFileNumber}\n\n, language:{language}\n\n, detect_type:{detect_type}\n\n,startTime:{startTime}\n\n, lastTime:{lastTime}\n\n, vul_number:{vul_number}\n\n, header_five:{header_five}\n\n, vuls:{vuls}\n\n, file_location:{file_location}\n\n, number:{number}\n\n, version:{version}\n\n, risk_level_dict:{risk_level_dict}\n\n")
+        url = '/static/Export_PDF/' + pdfName
+        jsondata = {'{}'.format(pdfName): url, 'code': '200'}
+        sql_insert = """ insert into export_file(export_name,url,createTime,vulId,fileType,data1,data2,data3,itemId) values(%s,%s,%s,%s,'pdf',null,null,null,%s) """
+        cursor.execute(sql_insert, [pdfName, url, pdf_Time, taskId, itemId])  # 将数据加入到数据库
+        conn.commit()
+    except Exception as e:
+        error_traceback = traceback.format_exc()
+        jsondata = {
+            'msg': 'pdf导出失败',
+            'code': '500',
+            '错误信息': error_traceback
+        }
+        print(e)
+    cursor.close()
+    conn.close()
+    return HttpResponse(json.dumps(jsondata, ensure_ascii=False))
+
+def export_excel(request):
+    taskId = request.POST['taskId']
+    itemId = request.POST['itemId']
+    #    itemName = request.POST['itemName']
+    itemName = request.POST.get('itemName', 'default_value')
+    excel_Time = request.POST['excel_Time']  # 创建pdf的时间
+    #    zipName = request.POST['zipName']
+    zipName = request.POST.get('zipName', 'default_value')
+    vulFileNumber = request.POST['vulFileNumber']
+    #    language = request.POST['language']
+    language = request.POST.get('language', 'default_value')
+    detect_type = request.POST['type']
+    # createTime = request.POST['createTime']
+    startTime = request.POST['startTime']
+    #    lastTime = request.POST['lastTime']
+    lastTime = request.POST['startTime']
+    vuls = request.POST['vuls']  # 检测文件的所有漏洞类型
+
+    conn = pymysql.connect(**config)
+    cursor = conn.cursor()
+    conn.ping(reconnect=True)  # 每次连接之前，会检查当前连接是否已关闭，如果连接关闭则会重新进行连接
+    # 统计每种漏洞的个数
     sql = """select (@rownum:=@rownum+1) AS num,vulType as cweName,count(*) as count from (SELECT @rownum:=0) r,vulfile where taskId = %s group by vulType order by num"""
     cursor.execute(sql, taskId)
     vul_number = cursor.fetchall()
@@ -2190,29 +2553,182 @@ def export_pdf(request):  # 导出PDF
     cursor.execute(sql6, taskId)
     risk_level = cursor.fetchall()
     risk_level_dict = {row[0]: row[1] for row in risk_level}
+    sql7 = """select lower(name_CN), level, description, repairPlan from subVulList"""
+    cursor.execute(sql7)
+    vul_infos = {
+        vul: (level, description, repairPlan)
+        for vul, level, description, repairPlan in cursor.fetchall()
+    }
+
+    # 使用字典按漏洞类型分组
+    grouped_results = defaultdict(list)
+    for row in file_location:
+        grouped_results[row[1]].append(row)
+
+    # 还是按元组来分组
+    final_results = []
+    for vul_type, file_list in grouped_results.items():  # 保持 grouped_results 的顺序
+        if vul_type in vul_infos:
+            level, description, repairPlan = vul_infos[vul_type]
+            final_results.append((vul_type, level, description, repairPlan, file_list))
+        else:
+            final_results.append((vul_type, '高危', '', '', file_list))
+
+    final_results = tuple(final_results)
+
     try:
-        pdfName = Graphs.export_pdf(itemName, pdf_Time, zipName, vulFileNumber, language, detect_type,
-                                    startTime, lastTime, vul_number, header_five, vuls, file_location, number, version, risk_level_dict)
-        #        print(f"itemName: {itemName},\n\n pdf_Time: {pdf_Time},\n\n zipName: {zipName},\n\n vulFileNumber: {vulFileNumber},\n\n language: {language},\n\n detect_type: {detect_type},\n\n startTime: {startTime},\n\n lastTime: {lastTime},\n\n vul_number: {vul_number},\n\n header_five: {header_five},\n\n vuls: {vuls},\n\n file_location: {file_location},\n\n number: {number}")
-        url = 'http://10.99.16.24:8088/static/Export_PDF/' + pdfName
-        jsondata = {'{}'.format(pdfName): url, 'code': '200'}
-        sql_insert = """ insert into export_file(export_name,url,createTime,vulId,fileType,data1,data2,data3,itemId) values(%s,%s,%s,%s,'pdf',null,null,null,%s) """
-        cursor.execute(sql_insert, [pdfName, url, pdf_Time, taskId, itemId])  # 将数据加入到数据库
+        excelName = export_excel1(itemName, excel_Time, zipName, vulFileNumber, language, detect_type, startTime, lastTime,
+                   vul_number, header_five, vuls, file_location, final_results, number, version, risk_level_dict)
+#        print(
+#            f"itemName:{itemName}\n\n, pdf_Time:{excel_Time}\n\n, zipName:{zipName}\n\n, vulFileNumber:{vulFileNumber}\n\n, language:{language}\n\n, detect_type:{detect_type}\n\n,startTime:{startTime}\n\n, lastTime:{lastTime}\n\n, vul_number:{vul_number}\n\n, header_five:{header_five}\n\n, vuls:{vuls}\n\n, file_location:{file_location}\n\n, number:{number}\n\n, version:{version}\n\n, risk_level_dict:{risk_level_dict}\n\n")
+        url = '/static/Export_PDF/' + excelName
+        jsondata = {'{}'.format(excelName): url, 'code': '200'}
+        sql_insert = """ insert into export_file(export_name,url,createTime,vulId,fileType,data1,data2,data3,itemId) values(%s,%s,%s,%s,'excel',null,null,null,%s) """
+        cursor.execute(sql_insert, [excelName, url, excel_Time, taskId, itemId])  # 将数据加入到数据库
         conn.commit()
     except Exception as e:
-        jsondata = {'msg': '导出失败', 'code': '500'}
+        error_traceback = traceback.format_exc()
+        jsondata = {
+            'msg': 'excel导出失败',
+            'code': '500',
+            '错误信息': error_traceback
+        }
         print(e)
     cursor.close()
     conn.close()
     return HttpResponse(json.dumps(jsondata, ensure_ascii=False))
 
-
 def export_word(request):
+    taskId = request.POST['taskId']
+    itemId = request.POST['itemId']
+    #    itemName = request.POST['itemName']
+    itemName = request.POST.get('itemName', 'default_value')
+    word_Time = request.POST['word_Time']  # 创建pdf的时间
+    #    zipName = request.POST['zipName']
+    zipName = request.POST.get('zipName', 'default_value')
+    vulFileNumber = request.POST['vulFileNumber']
+    #    language = request.POST['language']
+    language = request.POST.get('language', 'default_value')
+    detect_type = request.POST['type']
+    # createTime = request.POST['createTime']
+    startTime = request.POST['startTime']
+    lastTime = request.POST['lastTime']
+    vuls = request.POST['vuls']  # 检测文件的所有漏洞类型
+    code_size = request.POST['code_size']
+
+    conn = pymysql.connect(**config)
+    cursor = conn.cursor()
+    conn.ping(reconnect=True)  # 每次连接之前，会检查当前连接是否已关闭，如果连接关闭则会重新进行连接
+    # 统计每种漏洞的个数
+    sql = """ select (@rownum:=@rownum+1) AS num,vulType as cweName,count(*) as count from (SELECT @rownum:=0) r,vulfile where taskId = %s group by vulType order by num"""
+    cursor.execute(sql, taskId)
+    vul_number = cursor.fetchall()
+    sql2 = """ select type from vuldetail where taskId = %s"""
+    cursor.execute(sql2, taskId)
+    type_ = cursor.fetchall()[0][0]
+    if 'r4' in type_:
+        type_ = '思考模式'
+    elif 'r3' in type_:
+        type_ = '降误报模式'
+    elif 'r2' in type_:
+        type_ = '快速模式'
+    else:
+        type_ = '快速模式'
+    sql3 = """ select fileName,lower(vulType),location,source_code,repair_code,Sink,Enclosing_Method,Source, filepath from vulfile where taskId = %s order by vulType """
+    cursor.execute(sql3, taskId)
+    file_location = cursor.fetchall()
+    sql4 = """ select lower(vulType),count(*) as count from vulfile where taskId = %s group by vulType order by vulType """
+    cursor.execute(sql4, taskId)
+    number = cursor.fetchall()
+    sql5 = """ select version from vuldetail where taskId = %s"""
+    cursor.execute(sql5, taskId)
+    version = cursor.fetchall()
+    version = version[0][0]
+    sql6 = """ select vulfile.vultype, subVulList.level from vulfile left join subVulList on vulfile.vultype = subVulList.name_CN where vulfile.taskId = %s"""
+    cursor.execute(sql6, taskId)
+    risk_level = cursor.fetchall()
+    risk_level_dict = {row[0]: row[1] for row in risk_level}
+    sql7 = """select lower(name_CN), level, description, repairPlan from subVulList"""
+    cursor.execute(sql7)
+    vul_infos = {
+        vul: (level, description, repairPlan)
+        for vul, level, description, repairPlan in cursor.fetchall()
+    }
+
+    # 使用字典按漏洞类型分组
+    grouped_results = defaultdict(list)
+    for fileName,vulType,location,source_code,repair_code,Sink,Enclosing_Method,Source, filepath in file_location:
+        grouped_results[vulType].append(
+            [fileName,vulType,location,source_code,repair_code,Sink,Enclosing_Method,Source, filepath]
+        )
+
+    # 还是按元组来分组
+    final_results = []
+    for vul_type, file_list in grouped_results.items():  # 保持 grouped_results 的顺序
+        if vul_type in vul_infos:
+            level, description, repairPlan = vul_infos[vul_type]
+            final_results.append((vul_type, level, description, repairPlan, file_list))
+        else:
+            final_results.append((vul_type, '高危', '', '', file_list))
+
+    final_results = tuple(final_results)
+
+    sql8 = """select data1, risk_level, is_fp, repair_status from vulfile where taskId = %s"""
+    cursor.execute(sql8, taskId)
+    bar_data = cursor.fetchall()
+    data1 = len(bar_data)
+    data2, data3, data4, data5 = 0,0,0,0
+    for item in bar_data:
+        if item[0] is not None:
+            data2+=1
+        if item[1] is not None:
+            data3+=1
+        if item[2] == '是误报':
+            data4+=1
+        if item[3] == '已修复':
+            data5+=1
+    if data4 > data2-data2:
+        data4 = data2-data3
+
+    bar_info = [
+        ['漏洞总数', '已审核', '确认问题', '误报', '已修复'],
+        [data1, data2, data3, data4, data5],
+    ]
+
+    sql9 = '''select high_risk, med_risk, low_risk from vuldetail where taskId = %s'''
+    cursor.execute(sql9, taskId)
+    pie_data = cursor.fetchone()
+    pie_info = [
+        ['高危', '中危', '低危'],
+        [pie_data[0], pie_data[1], pie_data[2]],
+
+    ]
+
+    sql10 = '''select url_git, branch from vuldetail where taskId = %s'''
+    cursor.execute(sql10, taskId)
+    git_data = cursor.fetchone()
+    git_info = [git_data[0], git_data[1]]
+
     try:
-        jsondata = {'msg': 'word导出成功', 'code': '200'}
+        wordName = Graphs_word.export_word(itemName, word_Time, zipName, language, type_, startTime,lastTime,
+                   vul_number, vuls, file_location, final_results, number, version, risk_level_dict, bar_info, pie_info, code_size, git_info)
+        #        print(
+        #            f"itemName:{itemName}\n\n, pdf_Time:{excel_Time}\n\n, zipName:{zipName}\n\n, vulFileNumber:{vulFileNumber}\n\n, language:{language}\n\n, detect_type:{detect_type}\n\n,startTime:{startTime}\n\n, lastTime:{lastTime}\n\n, vul_number:{vul_number}\n\n, header_five:{header_five}\n\n, vuls:{vuls}\n\n, file_location:{file_location}\n\n, number:{number}\n\n, version:{version}\n\n, risk_level_dict:{risk_level_dict}\n\n")
+        url = '/static/Export_PDF/' + wordName
+        jsondata = {'{}'.format(wordName): url, 'code': '200'}
+        sql_insert = """ insert into export_file(export_name,url,createTime,vulId,fileType,data1,data2,data3,itemId) values(%s,%s,%s,%s,'word',null,null,null,%s) """
+        cursor.execute(sql_insert, [wordName, url, word_Time, taskId, itemId])  # 将数据加入到数据库
+        conn.commit()
     except Exception as e:
-        jsondata = {'msg': '导出失败', 'code': '500'}
+        error_traceback = traceback.format_exc()
+        jsondata = {
+            'msg': 'word导出失败',
+            'code': '500',
+            '错误信息': error_traceback
+        }
         print(e)
+    cursor.close()
+    conn.close()
     return HttpResponse(json.dumps(jsondata, ensure_ascii=False))
 
 
@@ -2296,10 +2812,11 @@ def export_delete(request):
     id = request.POST['id']
     export_name = request.POST['export_name']
     fileType = request.POST['fileType']
-    if fileType == 'excel':
-        location = '../../static/export/' + export_name
-    else:
-        location = '../../static/Export_PDF/' + export_name
+#    if fileType == 'excel':
+#        location = '../../static/export/' + export_name
+#    else:
+#        location = '../../static/Export_PDF/' + export_name
+    location = '../../../../static/Export_PDF/' + export_name
     if os.path.isfile(location):  # 如果文件存在，删掉文件
         os.remove(location)
     else:
@@ -2463,7 +2980,7 @@ def offer_subVul():
     try:
         with pymysql.connect(**config) as conn:
             with conn.cursor() as cursor:
-                sql = "SELECT id, name_CN FROM subVulList"
+                sql = "SELECT id, name_CN FROM subVulList WHERE function_name IS NOT NULL"
                 cursor.execute(sql)
                 results = cursor.fetchall()  # 获取所有结果
                 vulList = []
@@ -2550,11 +3067,18 @@ def create_policy(req):
 def get_all_policies(req):
     # 获取请求参数
     policy_name = req.POST.get('policy_name', '')  # 从 GET 请求中获取 policy_name 参数
-    print(f"接收到的 policy_name: {policy_name}")  # 打印日志
-    sql = "select name from subVulPolicies" # 获取所有的policy_name
-    sql1 = "select id, timestamp,status from subVulPolicies where name = %s" # 根据policy_name获取policy_id和timestamp
-    sql2 = "select vul_id from subVulPolicySelected where policy_id = %s" # 获取vul_id
-    sql3 = "select id, name_CN from subVulList where id = %s" # 获取vul_id对应的漏洞名称
+    page = int(req.POST.get('page', 1))  # 默认值为 1
+    rows = int(req.POST.get('rows', 10))  # 默认值为 10
+
+    # 计算分页的偏移量
+    offset = (page - 1) * rows
+
+    # print(f"接收到的 policy_name: {policy_name}")  # 打印日志
+    sql = "select name from subVulPolicies"  # 获取所有的policy_name
+    sql1 = "select id, timestamp,status from subVulPolicies where name = %s"  # 根据policy_name获取policy_id和timestamp
+    sql2 = "select vul_id from subVulPolicySelected where policy_id = %s"  # 获取vul_id
+    sql3 = "select id, name_CN from subVulList where id = %s"  # 获取vul_id对应的漏洞名称
+    count_sql = " SELECT COUNT(*)  FROM subVulPolicies "
 
     try:
         with pymysql.connect(**config) as conn:
@@ -2592,8 +3116,15 @@ def get_all_policies(req):
                         "policy_name": policy_name,
                         "vulList": vulList
                     }]
+                    total_count = 1  # 如果 policy_name 不为空，总记录数为 1
                 else:
                     # 如果没有传入 policy_name，则查询所有策略
+
+                    cursor.execute(count_sql)
+                    total_count = cursor.fetchone()[0]
+
+                    sql += " LIMIT %s, %s" % (offset, rows)
+
                     cursor.execute(sql)
                     names = cursor.fetchall()
                     policies = []
@@ -2620,18 +3151,18 @@ def get_all_policies(req):
                             vul = {'id': row[0], 'name': row[1]}
                             vulList.append(vul)
 
-                        policies.append({"policy_id":policy_id, "timestamp":timestamp,"status":status,"policy_name":policy_name, "vulList":vulList})
+                        policies.append({"policy_id": policy_id, "timestamp": timestamp, "status": status,
+                                         "policy_name": policy_name, "vulList": vulList})
 
-                return JsonResponse({"code": "200", "policies": policies})
+                return JsonResponse({"code": "200","count": total_count,"page": page,"rows": rows,"policies": policies})
     except Exception as e:
         print(f"Error:{e}")
         return JsonResponse({"error": "查询失败", "code": "500"})
 
-
 def delete_policy(req):
     policy_id = req.POST['policy_id']
-    sql1 = "select * from subVulPolicies where id = %s" # 查看该策略是否存在，如果不存在则返回创建失败
-    sql2 = "delete from subVulPolicySelected where policy_id = %s" # 然后删除该策略当前的漏洞类型
+    sql1 = "select * from subVulPolicies where id = %s"  # 查看该策略是否存在，如果不存在则返回修改失败
+    sql2 = "delete from subVulPolicySelected where policy_id = %s"  # 然后删除该策略当前的漏洞类型
     sql3 = "delete from subVulPolicies where id = %s" # 删除该策略
 
     try:
@@ -2640,18 +3171,18 @@ def delete_policy(req):
                 cursor.execute(sql1, (policy_id,))
                 isExist = cursor.fetchone()
                 if isExist is None:
-                    return JsonResponse({"error": "不存在该策略，删除失败", "code": "500"})
+                    return JsonResponse({"error": "不存在该策略，更新失败", "code": "500"})
 
                 cursor.execute(sql2, (policy_id,))
                 cursor.execute(sql3, (policy_id,))
 
                 conn.commit()
-                return JsonResponse({"code": "200", "msg": "删除成功"})
+                return JsonResponse({"code": "200", "msg": "更新成功"})
     except Exception as e:
         if conn:
             conn.rollback()
         print(f"Error:{e}")
-        return JsonResponse({"error": "删除失败", "code": "500"})
+        return JsonResponse({"error": "更新失败", "code": "500"})
 
 def update_policy(req):
     policy_id = req.POST['policy_id']
@@ -2888,7 +3419,7 @@ def send_station_mail(request):
         return JsonResponse({'msg': error_message, 'msg-code': '500'}, status=500)
 def query_alarm_logs(request):
     """
-    根据 sender 查询 alarm_logs 表中的 message 和 create_time
+    根据 sender 查询 alarm_logs 表中的 message、create_time 和 is_read
     """
     if request.method != 'POST':
         return JsonResponse({'msg': '仅支持 POST 请求', 'msg-code': '400'}, status=400)
@@ -2902,7 +3433,7 @@ def query_alarm_logs(request):
 
         # 构建查询 SQL
         sql = """
-            SELECT create_time, message
+            SELECT create_time, message, is_read
             FROM alarm_logs
             WHERE sender = %s
             ORDER BY create_time DESC
@@ -2935,6 +3466,54 @@ def query_alarm_logs(request):
     except Exception as e:
         # 捕获其他异常
         error_message = f"查询接口异常：{e}"
+        return JsonResponse({'msg': error_message, 'msg-code': '500'}, status=500)
+def mark_logs_as_read(request):
+    """
+    根据 sender 将日志标记为已读
+    """
+    if request.method != 'POST':
+        return JsonResponse({'msg': '仅支持 POST 请求', 'msg-code': '400'}, status=400)
+
+    try:
+        # 获取 POST 请求参数
+        sender = request.POST.get('sender')  # 发送者
+
+        if not sender:
+            return JsonResponse({'msg': 'sender 不能为空', 'msg-code': '400'}, status=400)
+
+        # 构建更新 SQL
+        sql = """
+            UPDATE alarm_logs
+            SET is_read = 1
+            WHERE sender = %s
+        """
+        params = [sender]
+
+        # 连接数据库并执行更新
+        connection = None
+        try:
+            connection = pymysql.connect(**config)
+            with connection.cursor() as cursor:
+                cursor.execute(sql, params)
+                connection.commit()  # 提交事务
+
+            # 返回成功响应
+            return JsonResponse({
+                'msg': '标记已读成功',
+                'msg-code': '200'
+            })
+
+        except Exception as e:
+            print(f"更新数据库失败：{e}")
+            return JsonResponse({'msg': '标记失败', 'msg-code': '500'}, status=500)
+
+        finally:
+            if connection:
+                connection.close()
+
+    except Exception as e:
+        # 捕获其他异常
+        error_message = f"标记接口异常：{e}"
         return JsonResponse({'msg': error_message, 'msg-code': '500'}, status=500)
 def send_email(request):
     """
@@ -3042,6 +3621,85 @@ def get_email_info(request):
                 connection.close()
     except Exception as e:
         return JsonResponse({'msg': f'查询数据时发生错误：{e}', 'msg-code': '500'}, status=500)
+def transfer_file_via_ftp(request):
+    """
+    通过 FTP 将文件从一个服务器传输到另一个服务器
+    """
+    if request.method != 'POST':
+        return JsonResponse({'msg': '仅支持 POST 请求', 'msg-code': '405'}, status=405)
+
+    try:
+        # 获取请求参数
+        source_ftp_host = request.POST.get('source_ftp_host')
+        source_ftp_user = request.POST.get('source_ftp_user')
+        source_ftp_password = request.POST.get('source_ftp_password')
+        source_remote_directory = request.POST.get('source_remote_directory')
+        source_file_name = request.POST.get('source_file_name')
+
+        target_ftp_host = request.POST.get('target_ftp_host')
+        target_ftp_user = request.POST.get('target_ftp_user')
+        target_ftp_password = request.POST.get('target_ftp_password')
+        target_remote_directory = request.POST.get('target_remote_directory')
+
+        # 检查必填字段是否为空
+        if not all([source_ftp_host, source_ftp_user, source_ftp_password, source_remote_directory, source_file_name,
+                    target_ftp_host, target_ftp_user, target_ftp_password, target_remote_directory]):
+            return JsonResponse({'msg': '所有字段都不能为空', 'msg-code': '400'}, status=400)
+
+        # 连接源 FTP 服务器
+        source_ftp = FTP(source_ftp_host)
+        source_ftp.login(source_ftp_user, source_ftp_password)
+
+        # 切换到源服务器的指定目录
+        try:
+            source_ftp.cwd(source_remote_directory)
+        except error_perm as e:
+            return JsonResponse({'msg': f'源目录不存在或无法访问：{e}', 'msg-code': '500'}, status=500)
+
+        # 下载文件到本地临时文件
+        local_file_path = f'/tmp/{source_file_name}'
+        with open(local_file_path, 'wb') as local_file:
+            source_ftp.retrbinary(f'RETR {source_file_name}', local_file.write)
+
+        # 关闭源 FTP 连接
+        source_ftp.quit()
+
+        # 连接目标 FTP 服务器
+        target_ftp = FTP(target_ftp_host)
+        target_ftp.login(target_ftp_user, target_ftp_password)
+
+        # 切换到目标服务器的指定目录（如果目录不存在则创建）
+        try:
+            target_ftp.cwd(target_remote_directory)
+        except error_perm:
+            # 如果目录不存在，尝试创建目录
+            target_ftp.mkd(target_remote_directory)
+            target_ftp.cwd(target_remote_directory)
+
+        # 检查目标文件是否存在，如果存在则删除
+        try:
+            target_ftp.size(source_file_name)
+            target_ftp.delete(source_file_name)  # 删除旧文件
+        except error_perm:
+            # 文件不存在，忽略错误
+            pass
+
+        # 上传文件到目标服务器
+        with open(local_file_path, 'rb') as local_file:
+            target_ftp.storbinary(f'STOR {source_file_name}', local_file)
+
+        # 关闭目标 FTP 连接
+        target_ftp.quit()
+
+        # 删除本地临时文件
+        os.remove(local_file_path)
+
+        # 返回成功响应
+        return JsonResponse({'msg': '文件传输成功', 'msg-code': '200'})
+
+    except Exception as e:
+        # 返回错误响应
+        return JsonResponse({'msg': f'文件传输时发生错误：{e}', 'msg-code': '500'}, status=500)
 def update_policyStatus(req):
     # 获取请求参数
     policy_id = req.POST.get('policy_id')
@@ -3503,6 +4161,113 @@ def update_custom_rules(req):
         conn.rollback()
         return HttpResponse(json.dumps({'msg': '修改失败', 'msg-code': '500'}))
 
+# 更新代码解析
+def update_Interpretation(id,full_response):
+    sql = """update vulfile set Interpretation = %s where id = %s """
+    conn = pymysql.connect(**config)
+    cursor = conn.cursor()
+    conn.ping(reconnect=True)  # 每次连接之前，会检查当前连接是否已关闭，如果连接关闭则会重新进行连接
+    try:
+        flag = cursor.execute(sql, [full_response, id])
+        conn.commit()
+    except Exception as e:
+        flag = False
+        print("提交出错\n:", e)
+        # 如果出错要回滚
+        conn.rollback()
+    cursor.close()
+    conn.close()
+    # if flag:
+    #     jsondata = {'msg': '更新成功', 'msg-code': '200'}
+    # else:
+    #     jsondata = {'msg': '更新失败', 'msg-code': '500'}
+    # return HttpResponse(json.dumps(jsondata, ensure_ascii=False))
+
+def get_Interpretation(req):
+    id = req.POST['id']
+    conn = pymysql.connect(**config)
+    cursor = conn.cursor()
+
+    sql = """ SELECT Interpretation FROM vulfile WHERE id = %s """
+    jsondata = []
+
+    conn.ping(reconnect=True)
+    cursor.execute(sql, id)
+    row_headers = [x[0] for x in cursor.description]
+    data = cursor.fetchall()
+    jsondata = []
+    if len(data) == 0:
+        jsondata = {'msg': '结果为空', 'msg-code': '200'}
+    else:
+        for result in data:
+            jsondata.append(dict(zip(row_headers, result)))
+    cursor.close()
+    conn.close()
+    return HttpResponse(json.dumps(jsondata, ensure_ascii=False))
+
+def get_chinese(name_En):
+    # 输入验证
+    if not name_En or not isinstance(name_En, str):
+        raise ValueError("name_En 必须是一个非空字符串")
+
+    # 初始化变量
+    name_CN = None
+
+    try:
+        # 连接数据库
+        conn = pymysql.connect(**config)
+        cursor = conn.cursor()
+
+        # 执行查询
+        sql = """SELECT name_CN FROM subVulList WHERE name_En = %s"""
+        cursor.execute(sql, (name_En,))
+
+        # 获取查询结果
+        result = cursor.fetchone()
+        if result:
+            name_CN = result[0]  # 提取查询结果中的 name_CN
+
+    except pymysql.Error as e:
+        # 处理数据库异常
+        print(f"数据库操作出错: {e}")
+    finally:
+        # 确保资源被释放
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+
+    # 返回查询结果
+    return name_CN
+
+def vul_top(req):  # 获取当前年份或所有年份检测出的漏洞类型的前10种
+    year = req.POST.get('year')
+    conn = pymysql.connect(**config)  # 使用pymysql库建立与数据库的连接，config是一个包含数据库连接配置的字典
+    cursor = conn.cursor()  # 创建游标对象，用于执行sql语句
+    sql = """select vultype,count(*) as vul_num from vulfile left join vuldetail on vulfile.taskid = vuldetail.taskid """
+    if year: # 如果年份不为空，则拼接sql语句
+        sql += " where year(vuldetail.startTime) = %s "
+
+    sql += " group by vultype order by vul_num DESC limit 10 "
+
+    conn.ping(reconnect=True)  # 每次连接之前，会检查当前连接是否已关闭，如果连接关闭则会重新进行连接
+    if year:
+        cursor.execute(sql, (year,))  # 执行sql语句,传入年份
+    else:
+        cursor.execute(sql)  # 执行sql语句
+
+    row_headers = [x[0] for x in cursor.description]
+    data = cursor.fetchall()  # 获取执行sql语句获得的所有数据
+    jsondata = []
+    if len(data) == 0:
+        jsondata = {'msg': '统计结果为空', 'msg-code': '200'}
+    else:
+        for result in data:
+            jsondata.append(dict(zip(row_headers, result)))
+    cursor.close()  # 关闭游标对象
+    conn.close()  # 关闭数据库连接
+    return HttpResponse(json.dumps(jsondata, ensure_ascii=False))
+
 def index(req):
     method = req.POST["method"]
     if method == "login":
@@ -3511,6 +4276,8 @@ def index(req):
         return check(req)
     elif method == "project_delete":
         return project_delete(req)
+    elif method == 'projects_batch_delete':
+        return projects_batch_delete(req)
     elif method == "account_insert":
         return account_insert(req)
     elif method == "account_delete":
@@ -3557,6 +4324,8 @@ def index(req):
         return itemdetail_insert(req)
     elif method == 'task_delete':
         return task_delete(req)
+    elif method == 'tasks_batch_delete':
+        return tasks_batch_delete_req(req)
     elif method == 'project_statistics':
         return project_statistics(req)
     elif method == 'review_update':
@@ -3577,8 +4346,12 @@ def index(req):
         return get_repair_code(req)
     elif method == 'repair_update':
         return repair_update(req)
+    elif method == 'status_update':
+        return status_update(req)
     elif method == 'export_pdf':
         return export_pdf(req)
+    elif method == 'export_excel':
+        return export_excel(req)
     elif method == 'export_word':
         return export_word(req)
     elif method == 'export_json':
@@ -3629,6 +4402,10 @@ def index(req):
         return send_station_mail(req)
     elif method == 'query_alarm_logs':
         return query_alarm_logs(req)
+    elif method == 'mark_logs_as_read':
+        return mark_logs_as_read(req)    
+    elif method == 'transfer_file_via_ftp':
+        return transfer_file_via_ftp(req)
     elif method == 'select_custom_rules':
         return select_custom_rules(req)
     elif method == 'insert_custom_rules':
@@ -3637,5 +4414,9 @@ def index(req):
         return delete_custom_rules(req)
     elif method == 'update_custom_rules':
         return update_custom_rules(req)
+    elif method == 'get_Interpretation':
+        return get_Interpretation(req)
+    elif method == 'vul_top':
+        return vul_top(req)
     else:
         return HttpResponse("method error! ")

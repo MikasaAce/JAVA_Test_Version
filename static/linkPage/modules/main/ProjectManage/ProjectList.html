@@ -58,6 +58,9 @@
             line-height: 50px;
             font-size: 25px;
         }
+        .el-radio {
+            margin: 10px 50px 10px 0;
+        }
 
 
     </style>
@@ -66,7 +69,7 @@
 <body>
 
 <div id="app">
-    <el-row :gutter="20" style="margin: 20px">
+    <el-row :gutter="20" style="margin: 20px" v-loading="countLoading">
         <el-col :span="3">
             <div class="topData">
                 <div class="top_title">项目总数:</div>
@@ -105,8 +108,8 @@
         </el-col>
 
     </el-row>
-    <el-row :gutter="20" style="margin: 20px">
-        <div class="slecet" style="margin-right:20px;margin-bottom: 15px; ">
+    <el-row :gutter="20" style="margin:  20px">
+        <div class="slecet" style="margin-right:20px;">
             <el-form :inline="true" :model="query" class="demo-form-inline" method="post" >
                 <el-form-item label="项目名称：">
                     <el-input v-model="query.project_name" placeholder="请输入关键字"></el-input>
@@ -115,7 +118,6 @@
                 <el-form-item>
                     <el-button type="primary" @click="checkFormData()">查询</el-button>
                     <el-button type="primary" @click="createPro()">新建项目</el-button>
-<!--                    <el-button  type="primary" @click="config()">配置策略</el-button>-->
                 </el-form-item>
             </el-form>
         </div>
@@ -129,14 +131,7 @@
             <el-table  :data="tableData" class="table" :header-cell-style="{textAlign:'center'}" :cell-style="{textAlign:'center'}" tooltip-effect="dark" style="width: 100%"  :default-sort = "{prop: 'createTime', order: 'descending'}">
                 <el-table-column prop="itemname" label="项目名称" ></el-table-column>
                 <el-table-column prop="description" label="项目描述" width="400" show-overflow-tooltip></el-table-column>
-<!--                <el-table-column prop="status" label="检测状态" width="100">-->
-<!--                    <template slot-scope="scope">-->
-<!--                        <el-tag effect="dark" v-if="scope.row.status === '0'" >检测中</el-tag>-->
-<!--                        <el-tag effect="dark" v-else type="success">已完成</el-tag>-->
-<!--                    </template>-->
-<!--                </el-table-column>-->
                 <el-table-column prop="language" label="扫描语言" ></el-table-column>
-<!--                <el-table-column prop="type" label="扫描策略" width="150"></el-table-column>-->
                 <el-table-column prop="source" label="项目来源" ></el-table-column>
                 <el-table-column prop="account" label="缺陷统计(高中低)" width="250">
                     <template slot-scope="scope">
@@ -147,25 +142,11 @@
                 </el-table-column>
 
                 <el-table-column prop="createTime" label="创建时间" sortable show-overflow-tooltip></el-table-column>
-<!--                <el-table-column prop="audit" label="审核结果" width="100">-->
-<!--                    <template slot-scope="scope">-->
-<!--                        <el-tag effect="dark" v-if="scope.row.audit === '0'" >未审核</el-tag>-->
-<!--                        <el-tag effect="dark" v-else type="success">已审核</el-tag>-->
-<!--                    </template>-->
-<!--                </el-table-column>-->
                 <el-table-column  fixed='right' label="操作" width="300px">
                     <template v-slot="scope">
-                        <el-row style="text-align: center">
-                            <el-col :span="8">
-                                <a lay-href=""> <el-button size="mini" type="text" @click="view(scope.row)">项目详情</el-button></a>
-                            </el-col>
-                            <el-col :span="8">
-                                <el-button size="mini" type="text" @click="account(scope.row)">缺陷统计</el-button>
-                            </el-col>
-                            <el-col :span="8">
-                                <el-button size="mini" type="text" @click="delopen(scope.row)">删除</el-button>
-                            </el-col>
-                        </el-row>
+                        <el-button size="mini" type="text" @click="view(scope.row)">项目详情</el-button>
+                        <el-button size="mini" type="text" @click="account(scope.row)">缺陷统计</el-button>
+                        <el-button size="mini" type="text" @click="delopen(scope.row)">删除</el-button>
                     </template>
                 </el-table-column>
             </el-table>
@@ -181,43 +162,9 @@
                     style="text-align: center">
             </el-pagination>
         </template>
-        <el-dialog title="" :visible.sync="configs" width="50%" style="">
-            <el-card class="box-card" shadow="never">
-                <div slot="header" class="clearfix">
-                    <span style="float: left;font-size: 18px">配置选择</span>
-                </div>
-                <el-radio-group v-model="config1">
-                    <el-radio  label="fortify">快速扫描</el-radio>
-                    <el-radio  label="model_fortify">深度扫描</el-radio>
-                    <el-radio  label="fortify_model">智能扫描</el-radio>
-                    <el-radio  label="deepSeek">deepSeek扫描</el-radio>
-                </el-radio-group>
-            </el-card>
-            <el-card class="box-card" shadow="never">
-                <div slot="header" class="clearfix">
-                    <span style="float: left;font-size: 18px">模型选择</span>
-                </div>
-                <el-table class="highlight" ref="singleTable" :data="tableConfig" :default-sort="{prop: 'description', order: 'descending'}"
-                          highlight-current-row @current-change="handleTableChange" :row-class-name="rowClassName"
-                          style="width: 100%">
-                    <el-table-column
-                            property="model_name"
-                            label="模型"
-                            width="">
-                    </el-table-column>
-                    <el-table-column
-                            property="remarks"
-                            label="描述"
-                            width="">
-                    </el-table-column>
-                </el-table>
-            </el-card>
-            <div style="text-align: center">
-                <el-button type="primary" @click="save()" >保存配置</el-button>
-            </div>
-        </el-dialog>
 
-        <el-dialog title="新建项目" :visible.sync="getAlert" width="50%" >
+
+        <el-dialog title="新建项目" :visible.sync="getAlert" width="50%" @close="resetForm">
             <el-form ref="form" :model="form" label-width="120px" :rules="rules">
                 <el-form-item label="项目名称:" prop="item_name">
                     <el-input v-model="form.item_name"></el-input>
@@ -227,27 +174,27 @@
                 </el-form-item>
                 <el-form-item label="代码语言:" prop="language">
                     <el-radio-group v-model="form.language">
-                        <el-radio label="java"></el-radio>
-                        <el-radio label="C/C++" ></el-radio>
-                        <el-radio label="c#" ></el-radio>
-                        <el-radio label="php" ></el-radio>
-                        <el-radio label="Python" ></el-radio>
+<!--                        <el-radio label="java"></el-radio>-->
+<!--                        <el-radio label="android"></el-radio>-->
+<!--                        <el-radio label="javascript"></el-radio>-->
+<!--                        <el-radio label="objective-c" ></el-radio>-->
+<!--                        <el-radio label="go"></el-radio>-->
+<!--                        <el-radio label="python"></el-radio>-->
+<!--                        <el-radio label="c/c++" ></el-radio>-->
+<!--                        <el-radio label="php" ></el-radio>-->
+<!--                        <el-radio label="ruby" ></el-radio>-->
+<!--                        <el-radio label="SQL" ></el-radio>-->
+ 					<el-radio v-for="(language, index) in languages" :key="index" :label="language">{{language}}</el-radio>
                     </el-radio-group>
                 </el-form-item>
                 <el-form-item label="下载来源:" prop="source">
                     <el-radio-group v-model="form.source">
-                        <el-radio label="git下载"></el-radio>
-                        <el-radio label="本地" ></el-radio>
+                        <el-radio label="本地上传" ></el-radio>
+                        <el-radio label="Git下载"></el-radio>
                         <el-radio label="SVN下载"></el-radio>
+                        <el-radio label="FTP下载"></el-radio>
                     </el-radio-group>
                 </el-form-item>
-<!--                <el-form-item label="URL:" prop="">-->
-<!--                    <el-input v-model="form.url"></el-input>-->
-<!--                </el-form-item>-->
-<!--                <el-form-item label="密钥:" prop="">-->
-<!--                    <el-input v-model="form.key"></el-input>-->
-<!--                </el-form-item>-->
-
                 <el-form-item>
                     <el-button type="primary" @click="create()">立即创建</el-button>
                     <el-button @click="getAlert = false">取消</el-button>

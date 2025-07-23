@@ -28,3 +28,4 @@ datasets
 bitsandbytes
 tree_sitter
 vllm==0.5.3
+openai

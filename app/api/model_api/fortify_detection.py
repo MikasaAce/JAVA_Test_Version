@@ -6,6 +6,7 @@ import pandas as pd
 import datetime
 
 def run_fortify(target_folder_fortify, template, version):
+    print(3333333)
     """在指定目录下运行fortify"""
     print("template:" + template)
     print("version:" + version)
