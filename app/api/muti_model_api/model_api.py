@@ -44,7 +44,7 @@ def count_files(folder_path, language):
     for root, dirs, files in os.walk(folder_path):
         for file in files:
             # 检查文件扩展名
-            if language != 'all' and not file.endswith(f'.{language}') and not file.endswith('.xml'):
+            if language != 'all' and language != 'mixed' and not file.endswith(f'.{language}') and not file.endswith('.xml'):
                 continue
 
             file_path = os.path.join(root, file)

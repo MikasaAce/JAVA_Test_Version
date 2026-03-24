@@ -1,267 +1,505 @@
+
 <!DOCTYPE html>
 <html lang="en" style="height: 100%">
 <head>
-    <meta charset="UTF-8">
-    <link rel="stylesheet" href="../../../../assets/libs/element/index.css">
-    <link rel="stylesheet" type="text/css" href="../../../../assets/libs/highlight/styles/a11y-light.css">
+  <meta charset="UTF-8">
+  <link rel="stylesheet" href="../../../../assets/libs/element/index.css">
+  <link rel="stylesheet" type="text/css" href="../../../../assets/libs/highlight/styles/a11y-light.css">
 
-    <title>静态代码安全扫描系统--结果审核</title>
-    <style>
-        .el-header {
-            /*background-color: #B3C0D1;*/
-            /*color: #333;*/
-            line-height: 60px;
-        }
+  <title>静态代码安全扫描系统--结果审核</title>
+  <style>
+      .el-header {
+          /*background-color: #B3C0D1;*/
+          /*color: #333;*/
+          line-height: 60px;
+      }
 
-        .el-aside {
-            color: #333;
-        }
-        .box-card {
-            /*width: 1000px;*/
-            /*margin: auto;*/
-            height: calc(100% - 2px);
-        }
-        .autoWrap {
-            white-space: pre-wrap; /* 保持空格和换行，但允许长行折行 */
-            word-wrap: break-word; /* 长单词也会换行 */
-            max-width: 100%; /* 设置最大宽度，宽度超过这个值就换行 */
-            overflow: auto; /* 添加滚动条以防止内容超出容器 */
-            word-break: break-all; /* 长单词会在任意点断行 */
-            height: calc(100% - 30px);
-        }
-        pre {
-            background-color: #f4f4f4;
-            padding: 10px;
-            margin: 5px;
-            border-radius: 5px;
-            overflow-x: auto;
+      .el-aside {
+          color: #333;
+      }
+      .box-card {
+          /*width: 1000px;*/
+          /*margin: auto;*/
+          height: calc(100% - 2px);
+      }
+      .autoWrap {
+          white-space: pre-wrap; /* 保持空格和换行，但允许长行折行 */
+          word-wrap: break-word; /* 长单词也会换行 */
+          max-width: 100%; /* 设置最大宽度，宽度超过这个值就换行 */
+          overflow: auto; /* 添加滚动条以防止内容超出容器 */
+          word-break: break-all; /* 长单词会在任意点断行 */
+          height: calc(100% - 30px);
+      }
+      pre {
+          background-color: #f4f4f4;
+          padding: 10px;
+          margin: 5px;
+          border-radius: 5px;
+          overflow-x: auto;
 
-        }
-        pre code {
-            font-size: 0.8rem;
-            font-family: sans-serif;
-        }
-        .line-highlight {
-            background-color: rgba(248, 248, 85, 0.7);
-        }
-        .el-loading-mask {
-            background-color: #f4f4f4;
-        }
-        .el-tabs__content {
-            height: calc(100% - 40px);
-        }
-        .el-card__body {
-            /*height: 100%;*/
-            height: calc(100% - 40px);
-        }
-        .baofa {
-            white-space: pre-wrap;word-wrap: break-word;max-width: 100%;
-            font-family: sans-serif;
-            font-size: 0.8rem;
-        }
+      }
+      pre code {
+          font-size: 0.8rem;
+          font-family: sans-serif;
+      }
+      .line-highlight {
+          background-color: rgba(248, 248, 85, 0.7);
+      }
+      .el-loading-mask {
+          background-color: #f4f4f4;
+      }
+      .el-tabs__content {
+          height: calc(100% - 40px);
+      }
+      .el-card__body {
+          /*height: 100%;*/
+          height: calc(100% - 40px);
+      }
+      .baofa {
+          white-space: pre-wrap;word-wrap: break-word;max-width: 100%;
+          font-family: sans-serif;
+          font-size: 0.8rem;
+      }
 
-    </style>
+      /* 添加行号相关样式 */
+      .numbered-code-container {
+          display: flex;
+          flex-direction: column;
+          font-family: monospace;
+          line-height: 1.5;
+          white-space: pre;
+          background-color: #f4f4f4;
+          padding: 10px;
+          margin: 5px;
+          border-radius: 5px;
+          overflow-x: auto;
+      }
+
+      .code-line {
+          display: flex;
+          min-height: 1.5em;
+          white-space: pre-wrap;
+          word-break: break-all;
+      }
+
+      .line-number {
+          display: inline-block;
+          width: 40px;
+          min-width: 40px;
+          padding-right: 10px;
+          text-align: right;
+          color: #999;
+          user-select: none;
+          background-color: #f4f4f4;
+      }
+
+      .line-content {
+          flex: 1;
+          padding-left: 10px;
+      }
+
+      .line-highlight {
+          background-color: rgba(248, 248, 85, 0.7);
+          display: block;
+          width: 100%;
+      }
+
+      /* 新增缺陷描述页面的滚动条样式 */
+      .defect-description-container {
+          height: calc(100% - 40px); /* 减去标题高度 */
+          overflow-y: auto; /* 添加垂直滚动条 */
+          padding: 10px;
+      }
+
+      /* 添加滚动条美化 */
+      .defect-description-container::-webkit-scrollbar {
+          width: 8px;
+      }
+
+      .defect-description-container::-webkit-scrollbar-track {
+          background: #f1f1f1;
+          border-radius: 4px;
+      }
+
+      .defect-description-container::-webkit-scrollbar-thumb {
+          background: #c0c4cc;
+          border-radius: 4px;
+      }
+
+      .defect-description-container::-webkit-scrollbar-thumb:hover {
+          background: #a8abb2;
+      }
+
+      /* 追踪图紧凑样式 */
+      .trace-compact {
+        border: 1px solid #eaeaea;
+        border-radius: 4px;
+        padding: 8px;
+        background-color: #f8f9fa;
+        height: 100%;
+      }
+
+      .trace-header {
+        font-weight: bold;
+        color: #333;
+        margin-bottom: 8px;
+        text-align: center;
+        font-size: 12px;
+      }
+
+      .trace-box-compact {
+        height: 60px;
+        overflow-y: auto;
+        font-size: 11px;
+        border: 1px solid #ddd;
+        border-radius: 3px;
+        padding: 4px;
+        background: white;
+      }
+
+      .trace-file-item {
+        padding: 1px 0;
+        color: #666;
+        word-break: break-all;
+        font-size: 11px;
+      }
+
+      .trace-current-file {
+        background-color: #ecf5ff;
+        padding: 4px;
+        text-align: center;
+        border: 1px solid #409EFF;
+        border-radius: 3px;
+        font-size: 12px;
+        font-weight: bold;
+      }
+
+      .trace-stats {
+        margin-top: 6px;
+        text-align: center;
+        color: #666;
+        font-size: 10px;
+      }
+      
+  </style>
 </head>
 <body style="height: 100%; overflow-y:hidden">
 <div id="app" style="height: 100%" >
-    <template  style="height: 100%">
-        <el-page-header @back="goBack" content="结果审核" style="margin: 10px">
-        </el-page-header>
+  <template  style="height: 100%">
+    <el-page-header @back="goBack" content="结果审核" style="margin: 10px">
+    </el-page-header>
 
-        <el-container style="height: 95%;">
-            <el-aside style="background-color: rgb(238, 241, 246);border:1px solid #d7dcdf; margin-top: 20px;width:20%; ">
-                <el-button type="primary" @click="shenhe" style="margin: 20px">批量审核</el-button>
-<!--                <el-button type="primary" @click="" style="margin: 20px">一键降误报</el-button>-->
-                <!--            <el-select v-model="value" placeholder="请选择漏洞类型" style="margin: 5px;width: 200px;">-->
-                <!--                <el-option-->
-                <!--                  v-for="item in options"-->
-                <!--                  :key="item.value"-->
-                <!--                  :label="item.label"-->
-                <!--                  :value="item.value">-->
-                <!--                </el-option>-->
-                <!--            </el-select>-->
-                <!--            <el-input v-model="input" placeholder="请输入关键字" style="margin: 5px;width: 200px"></el-input>-->
+    <el-container style="height: 95%;">
+      <el-aside style="background-color: rgb(238, 241, 246);border:1px solid #d7dcdf; margin-top: 20px;width:20%; ">
+        <el-button type="primary" @click="shenhe" style="margin: 20px">批量审核</el-button>
+        <!--                <el-button type="primary" @click="" style="margin: 20px">一键降误报</el-button>-->
+        <!--            <el-select v-model="value" placeholder="请选择漏洞类型" style="margin: 5px;width: 200px;">-->
+        <!--                <el-option-->
+        <!--                  v-for="item in options"-->
+        <!--                  :key="item.value"-->
+        <!--                  :label="item.label"-->
+        <!--                  :value="item.value">-->
+        <!--                </el-option>-->
+        <!--            </el-select>-->
+        <!--            <el-input v-model="input" placeholder="请输入关键字" style="margin: 5px;width: 200px"></el-input>-->
 
-                <el-input
-                        placeholder="输入文件名进行过滤" size="small" style="margin:10px 0"
-                        v-model="filterText">
-                </el-input>
-                <!--              default-expanded-keys  默认展开的节点的数组。另外这个需配套指定node-key。里面的值是node-key的值-->
-                <el-tree   style=""
-                           ref="tree"
-                           class="filter-tree"
-                           show-checkbox
-                           :data="fileList"
-                           :props="{ label: 'name', children: 'files' }"
-                           node-key="fileid"
-                           :filter-node-method="filterNode"
-                           :expanded-keys="expandedKeys"
-                           @node-expand="handleNodeExpand"
-                           @node-collapse="handleNodeCollapse"
-                           current-node-key="currentFileId"
-                           highlight-current
-                           @node-click="handleNodeClick"
-                           @click="getCheckedKeys"
-                ></el-tree>
+        <el-input
+            placeholder="输入文件名进行过滤" size="small" style="margin:10px 0"
+            v-model="filterText">
+        </el-input>
+        <!--              default-expanded-keys  默认展开的节点的数组。另外这个需配套指定node-key。里面的值是node-key的值-->
+        <el-tree   style=""
+                   ref="tree"
+                   class="filter-tree"
+                   show-checkbox
+                   :data="fileList"
+                   :props="{ label: 'name', children: 'files' }"
+                   node-key="fileid"
+                   :filter-node-method="filterNode"
+                   :expanded-keys="expandedKeys"
+                   @node-expand="handleNodeExpand"
+                   @node-collapse="handleNodeCollapse"
+                   current-node-key="currentFileId"
+                   highlight-current
+                   @node-click="handleNodeClick"
+                   @click="getCheckedKeys"
+        ></el-tree>
 
 
 
-                <el-dialog title="批量审核" :visible.sync="showDialog" width="50%" >
-                    <el-form ref="form1" :model="form" label-width="80px" style="margin: 10px">
-                        <el-radio v-model="form1.Question" label="是问题" @change="handleRadioChange1">是问题</el-radio>
-                        <br>
-                        <el-radio-group v-model="form1.list1" style="margin: 10px" :disabled="isDisabled1">
-                            <el-radio :label="1">高危</el-radio>
-                            <el-radio :label="2">中危</el-radio>
-                            <el-radio :label="3">低危</el-radio>
-                        </el-radio-group>
-                        <br>
-                        <el-radio v-model="form1.Question" label="不是问题" @change="handleRadioChange1">不是问题</el-radio>
-                        <br>
-                        <el-radio-group v-model="form1.list2" style="margin: 10px" :disabled="isDisabled2">
-                            <el-radio :label="1">误报</el-radio>
-<!--                            <el-radio :label="2">永久忽略</el-radio>-->
-                        </el-radio-group>
-                        <el-form-item label="备注信息" style="margin-top: 10px">
-                            <el-input v-model="form1.remarks" style="width: 200px"></el-input>
-                            <el-button type="primary" @click="submit1()">提交</el-button>
-                        </el-form-item>
-                    </el-form>
-                </el-dialog>
+        <el-dialog title="批量审核" :visible.sync="showDialog" width="40%" >
+          <el-form ref="form1" :model="form" label-width="120px" style="margin: 10px;">
+            <el-form-item label="人工研判结果：" style="margin-top: 10px;">
+              <el-radio-group v-model="form1.list1">
+                <el-radio :label="1">高危</el-radio>
+                <el-radio :label="2">中危</el-radio>
+                <el-radio :label="3">低危</el-radio>
+                <el-radio :label="4">忽略</el-radio>
+                <el-radio :label="5">误报</el-radio>
+              </el-radio-group>
+            </el-form-item>
+<!--            <el-radio v-model="form1.Question" label="是问题" @change="handleRadioChange1">是问题</el-radio>-->
+<!--            <br>-->
+<!--            <el-radio-group v-model="form1.list1" style="margin: 10px" :disabled="isDisabled1">-->
+<!--              <el-radio :label="1">高危</el-radio>-->
+<!--              <el-radio :label="2">中危</el-radio>-->
+<!--              <el-radio :label="3">低危</el-radio>-->
+<!--            </el-radio-group>-->
+<!--            <br>-->
+<!--            <el-radio v-model="form1.Question" label="不是问题" @change="handleRadioChange1">不是问题</el-radio>-->
+<!--            <br>-->
+<!--            <el-radio-group v-model="form1.list2" style="margin: 10px" :disabled="isDisabled2">-->
+<!--              <el-radio :label="1">误报</el-radio>-->
+              <!--                            <el-radio :label="2">永久忽略</el-radio>
+              -->
+<!--            </el-radio-group>-->
+            <el-form-item label="备注信息：" style="margin-top: 10px">
+              <el-input v-model="form1.remarks" style="max-width: 400px" type="textarea"
+                        :rows="2"></el-input>
+            </el-form-item>
+            <el-form-item>
+              <el-button type="primary" @click="submit1()" size="mini">提交</el-button>
+            </el-form-item>
+          </el-form>
+        </el-dialog>
 
-            </el-aside>
+      </el-aside>
 
-            <el-main  style="height: 100%;">
-                <router-view v-if="isRouterAlive">
-                    <el-tabs v-model="activeName" @tab-click="handleClick" ref="tabs" style="height: 100%;">
+      <el-main  style="height: 100%;">
+        <router-view v-if="isRouterAlive">
+          <el-tabs v-model="activeName" @tab-click="handleClick" ref="tabs" style="height: 100%;">
 
-                        <el-tab-pane label="代码详情" name="first"  style="height: 100%;overflow: hidden;">
-                            <el-card class="box-card">
-                                <el-row>
-                                    <el-col :span="24"><div class="">{{details.filepath}}</div></el-col>
-                                </el-row>
-                                <hr>
-                                <el-row style="height: calc(100% - 40px);">
-                                    <el-col :span="12" style="height: 100%;">
-                                        <!--                        <div >-->
-                                        <pre  id="codeBlock"  class="autoWrap"><code>{{details.source_code}}</code></pre>
-                                        <!--                        </div>-->
-                                    </el-col>
-
-                                    <el-col :span="12" style="overflow: auto;height: 100%">
-                                        <pre  class="baofa">爆发点：{{details.Sink}}</pre>
-                                        <pre  class="baofa">缺陷源：{{details.Source}}</pre>
-                                        <pre  class="baofa">爆发点函数：{{details.Enclosing_Method}}</pre>
-                                        <div  style="white-space: pre-wrap;word-wrap: break-word;max-width: 100%;height: 40%;overflow: auto;
+            <el-tab-pane label="代码详情" name="first"  style="height: 100%;overflow: hidden;">
+              <el-card class="box-card">
+                <el-row>
+                  <el-col :span="24"><div class="">{{details.filepath}}</div></el-col>
+                </el-row>
+                <hr>
+                <el-row style="height: calc(100% - 40px);">
+                  <!--                  <el-col :span="12" style="height: 100%;">-->
+                  <!--                    &lt;!&ndash;                        <div >&ndash;&gt;-->
+                  <!--                    <pre  id="codeBlock"  class="autoWrap"><code>{{details.source_code}}</code></pre>-->
+                  <!--                    &lt;!&ndash;                        </div>&ndash;&gt;-->
+                  <!--                  </el-col>-->
+                  <!-- 修改后的代码 -->
+                  <el-col :span="12" style="height: 100%; overflow: auto;">
+                    <div id="codeBlock" class="numbered-code-container">{{details.source_code}}</div>
+                  </el-col>
+                  <el-col :span="12" style="overflow: auto;height: 100%">
+                    <pre  class="baofa">爆发点：{{details.Sink}}</pre>
+                    <pre  class="baofa">缺陷源：{{details.Source}}</pre>
+                    <pre  class="baofa">来源文件：{{details.src_filename}}</pre>
+                    <pre  class="baofa">爆发点函数：{{details.Enclosing_Method}}</pre>
+                    <div  style="white-space: pre-wrap;word-wrap: break-word;max-width: 100%;height: 40%;overflow: auto;
                                         background-color: #f4f4f4;padding: 10px;margin: 5px;border-radius: 5px;scroll-behavior: smooth; " id="bigBox">
-                                            <el-row>
-                                                <el-col :span="24"><el-button @click="getAnalysis" type="text" style="float: left;" >生成代码解析</el-button>
-                                                </el-col>
-                                            </el-row>
-                                            <span style="font-size: 0.8rem;font-family: sans-serif;text-align: left;overflow:auto;">{{details.Interpretation}}</span>
-<!--                                            <span style="font-size: 0.8rem;font-family: sans-serif;text-align: left;overflow:auto;">{{fileInterpretations[currentFileId] || ''}}</span>-->
-                                        </div>
+                      <el-row>
+                        <el-col :span="24"><el-button @click="getAnalysis" type="text" style="float: left;" >生成代码解析</el-button>
+                        </el-col>
+                      </el-row>
+                      <span style="font-size: 0.8rem;font-family: sans-serif;text-align: left;overflow:auto;">{{details.Interpretation}}</span>
+                      <!--                                            <span style="font-size: 0.8rem;font-family: sans-serif;text-align: left;overflow:auto;">{{fileInterpretations[currentFileId] || ''}}</span>-->
+                    </div>
+                    <!-- 在代码解析div后面添加追踪图部分 -->
+                    <el-form ref="form" :model="form" label-width="80px" style="margin: 10px">
+                      <el-row :gutter="20">
+                        <!-- 左侧：审核表单 -->
+                        <el-col :span="12">
+                          <el-form-item label="人工研判结果：" style="margin-top: 10px;">
+                            <el-radio-group v-model="form.list1" style="line-height: 40px">
+                              <el-radio :label="1">高危</el-radio>
+                              <el-radio :label="2">中危</el-radio>
+                              <el-radio :label="3">低危</el-radio>
+                              <el-radio :label="4">忽略</el-radio>
+                              <el-radio :label="5">误报</el-radio>
+                            </el-radio-group>
+                          </el-form-item>
+<!--                          <el-radio v-model="form.Question" label="是问题" @change="handleRadioChange">是问题</el-radio>-->
+<!--                          <br>-->
+<!--                          <el-radio-group v-model="form.list1" style="margin: 10px" :disabled="isDisabled1">-->
+<!--                            <el-radio :label="1">高危</el-radio>-->
+<!--                            <el-radio :label="2">中危</el-radio>-->
+<!--                            <el-radio :label="3">低危</el-radio>-->
+<!--                          </el-radio-group>-->
+<!--                          <br>-->
+<!--                          <el-radio v-model="form.Question" label="不是问题" @change="handleRadioChange">不是问题</el-radio>-->
+<!--                          <br>-->
+<!--                          <el-radio-group v-model="form.list2" style="margin: 10px" :disabled="isDisabled2">-->
+<!--                            <el-radio :label="1">误报</el-radio>-->
+<!--                          </el-radio-group>-->
 
-                                        <el-form ref="form" :model="form" label-width="80px" style="margin: 10px">
-                                            <el-radio v-model="form.Question" label="是问题" @change="handleRadioChange">是问题</el-radio>
-                                            <br>
-                                            <el-radio-group v-model="form.list1" style="margin: 10px" :disabled="isDisabled1">
-                                                <el-radio :label="1">高危</el-radio>
-                                                <el-radio :label="2">中危</el-radio>
-                                                <el-radio :label="3">低危</el-radio>
-                                            </el-radio-group>
-                                            <br>
-                                            <el-radio v-model="form.Question" label="不是问题" @change="handleRadioChange">不是问题</el-radio>
-                                            <br>
-                                            <el-radio-group v-model="form.list2" style="margin: 10px" :disabled="isDisabled2">
-                                                <el-radio :label="1">误报</el-radio>
-<!--                                                <el-radio :label="2">永久忽略</el-radio>-->
-                                            </el-radio-group>
+                          <el-form-item label="备注信息" style="margin-top: 10px">
+                            <el-input v-model="form.remarks" type="textarea" :rows="2"></el-input>
+                            <el-button type="primary" @click="submit()" size="mini">提交</el-button>
+                          </el-form-item>
+                        </el-col>
+                        
+                        <!-- 右侧：追踪图 -->
+                        <el-col :span="12">
+                          <div style="border: 1px solid #eaeaea; border-radius: 4px; padding: 10px; background-color: #f8f9fa; height: 100%;">
+                            <div style="font-weight: bold; color: #333; margin-bottom: 10px; text-align: center;">
+                              <i class="el-icon-connection"></i> 跨文件缺陷源追踪
+                            </div>
+                            
+                            <!-- 垂直三框布局 -->
+                            <div style="display: flex; flex-direction: column; align-items: center;">
+                              <!-- 上方：该文件引用的文件 -->
+                              <div style="width: 100%; margin-top: 8px;">
+                                <div style="height: 60px; overflow-y: auto; font-size: 11px; border: 1px solid #ddd; border-radius: 3px; padding: 5px; background: white;">
+                                  <div 
+                                    v-for="(file, index) in traceData.imports" 
+                                    :key="'imports-' + index"
+                                    style="padding: 1px 0; color: #666; word-break: break-all;"
+                                    :title="file">
+                                    {{ extractFileName(file) }}
+                                  </div>
+                                  <div v-if="traceData.imports.length === 0" style="color: #999; text-align: center;">
+                                    无
+                                  </div>
+                                </div>
+                              </div>
+                              
+                              <!-- 中间箭头 -->
+                              <div style="text-align: center; margin: 2px 0;">
+                                <i class="el-icon-bottom" style="color: #67C23A; font-size: 12px;"></i>
+                                <div style="color: #999; font-size: 10px;">引用</div>
+                              </div>
+                              
+                              <!-- 中间：当前文件 -->
+                              <div style="width: 90%; margin: 2px 0;">
+                                <div style="background-color: #ecf5ff; padding: 5px; text-align: center; border: 1px solid #409EFF; border-radius: 3px;">
+                                  <div style="color: #67C23A; font-weight: bold; word-break: break-all; font-size: 12px;">
+                                    {{ extractFileName(currentFileName) }}
+                                  </div>
+                                </div>
+                              </div>
+                              
+                              <!-- 中间箭头 -->
+                              <div style="text-align: center; margin: 2px 0;">
+                                <i class="el-icon-bottom" style="color: #E6A23C; font-size: 12px;"></i>
+                                <div style="color: #999; font-size: 10px;">被引用</div>
+                              </div>
+                              
+                              <!-- 下方：引用该文件的文件 -->
+                              <div style="width: 100%; margin-bottom: 8px;">
+                                <div style="height: 60px; overflow-y: auto; font-size: 11px; border: 1px solid #ddd; border-radius: 3px; padding: 5px; background: white;">
+                                  <div 
+                                    v-for="(file, index) in traceData.referenced_by" 
+                                    :key="'ref-by-' + index"
+                                    style="padding: 1px 0; color: #666; word-break: break-all;"
+                                    :title="file">
+                                    {{ extractFileName(file) }}
+                                  </div>
+                                  <div v-if="traceData.referenced_by.length === 0" style="color: #999; text-align: center;">
+                                    无
+                                  </div>
+                                </div>
+                              </div>
 
-                                            <el-form-item label="备注信息" style="margin-top: 10px">
-                                                <el-input v-model="form.remarks" style="width: 200px"></el-input>
-                                                <el-button type="primary" @click="submit()">提交</el-button>
-                                            </el-form-item>
-                                        </el-form>
-                                    </el-col>
-                                </el-row>
-                            </el-card>
-                        </el-tab-pane>
-                        <el-tab-pane label="缺陷描述" name="second"  style="height: 100%;overflow: hidden">
-                            <el-descriptions style="margin: 10px" title="">
-                                <el-descriptions-item label="缺陷名称">{{descriptions.NAME}}</el-descriptions-item>
-                                <el-descriptions-item label="缺陷修复状态">
-                                    <el-tag v-if="descriptions.repair_status === '未修复'" size="small" type="danger">未修复</el-tag>
-                                    <el-tag v-else size="small" type="success">{{descriptions.repair_status}}</el-tag>
-                                </el-descriptions-item>
-                                <el-descriptions-item label="代码语言">{{descriptions.LANGUAGE}}</el-descriptions-item>
-                                <el-descriptions-item label="原始风险等级">
-                                     <el-tag v-if="descriptions.risk_level === '高危'" size="small" type="danger">高危</el-tag>
-                                     <el-tag v-else-if="descriptions.risk_level === '中危'" size="small" type="warning">中危</el-tag>
-                                     <el-tag v-else-if="descriptions.risk_level === '低危'" size="small" type="success">低危</el-tag>
-                                     <el-tag v-else size="small" type="info">{{ descriptions.risk_level }}</el-tag>
-                                </el-descriptions-item>
-                                <el-descriptions-item label="缺陷路径">{{descriptions.filepath}}</el-descriptions-item>
-                                <el-descriptions-item label="发现日期">{{descriptions.startTime}}</el-descriptions-item>
-                            </el-descriptions>
-                            <el-descriptions :colon="false" style="margin: 10px" title="缺陷描述：">
-                                <el-descriptions-item label="">{{descriptions.description}}</el-descriptions-item>
-                            </el-descriptions>
-                            <el-descriptions :colon="false" style="margin: 10px" title="参考代码示例：">
-                                <el-descriptions-item label="">{{descriptions.example}}</el-descriptions-item>
-                            </el-descriptions>
-                            <el-descriptions :colon="false" style="margin: 10px" title="解决方案：">
-                                <el-descriptions-item label="">{{descriptions.repairPlan}}</el-descriptions-item>
-                            </el-descriptions>
-                        </el-tab-pane>
-                        <el-tab-pane label="代码修复" name="third"  style="height:100%;overflow: auto">
-                            <el-card class="box-card">
-                                <el-row style="height: 42px">
-                                    <el-col :span="20">
-                                        <span class="">{{details.filepath}}</span>
-                                    </el-col>
-                                    <el-col :span="4">
-                                        <span><el-button type="danger" size="mini" round @click="xiufu()">一键修复</el-button></span>
-                                        <span><el-button  type="danger" size="mini" round @click="get_repair_feedback()">修复反馈</el-button></span>
-                                    </el-col>
-                                </el-row>
+                            </div>
+                          </div>
+                        </el-col>
+                      </el-row>
+                    </el-form>
+                  </el-col>
+                </el-row>
+              </el-card>
+            </el-tab-pane>
+            <el-tab-pane label="缺陷描述" name="second"  style="height: 100%;overflow: hidden">
+              <div class="defect-description-container">
+                <el-descriptions style="margin: 10px" title="">
+                  <el-descriptions-item label="缺陷名称">{{descriptions.NAME}}</el-descriptions-item>
+                  <el-descriptions-item label="缺陷修复状态">
+                    <el-switch
+                      v-model="descriptions.repair_status"
+                      active-value="已修复"
+                      inactive-value="未修复"
+                      active-color="#13ce66"
+                      inactive-color="#ff4949"
+                      active-text="已修复"
+                      inactive-text="未修复"
+                      @change="updateRepairStatus">
+                    </el-switch>
+                  </el-descriptions-item>
+                  <el-descriptions-item label="代码语言">{{descriptions.LANGUAGE}}</el-descriptions-item>
+                  <el-descriptions-item label="原始风险等级">
+                    <el-tag v-if="descriptions.risk_level === '高危'" size="small" type="danger">高危</el-tag>
+                    <el-tag v-else-if="descriptions.risk_level === '中危'" size="small" type="warning">中危</el-tag>
+                    <el-tag v-else-if="descriptions.risk_level === '低危'" size="small" type="primary">低危</el-tag>
+                    <el-tag v-else size="small" type="info">{{ descriptions.risk_level }}</el-tag>
+                  </el-descriptions-item>
+                  <el-descriptions-item label="缺陷路径">{{descriptions.filepath}}</el-descriptions-item>
+                  <el-descriptions-item label="发现日期">{{descriptions.startTime}}</el-descriptions-item>
+                </el-descriptions>
+                <el-descriptions :colon="false" style="margin: 10px" title="缺陷描述：">
+                  <el-descriptions-item label="">{{descriptions.description}}</el-descriptions-item>
+                </el-descriptions>
+              <el-descriptions :colon="false" style="margin: 10px" title="参考代码示例：">
+                <el-descriptions-item label="">
+                  <pre style="margin: 0; white-space: pre-wrap">{{descriptions.example}}</pre>
+                </el-descriptions-item>
+              </el-descriptions>
+                <el-descriptions :colon="false" style="margin: 10px" title="解决方案：">
+                  <el-descriptions-item label="">{{descriptions.repairPlan}}</el-descriptions-item>
+                </el-descriptions>
+              </div>
+            </el-tab-pane>
+            <el-tab-pane label="代码修复" name="third"  style="height:100%;overflow: auto">
+              <el-card class="box-card">
+                <el-row style="height: 42px">
+                  <el-col :span="20">
+                    <span class="">{{details.filepath}}</span>
+                  </el-col>
+                  <el-col :span="4">
+                    <span><el-button type="danger" size="mini" round @click="xiufu()">一键修复</el-button></span>
+                    <span><el-button  type="danger" size="mini" round @click="get_repair_feedback()">修复反馈</el-button></span>
+                  </el-col>
+                </el-row>
 
-                                <hr>
-                                <el-row style="height: calc(100% - 48px)">
-                                    <el-col :span="12" style="height: 100%">
-                        <pre id="codeBlock2" class="autoWrap"><code>
-{{details.source_code}}</code></pre>
-                                    </el-col>
-                                    <el-col :span="12" style="height: 100%"><div class=""  style="height: 100%" id="repairBox">
-                                        <pre class="autoWrap" id="codeBlock3"><code>{{details.repair_code}}</code></pre>
-                                    </div></el-col>
-                                </el-row>
-                            </el-card>
-                        </el-tab-pane>
-                    </el-tabs>
+                <hr>
+                <el-row style="height: calc(100% - 48px)">
+                  <!-- <el-col :span="12" style="height: 100%">
+                        <pre id="codeBlock2" class="autoWrap"><code>{{details.source_code}}</code></pre>
+                        <div id="codeBlock2" class="autoWrap">{{details.source_code}}</div>
+                  </el-col> -->
+                  <!-- <el-col :span="12" style="height: 100%; overflow: auto;">
+                    <div id="codeBlock" class="numbered-code-container">{{details.source_code}}</div>
+                  </el-col> -->
 
-                    <el-dialog
-                            title="修复反馈"
-                            :visible.sync="dialogVisible"
-                            width="50%">
-                        <span>请将您认为正确的修复后代码填在下方</span>
-                        <div style="margin: 20px 0;"></div>
-                        <el-input
-                                type="textarea"
-                                :autosize="{ minRows: 6,}"
-                                placeholder="请输入内容"
-                                v-model="textarea">
-                        </el-input>
-                        <span slot="footer" class="dialog-footer">
+                  <!-- 修改左侧代码显示，与代码详情页保持一致 -->
+                  <el-col :span="12" style="height: 100%; overflow: auto;">
+                    <div id="codeBlock2" class="numbered-code-container">{{details.source_code}}</div>
+                  </el-col>
+
+                  <el-col :span="12" style="height: 100%"><div class=""  style="height: 100%" id="repairBox">
+                    <pre class="autoWrap" id="codeBlock3"><code>{{details.repair_code}}</code></pre>
+                  </div></el-col>
+                </el-row>
+              </el-card>
+            </el-tab-pane>
+          </el-tabs>
+
+          <el-dialog
+              title="修复反馈"
+              :visible.sync="dialogVisible"
+              width="50%">
+            <span>请将您认为正确的修复后代码填在下方</span>
+            <div style="margin: 20px 0;"></div>
+            <el-input
+                type="textarea"
+                :autosize="{ minRows: 6,}"
+                placeholder="请输入内容"
+                v-model="textarea">
+            </el-input>
+            <span slot="footer" class="dialog-footer">
                 <el-button @click="dialogVisible = false">取 消</el-button>
                 <el-button type="primary" @click="submit_repair_feedback()">确 定</el-button>
               </span>
-                    </el-dialog>
-                </router-view>
-            </el-main>
+          </el-dialog>
+        </router-view>
+      </el-main>
 
-        </el-container>
-    </template>
+    </el-container>
+  </template>
 </div>
 <script src="../../../../assets/libs/vue/vue.js"></script>
 <script src="../../../../assets/libs/element/index.js"></script>

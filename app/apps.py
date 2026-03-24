@@ -14,16 +14,16 @@ class PythonConfig(AppConfig):
         # 调用检查函数
         check()
 
-        # 关键1：通过环境变量判断是否为主进程（开发模式）
-        is_main_process = not os.environ.get("RUN_MAIN") and not os.environ.get("WERKZEUG_RUN_MAIN")
-        # 关键2：生产环境需额外判断（如通过 manage.py 参数）
-        if "runserver" in sys.argv:
-            is_main_process = True
-
-        # 仅在主进程且未初始化时启动
-        if is_main_process and not self._vllm_started:
-            self._start_vllm_server()
-            PythonConfig._vllm_started = True  # 标记为已启动
+#        # 关键1：通过环境变量判断是否为主进程（开发模式）
+#        is_main_process = not os.environ.get("RUN_MAIN") and not os.environ.get("WERKZEUG_RUN_MAIN")
+#        # 关键2：生产环境需额外判断（如通过 manage.py 参数）
+#        if "runserver" in sys.argv:
+#            is_main_process = True
+#
+#        # 仅在主进程且未初始化时启动
+#        if is_main_process and not self._vllm_started:
+#            self._start_vllm_server()
+#            PythonConfig._vllm_started = True  # 标记为已启动
 
     def _start_vllm_server(self):
         

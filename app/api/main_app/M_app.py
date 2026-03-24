@@ -7,7 +7,7 @@ import time
 import uuid
 import zipfile
 from io import StringIO
-
+import re
 import javalang
 import importlib
 import traceback
@@ -16,7 +16,8 @@ from urllib.request import urlopen
 from django.http import StreamingHttpResponse, JsonResponse
 from multiprocessing import Process, Queue, Semaphore
 from javalang.tokenizer import LexerError
-
+import pandas as pd
+import tempfile
 import math
 import py7zr
 import rarfile
@@ -26,6 +27,7 @@ import json
 import signal
 import glob
 import random
+import string
 import sys
 from neo4j import GraphDatabase
 
@@ -37,11 +39,6 @@ from app.api.config.config import *
 import multiprocessing
 from multiprocessing import Pool
 
-csv_dir = '/home2/JAVA_Test_Version/app/static/csv_temp'
-csv_path = '/home2/JAVA_Test_Version/app/static/csv_temp'
-import_path = '/var/lib/neo4j/import/'
-node_path = '/var/lib/neo4j/import/nodes_CALL_cypher.csv'
-edge_path = '/var/lib/neo4j/import/edges_CALL_cypher.csv'
 
 # 获取py 文件所在目录
 current_path = os.path.dirname(__file__)
@@ -262,7 +259,86 @@ def get_unique_folder_name(base_path, folder_name):
     unique_folder_name = f"{folder_name}_{timestamp}_{random_suffix}"
     return os.path.join(base_path, unique_folder_name)
 
-
+def process_excel_and_extract_git_urls(req):
+    """
+    处理上传的Excel文件并提取Git地址及相关信息（使用pandas）
+    
+    参数:
+        req: Django请求对象，包含上传的文件
+    
+    返回:
+        JsonResponse: 包含提取的Git地址列表和相关信息或错误信息的JSON响应
+    """
+    # 获取上传的文件
+    uploaded_file = req.FILES.get('file', None)
+    if not uploaded_file:
+        return JsonResponse({'code': '400', 'msg': '未找到上传文件'})
+    
+    # 检查文件扩展名
+    file_name = uploaded_file.name.lower()
+    if not (file_name.endswith('.xlsx') or file_name.endswith('.xls')):
+        return JsonResponse({'code': '400', 'msg': '仅支持Excel文件(.xlsx, .xls)'})
+    
+    # 创建临时文件保存上传的Excel
+    temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx')
+    
+    try:
+        # 将上传的文件内容写入临时文件
+        with open(temp_file.name, 'wb+') as destination:
+            for chunk in uploaded_file.chunks():
+                destination.write(chunk)
+        
+        # 使用pandas读取Excel文件
+        # 读取Excel文件，不将第一行作为表头
+        df = pd.read_excel(temp_file.name, header=None)
+        
+        
+        # 提取所有行的数据
+        git_repos = []
+        for index, row in df.iterrows():
+            # 获取第一列：Git地址
+            git_url = row[0]
+            
+            # 检查是否是有效的Git地址
+            if isinstance(git_url, str) and ('http' in git_url or 'git' in git_url or 'gitee' in git_url):
+                # 清理可能的多余空格
+                cleaned_url = git_url.strip()
+                
+                # 获取第二列：分支(branch)，默认为空字符串
+                branch = str(row[1]) if len(row) > 1 and pd.notna(row[1]) else ""
+                
+                # 获取第三列：账号(username)，默认为空字符串
+                username = str(row[2]) if len(row) > 2 and pd.notna(row[2]) else ""
+                
+                # 获取第四列：密码(password)，默认为空字符串
+                password = str(row[3]) if len(row) > 3 and pd.notna(row[3]) else ""
+                
+                # 添加到结果列表
+                git_repos.append({
+                    'git_url': cleaned_url,
+                    'branch': branch.strip(),
+                    'username': username.strip(),
+                    'password': password.strip(),
+                    'row_number': index + 1  # 添加行号便于定位
+                })
+        
+        # 返回结果
+        return JsonResponse({
+            'code': '200', 
+            'git_repos': git_repos,
+            'count': len(git_repos),
+            'msg': f'成功提取 {len(git_repos)} 个Git仓库信息'
+        })
+        
+    except Exception as e:
+        return JsonResponse({'code': '500', 'msg': f'处理Excel文件时出错: {str(e)}'})
+    
+    finally:
+        # 清理临时文件
+        try:
+            os.unlink(temp_file.name)
+        except:
+            pass
 def decompress_file(req):
     """解压上传的压缩文件并保存到指定路径。"""
     uploaded_file = req.FILES.get('file', None)
@@ -344,37 +420,67 @@ def decompress_file(req):
         return JsonResponse({'code': '500', 'msg': f'解压文件出现错误: {str(e)}'})
 
 
-def clone_or_pull_project(project_url, project_path, access_token, max_retries=3):
-    """克隆或拉取Git项目。"""
+def clone_or_pull_project(project_url, project_path, access_token, branch=None, max_retries=3):
+    """克隆或拉取Git项目，支持指定分支。"""
     retries = 0
     while retries < max_retries:
         try:
             print('正在拉取或克隆:', project_url)
+            print('目标分支:', branch if branch else '默认分支')
 
-            command = shlex.split(f'git -C "{project_path}" pull' if os.path.exists(
-                project_path) else f'git clone {project_url} {project_path}')
+            if os.path.exists(project_path):
+                # 项目已存在，执行拉取
+                if branch:
+                    # 切换到指定分支并拉取
+                    commands = [
+                        f'git -C "{project_path}" fetch origin',
+                        f'git -C "{project_path}" checkout {branch}',
+                        f'git -C "{project_path}" pull origin {branch}'
+                    ]
+                else:
+                    # 拉取当前分支
+                    commands = [f'git -C "{project_path}" pull']
+            else:
+                # 项目不存在，执行克隆
+                if branch:
+                    # 克隆指定分支
+                    commands = [f'git clone -b {branch} {project_url} "{project_path}"']
+                else:
+                    # 克隆默认分支
+                    commands = [f'git clone {project_url} "{project_path}"']
+
+            # 执行命令
             env = os.environ.copy()
             env['GITLAB_API_PRIVATE_TOKEN'] = access_token
+            
+            for command in commands:
+                print(f"执行命令: {command}")
+                result = subprocess.run(
+                    shlex.split(command), 
+                    capture_output=True, 
+                    text=True, 
+                    env=env
+                )
+                if result.returncode != 0:
+                    raise subprocess.CalledProcessError(result.returncode, command, result.stderr)
 
-            result_code = subprocess.run(command, capture_output=True, text=True, env=env)
+            return True, "成功克隆或拉取项目"
 
-            if result_code.returncode == 0:
-                return True, "成功克隆或拉取项目"
-            else:
-                raise subprocess.CalledProcessError(result_code.returncode, command, result_code.stderr)
         except subprocess.CalledProcessError as e:
             retries += 1
             if retries < max_retries:
                 print(f"克隆或拉取项目失败，重试次数：{retries}")
+                print(f"错误信息: {e.stderr}")
+                time.sleep(2)  # 等待后重试
             else:
                 return False, f"克隆或拉取项目失败，已达到最大重试次数 ({max_retries})", e.stderr
         except Exception as e:
-            return False, "Error: %s" % str(e)
+            return False, f"Error: {str(e)}"
 
     return False, f"克隆或拉取项目失败，已达到最大重试次数 ({max_retries})"
 
 
-def fetch_gitlab_projects(gitlab_url, access_token, download_path):
+def fetch_gitlab_projects(gitlab_url, access_token, download_path,branch=None):
     """从GitLab拉取项目。"""
     fetched_projects = []
 
@@ -427,6 +533,173 @@ def clone_git_repository(req):
     password = req.POST['password']
     folder_path = req.POST['folder_path']
     branch = req.POST['branch']
+    url_git = gitlab_url # 保留原始url
+
+    base_path = os.path.join(processed_file_save_path, item_name)
+    download_directory = get_unique_folder_name(base_path, 'git_task')
+    project_name_match = re.search(r'/([^/]+?)(\.git)?$', url_git)
+    if project_name_match:
+        base_project_name = project_name_match.group(1)
+    else:
+        base_project_name = item_name
+    
+    # 生成17位时间戳（10位秒 + 7位微秒）
+    current_time = time.time()
+    integer_part = int(current_time)  # 10位整数部分
+    fractional_part = int((current_time - integer_part) * 10**7)  # 7位小数部分
+    timestamp_str = f"{integer_part}{fractional_part:07d}"
+    
+    # 使用时间戳代替随机字符串
+    project_name = f"{base_project_name}_{timestamp_str}"
+
+    if username and password:  # 更Pythonic的判断方式
+        if gitlab_url.startswith('http://'):
+            base_url = gitlab_url.split('http://')[-1]
+            gitlab_url = f'http://{username}:{password}@{base_url}'
+        elif gitlab_url.startswith('https://'):
+            base_url = gitlab_url.split('https://')[-1]
+            gitlab_url = f'https://{username}:{password}@{base_url}'
+        else:
+            # 如果没有协议前缀，默认使用http
+            gitlab_url = f'http://{username}:{password}@{gitlab_url}'
+
+    print(gitlab_url)
+    projects = fetch_gitlab_projects(gitlab_url, access_token, download_directory,branch)
+    print(projects)
+
+    if projects:
+        project_url, storage_path = projects[0]
+        print("项目URL:", project_url)
+        print("存储路径:", storage_path)
+        return JsonResponse({'code': '200', 'msg': '拉取文件成功', 'folder_name': storage_path, 'url_git': url_git, 'branch': branch,'project_name': project_name})
+    else:
+        return JsonResponse({"error": "拉取失败", "code": "500"})
+
+def clone_git_repositories(req):
+    """克隆多个GitLab仓库。"""
+    try:
+        # 获取参数
+        gitlab_urls = req.POST.get('urls', '')  # 多个URL用逗号分隔
+        access_token = req.POST.get('token')
+        item_name = req.POST.get('item_name')
+        username = req.POST.get('username')
+        password = req.POST.get('password')
+        branch = req.POST.get('branch', 'main')
+        
+        # 参数验证
+        if not all([gitlab_urls, item_name]):
+            return JsonResponse({"error": "缺少必要参数", "code": "400"})
+        
+        # 分割URL字符串为列表
+        url_list = [url.strip() for url in gitlab_urls.split(',') if url.strip()]
+        if not url_list:
+            return JsonResponse({"error": "未提供有效的仓库URL", "code": "400"})
+        
+        # 准备基础路径
+        base_path = os.path.join(processed_file_save_path, item_name)
+        os.makedirs(base_path, exist_ok=True)
+        used_names = {}
+        results = []
+        
+        # 循环处理每个仓库URL
+        for i, gitlab_url in enumerate(url_list):
+            # 在循环开始时初始化变量
+            repo_name = None
+            base_name = None
+            download_directory = None
+            
+            try:
+                # 从URL中提取基础仓库名称
+                base_name = gitlab_url.split('/')[-1].replace('.git', '')
+                
+                # 生成17位时间戳
+                current_time = time.time()
+                integer_part = int(current_time)  # 10位整数部分
+                fractional_part = int((current_time - integer_part) * 10**7)  # 7位小数部分
+                timestamp_str = f"{integer_part}{fractional_part:07d}"
+                
+                # 处理重复名称
+                if base_name in used_names:
+                    count = used_names[base_name] + 1
+                    used_names[base_name] = count
+                    repo_name = f"{base_name}{count}_{timestamp_str}"
+                else:
+                    used_names[base_name] = 0  # 初始计数为0，表示第一次出现
+                    repo_name = f"{base_name}_{timestamp_str}"  # 修正：第一次出现不加计数
+                
+                download_directory = get_unique_folder_name(base_path, repo_name)
+                os.makedirs(download_directory, exist_ok=True)
+                
+                # 构建认证URL
+                auth_url = gitlab_url
+                if username and password:
+                    if gitlab_url.startswith('http://'):
+                        auth_url = gitlab_url.replace('http://', f'http://{username}:{password}@')
+                    elif gitlab_url.startswith('https://'):
+                        auth_url = gitlab_url.replace('https://', f'https://{username}:{password}@')
+                    else:
+                        auth_url = f'http://{username}:{password}@{gitlab_url}'
+                
+                # 使用原有逻辑获取项目
+                projects = fetch_gitlab_projects(auth_url, access_token, download_directory, branch)
+                
+                if projects:
+                    project_url, storage_path = projects[0]
+                    results.append({
+                        'url': gitlab_url,
+                        'success': True,
+                        'name': repo_name,  # 使用处理后的名称
+                        'folder': storage_path
+                    })
+                else:
+                    results.append({
+                        'url': gitlab_url,
+                        'success': False,
+                        'name': repo_name,  # 使用处理后的名称
+                        'message': '获取项目失败'
+                    })
+                    
+            except Exception as e:
+                # 如果repo_name未定义，创建一个默认名称
+                if repo_name is None:
+                    if base_name:
+                        # 使用base_name作为后备
+                        repo_name = f"{base_name}_error_{i}"
+                    else:
+                        # 使用URL的一部分作为后备
+                        try:
+                            # 尝试从URL中提取名称
+                            url_part = gitlab_url.split('/')[-1][:20] if gitlab_url else f"repo_{i}"
+                            repo_name = f"{url_part}_error"
+                        except:
+                            repo_name = f"repository_{i}_error"
+                
+                results.append({
+                    'url': gitlab_url,
+                    'success': False,
+                    'name': repo_name,  # 现在repo_name一定有值
+                    'message': f'处理过程中出错: {str(e)}'
+                })
+        
+        return JsonResponse({
+            'code': '200', 
+            'msg': '处理完成',
+            'results': results
+        })
+            
+    except Exception as e:
+        return JsonResponse({
+            "error": f"处理请求时出错: {str(e)}", 
+            "code": "500"
+        })
+
+def clone_git_repository_1(**kwargs):
+    """克隆GitLab仓库。"""
+    gitlab_url = kwargs['gitlab_url']
+    access_token = kwargs['access_token']
+    item_name = kwargs['item_name']
+    username = kwargs['username']
+    password = kwargs['password']
 
     base_path = os.path.join(processed_file_save_path, item_name)
     download_directory = get_unique_folder_name(base_path, 'git_task')
@@ -440,12 +713,17 @@ def clone_git_repository(req):
 
     if projects:
         project_url, storage_path = projects[0]
-        print("项目URL:", project_url)
-        print("存储路径:", storage_path)
-        return JsonResponse({'code': '200', 'msg': '拉取文件成功', 'folder_name': storage_path, 'url_git': gitlab_url, 'branch': branch})
+        return storage_path
     else:
-        return JsonResponse({"error": "拉取失败", "code": "500"})
+        return 0
 
+    # if projects:
+    #     project_url, storage_path = projects[0]
+    #     print("项目URL:", project_url)
+    #     print("存储路径:", storage_path)
+    #     return JsonResponse({'code': '200', 'msg': '拉取文件成功', 'folder_name': storage_path, 'url_git': gitlab_url, 'branch': branch})
+    # else:
+    #     return JsonResponse({"error": "拉取失败", "code": "500"})
 
 def clone_or_pull_svn(svn_url, svn_path, username, password, max_retries=3, timeout=100):
     """克隆或拉取SVN项目。"""
@@ -1309,9 +1587,11 @@ def deepseek_repair(req):
     code = req.POST['code']
     vultype = req.POST['vultype']
     model_name = req.POST['model_name']
+    sink_line = req.POST.get('sink_line', '')
+    src_line = req.POST.get('src_line', '')
     detection_type = 'repair'
 
-    response = getLLM_deepseek3(task_id, file_id, code, vultype, model_name, detection_type)
+    response = getLLM_deepseek3(task_id, file_id, code, vultype, model_name, detection_type, sink_line, src_line)
 
     return StreamingHttpResponse(response, content_type='text/event-stream')
 
@@ -1433,23 +1713,31 @@ def deepseek_scan_result(args):
                 return False
 
             response = deepseek_chat8(code)
-            print("222===")
+            print(response,'\n')
             think = response.split("</think>")[0]
             response2 = response.split("</think>")[-1]
+            print(response2,'\n')
             #调别人的api用下面的，并把上面的注释掉
             #response2 = response.split("###")[0].strip()
             response2 = response2.replace("json\n", "").replace("\n```", "")
+            print(response2,'\n')
             #response2 = response2.replace("```json\n", "").replace("\n```", "").strip()
 
             response2 = json.loads(response2)
+            print(response2,'\n')
             #print(response2)
             temp_response = response2
 
             try:
                 result = find_code_position(code, response2["爆发点"])
+                print(result,'\n')
                 line_number = str([result["start_line"], result["start_line"]])
+                line_number1 = int(result["start_line"])
             except:
                 line_number = ""
+                line_number1 = 0
+            print(line_number,'\n')
+            print(line_number1,'\n')
 
             id_vul = {
                   "CWE-798": "硬编码凭证",
@@ -1471,14 +1759,18 @@ def deepseek_scan_result(args):
                   "CWE-999": "下载漏洞",
                   "CWE-779": "访问控制"
             }
+
             vul_name = id_vul[response2["漏洞类型"]]
+            code_context = get_code_context(code, line_number1, 15)
             test_result = [{
                 'filename': os.path.basename(args["file_path"]),
                 'file_path': args["file_path"],
                 'cwe_id': response2["漏洞类型"],
                 'vul_name': vul_name,
-                'code': '',
+                'code': code_context,
                 'line_number': line_number,
+                'src_line_number': None,
+                'func_line_number': None,
                 'risk_level': '',
                 'repair_code': '',
                 'new_line_number': '',
@@ -1539,13 +1831,16 @@ def deepseek_scan_result(args):
                 "CWE-176": "字符集编码漏洞",
             }
             vul_name = id_vul[response2["漏洞类型"]]
+            code_context = get_code_context(code, line_number, 50)
             test_result = [{
                 'filename': os.path.basename(args["file_path"]),
                 'file_path': args["file_path"],
                 'cwe_id': response2["漏洞类型"],
                 'vul_name': vul_name,
-                'code': '',
+                'code': code_context,
                 'line_number': line_number,
+                'src_line_number': None,
+                'func_line_number': None,
                 'risk_level': '',
                 'repair_code': '',
                 'new_line_number': '',
@@ -1573,6 +1868,32 @@ def deepseek_scan_result(args):
             print(temp_response)
             print(file_name)
             return False
+
+
+def get_code_context(code, line_number, context_lines=50):
+    """
+    获取 code 中指定行号上下各 context_lines 行的代码。
+
+    :param code: 完整代码字符串
+    :param line_number: 目标行号（1-based）
+    :param context_lines: 上下各取多少行
+    :return: 上下文代码字符串
+    """
+    lines = code.splitlines()  # 按行分割成列表
+    total_lines = len(lines)
+
+    # 转换为 0-based 索引（注意行号从 1 开始）
+    target_idx = line_number - 1
+
+    # 计算起始和结束行索引（确保不越界）
+    start_idx = max(0, target_idx - context_lines)
+    end_idx = min(total_lines, target_idx + context_lines + 1)  # +1 是为了包含结束行
+
+    # 提取上下文行
+    context = lines[start_idx:end_idx]
+
+    # 重新组合成字符串（保留换行符）
+    return "\n".join(context)
 
 def find_code_position(full_code, code_snippet):
     """
@@ -3106,7 +3427,7 @@ def load_rules():
     """
 
     # 将 rules.py 所在目录添加到 sys.path
-    sys.path.append("/home2/JAVA_Test_Version/app/api/main_app")
+    sys.path.append("../../../app/api/main_app")
 
     rows = get_rule_function_name()
     #print(rows)
@@ -3163,14 +3484,21 @@ def detect_vulnerabilities_with_strings(vuln_rules_list, code):
     # 遍历每一行代码
     for line_no, line in enumerate(code, start=1):
         # 遍历所有规则
+        print("执行自定义规则检测------------")
         for rule in vuln_rules_list:
             # 如果规则字符串在代码行中找到，则记录结果
             if rule['pattern'] in line:
                 results.append({
                     "漏洞类型": rule['name'],
-                    "行号": line_no,
+                    "爆发点函数行号": line_no,
+                    "爆发点行号": line_no,
+                    "缺陷源": line_no,
+                    "缺陷源内容": '',
+                	"缺陷源文件": '',
+                	"爆发点函数名": ''  # 新增字段
                 })
 
+    print(results)
     return results
 
 
@@ -3178,8 +3506,12 @@ def index(req):
     method = req.POST["method"]
     if method == "decompression":
         return decompress_file(req)
+    if method == "decompression_excel":
+        return process_excel_and_extract_git_urls(req)
     elif method == "clone_git_repository":
         return clone_git_repository(req)
+    elif method == "clone_git_repositories":
+        return clone_git_repositories(req)
     elif method == 'deepseek_detection':
         return deepseek_detection(req)
     elif method == 'deepseek_repair':

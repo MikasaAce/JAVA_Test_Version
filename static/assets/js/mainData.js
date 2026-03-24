@@ -19,32 +19,39 @@ let localUser = {
 
 let scanLanguages = [
     'java',
-    'android',
-    'javascript',
-    'objective-c',
-    'go',
+//    'android',
+//    'javascript',
+//    'objective-c',
+//    'go',
     'python',
     'c/c++',
-    'php',
-    'ruby',
-    'SQL',
+//    'php',
+//    'ruby',
+//    'SQL',
 //  以下不是安信和乐信需要的语言类型，并且暂时不支持扫描
-    'C#',
-    'Swift',
-    'Cobol',
-    'Fortran',
-    'shell',
-    'Node.js',
-    'Kotlin',
-    'Scala',
-    'Lua',
+//    'C#',
+//    'Swift',
+//    'Cobol',
+//    'Fortran',
+//    'shell',
+//    'Node.js',
+//    'Kotlin',
+//    'Scala',
+//    'Lua',
+    '混合模式',  // 多语言混合模式
 ]
 
 //获取cookie信息
 var cookie_value = getCookieValue('username')
 //console.log(cookie_value)
 
-if(cookie_value){
+// 获取当前页面路径
+const currentPath = window.location.pathname
+
+// 如果当前已经是登录页，则跳过检查
+if (currentPath === '/') {
+    // 登录页不需要检查，跳过
+} else if(cookie_value){
     $.ajax({
         url: http_head + '/login/',
         type: 'POST',
@@ -55,7 +62,7 @@ if(cookie_value){
         dataType: 'json',
         async: false,
         success: function (res) {
-//            console.log(res);
+            console.log(res);
             if (res.isLogin === 'false') {
                 console.log('没有登录');
             } else {//登陆成功了
@@ -65,8 +72,8 @@ if(cookie_value){
 
         }
     });
-}else{
-    // window.location.href = 'http://10.99.16.24:8088/static/linkPage/login/index.html'
+} else {
+    window.location.href = http_head
 
 }
 

@@ -52,7 +52,7 @@ var vm = new Vue({
             form:{
                 item_name:'',
                 description:'',
-                language: 'java',
+                language: '混合模式',
                 source:'本地上传',
 
             },
@@ -68,8 +68,11 @@ var vm = new Vue({
                     { required: true, message: '请选择代码来源', trigger: 'blur' },
                 ],
             },
-            countLoading:false
+            countLoading:false,
 
+            // 新增数据
+            multipleSelection: [], // 存储选中的项目
+            batchDeleteLoading: false, // 批量删除加载状态
         }
 
     },
@@ -88,12 +91,19 @@ var vm = new Vue({
         create(){
             var that = this
             console.log(localUser)
+            
+            // 处理语言参数：如果是"混合模式"则转换为"mix"
+		  let languageParam = that.form.language;
+		  if (that.form.language === '混合模式') {
+		      languageParam = 'mixed';
+		  }
+		  
             $.ajax({
                 url: (http_head + '/login/'),
                 data:{
                     method : 'itemdetail_insert',
                     item_name : that.form.item_name,
-                    language : that.form.language,
+                    language : languageParam,  // 使用处理后的参数
                     source : that.form.source,
                     description : that.form.description,
                     creator_id : localUser.accountId,
@@ -126,7 +136,7 @@ var vm = new Vue({
             this.form = {
                 item_name: '',
                 description: '',
-                language: 'java',
+                language: '混合模式',
                 source: '本地上传',
             }
         },
@@ -168,8 +178,8 @@ var vm = new Vue({
                         that.tableConfig.model_name = res.model
                         //高亮的行
                         that.highlightedRow = { model_name:that.tableConfig.model_name,
-                             }
-                          // console.log(that.highlightedRow)
+                        }
+                        // console.log(that.highlightedRow)
                     }
                 },
                 error: function (err) {
@@ -301,32 +311,127 @@ var vm = new Vue({
                 });
             });
         },
-        del(row){
+        del(row, instance) {
             console.log(row)
             var that = this;
-            $.ajax({
-                url:  (http_head + '/login/'),
-                data:{
-                    method : 'project_delete',
-                    itemid : row.itemid,
-                },
-                type : 'post',
-                dataType : 'JSON',
-                success : function (res){
-                    console.log(res);
-                    if (res.code === '200'){
-                        mymessage.success(res.msg)
-                    }else{
-                        mymessage.error(res.msg)
+            return new Promise((resolve, reject) => {
+                $.ajax({
+                    url: (http_head + '/login/'),
+                    data: {
+                        method: 'project_delete',
+                        itemid: row.itemid,
+                    },
+                    type: 'post',
+                    dataType: 'JSON',
+                    success: function(res) {
+                        console.log(res);
+                        if (res.code === '200') {
+                            mymessage.success(res.msg)
+                        } else {
+                            mymessage.error(res.msg)
+                        }
+                        that.getTableData()
+                        that.getInfoData()
+                        resolve(); // 确保Promise被resolve
+                    },
+                    error: function(err) {
+                        console.log(err)
+                        mymessage.error("删除失败")
+                        reject(err); // 出错时reject
                     }
-                    that.getTableData()
-                    that.getInfoData()
-                },
-                error: function (err) {
-                    console.log(err)
-                    mymessage.error("删除失败")
+                });
+            });
+        },
+        // 新增方法 - 处理表格选择项变化
+        handleSelectionChange(val) {
+            this.multipleSelection = val;
+        },
+
+        // 新增方法 - 批量删除确认
+        batchDeleteConfirm() {
+            if (this.multipleSelection.length === 0) {
+                this.$message.warning('请至少选择一个项目');
+                return;
+            }
+
+            this.$confirm(`确定要删除选中的 ${this.multipleSelection.length} 个项目吗?`, '提示', {
+                confirmButtonText: '确定',
+                cancelButtonText: '取消',
+                type: 'warning',
+                dangerouslyUseHTMLString: true,
+                beforeClose: (action, instance, done) => {
+                    if (action === 'confirm') {
+                        instance.confirmButtonLoading = true;
+                        this.batchDeleteProjects().finally(() => {
+                            instance.confirmButtonLoading = false;
+                            done();
+                        });
+                    } else {
+                        done();
+                    }
                 }
-            })
+            }).catch(() => {
+                this.$message.info('已取消删除');
+            });
+        },
+
+        // 新增方法 - 执行批量删除
+        batchDeleteProjects() {
+            this.batchDeleteLoading = true;
+            const itemIds = this.multipleSelection.map(item => item.itemid).join(',');
+
+            return new Promise((resolve, reject) => {
+                $.ajax({
+                    url: (http_head + '/login/'),
+                    type: 'post',
+                    data: {
+                        method: 'projects_batch_delete',
+                        itemid_list: itemIds
+                    },
+                    dataType: 'JSON',
+                    success: (res) => {
+                        if (res.code === '200') {
+                            this.$message.success(res.msg);
+                            this.getTableData(); // 刷新列表
+                            this.getInfoData(); // 刷新统计数据
+                            this.multipleSelection = []; // 清空选择
+                        } else {
+                            this.$message.error(res.msg || '删除失败');
+                        }
+                        resolve();
+                    },
+                    error: (err) => {
+                        console.error(err);
+                        this.$message.error('批量删除请求失败');
+                        reject(err);
+                    },
+                    complete: () => {
+                        this.batchDeleteLoading = false;
+                    }
+                });
+            });
+        },
+
+        // 修改原有删除方法，保持一致性
+        delopen(row) {
+            this.$confirm(`确定要删除项目"${row.itemname}"吗?`, '提示', {
+                confirmButtonText: '确定',
+                cancelButtonText: '取消',
+                type: 'warning',
+                beforeClose: (action, instance, done) => {
+                    if (action === 'confirm') {
+                        instance.confirmButtonLoading = true;
+                        this.del(row, instance).finally(() => {
+                            instance.confirmButtonLoading = false;
+                            done();
+                        });
+                    } else {
+                        done();
+                    }
+                }
+            }).catch(() => {
+                this.$message.info('已取消删除');
+            });
         },
 
 

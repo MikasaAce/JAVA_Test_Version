@@ -64,7 +64,7 @@ var vm = new Vue({
                     { required: true, message: '请选择缺陷类型', trigger: 'blur' }
                 ],
                 func_name: [
-                    { required: true, message: '请输入清洁函数名称', trigger: 'blur' }
+                    { required: true, message: '请输入自定义规则名称', trigger: 'blur' }
                 ],
             },
             isNew: true,
@@ -128,8 +128,44 @@ var vm = new Vue({
             this.isNew = true     //新增时，下面的按钮是“立即创建”；编辑时，下面的按钮是“更新”
             this.isFormDisabled = false    //新增和编辑时，弹窗的表单可编辑，详情不可编辑
         },
+
+        // 表单验证方法
+        validateForm() {
+            let isValid = true;
+            
+            // 验证策略名称
+            if (!this.createForm.name) {
+                this.$message.error('请输入策略名称');
+                isValid = false;
+            }
+            
+            // 验证代码语言
+            if (!this.createForm.language) {
+                this.$message.error('请选择代码语言');
+                isValid = false;
+            }
+            
+            // 验证缺陷类型
+            if (!this.createForm.vul_id) {
+                this.$message.error('请选择缺陷类型');
+                isValid = false;
+            }
+            
+            // 验证自定义规则名称
+            if (!this.createForm.func_name) {
+                this.$message.error('请输入自定义规则名称');
+                isValid = false;
+            }
+            
+            return isValid;
+        },
         // "立即创建"
         submitForm(){
+            // 先验证表单
+            if (!this.validateForm()) {
+                return false;
+            }
+            
             var that = this;
             $.ajax({
                 url: (http_head + '/login/'),
@@ -270,6 +306,11 @@ var vm = new Vue({
         },
         // 提交编辑
         submit_edit(){
+            // 先验证表单
+            if (!this.validateForm()) {
+                return false;
+            }
+            
             var that = this;
             $.ajax({
                 url: (http_head + '/login/'),
@@ -299,14 +340,20 @@ var vm = new Vue({
                 }
             })
         },
-        // 重置
+        // 重置表单并清除验证状态
         resetForm(){
-            this.createForm.name = ''
-            this.createForm.language = ''
-            this.createForm.vul_id = ''
-            this.createForm.func_name = ''
-            this.createForm.notes = ''
-            this.createForm.status = ''
+            this.createForm = {
+                name: '',
+                language: '',
+                vul_id: '',
+                func_name: '',
+                notes: '',
+                status: ''
+            };
+            // 清除验证状态
+            if (this.$refs.createForm) {
+                this.$refs.createForm.clearValidate();
+            }
         },
 // 点击启用和停用
         ifUse(row){

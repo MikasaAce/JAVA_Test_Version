@@ -89,17 +89,17 @@
     <div class="box">
       <span class="title">配置选择</span>
       <el-radio-group v-model="config1" >
-        <el-radio  label="rule3" width="200px">模型R</el-radio>
+<!--        <el-radio  label="rule3" width="200px">模型R</el-radio>-->
 <!--        <el-radio  label="rule0">模型O</el-radio>-->
 <!--        <el-radio  label="rule1">模型OR</el-radio>-->
 <!--        <el-radio  label="rule2">模型RO</el-radio>-->
 <!--        <el-radio  label="rule4">模型Q</el-radio>-->
 <!--        <el-radio  label="deepSeek">模型D</el-radio>-->
 <!--        <el-radio  label="deepSeek_6.7b">模型D+</el-radio>-->
-        <el-radio  label="rule5">速度优先（高速）</el-radio>     <!--自定义规则单独扫描-->
-        <el-radio  label="rule6">降误报优先（中速）</el-radio>     <!--自定义规则单独扫描+S降误报-->
-        <el-radio  label="rule7">思考模式（低速）</el-radio>     <!--R2 并 S-->
-        <el-radio  label="Muti_transformer">模型M</el-radio>
+        <div><el-radio label="rule5">快速扫描（高速模式：以速度优先为导向，适用于批量大文件的快速检测）</el-radio></div>  <!--自定义规则单独扫描-->
+        <div><el-radio label="rule6">降误报模型（中速模式：以降低一部分速度的前提下，提升大模型扫描的精度降低误报率）</el-radio></div>  <!--自定义规则单独扫描+S降误报-->
+        <div><el-radio label="rule7">思考模式（低速模式：通过大模型的深度思考去理解业务代码中的上下文语义来判断潜在的复杂漏洞）</el-radio></div>  <!--R2 并 S-->
+<!--        <el-radio  label="Muti_transformer">模型M</el-radio>-->
 
       </el-radio-group>
 <!--      <div style="margin: 20px" v-show="ruuule">-->

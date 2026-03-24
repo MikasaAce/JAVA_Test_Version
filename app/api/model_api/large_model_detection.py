@@ -574,11 +574,15 @@ def getLLM_deepseek(path_list, model_name):
 #
 #     return result
 
-def get_prompt2(code, vultype):  # 针对修复生成提示词
-    prompt = f"""
-这段代码存在{vultype}漏洞，请你对这段代码进行修复，思考过程尽可能简洁，只需要将修复后的代码输出
+def get_prompt2(code, vultype, sink_line, src_line):  # 针对修复生成提示词
+    prompt = f"""请用**极简思考**的方式修复以下代码的{vultype}漏洞：
 
-[代码]
+**要求：**
+- 思考过程：3-5句话，直接点明问题核心和修复方案
+- 输出：修复后代码代码片段，50行以内
+- 主要关注爆发点处的代码{sink_line}和缺陷源处的代码{src_line}
+
+代码：
 {code}
 """
     return prompt
@@ -754,7 +758,7 @@ def deepseek_chat3(prompt, key):
     # 发起流式请求
     if key == "1":
         chat_response = client.chat.completions.create(
-            model="deepseek",  # 模型名称
+            model="qwen3-4b",  # 模型名称
             messages=[
                 {"role": "system", "content": get_logic_prompt()},
                 {"role": "user", "content": prompt},
@@ -985,19 +989,10 @@ def deepseek_chat6(id, code, vultype,sink):
 
     update_Interpretation(id, full_response)
 
-
 def deepseek_chat7(code, vultype):
     """使用 vLLM 调用模型，判断该漏洞类型是否是误报。"""
     # 构造输入内容
-    prompt = f"""请你分析下面代码，并判断其是否存在{vultype}这种类型的漏洞，请一步一步思考。
-    如果是对于路径遍历漏洞，需要注意以下几点：
-    1. 检测模式：用户输入直接用于文件路径操作  
-    2. 高危函数：`open()`、`include()`  
-    3. 检测路径穿越符号：`../`、`~/`  
-    4. 检查用于文件名拼接的变量来源
-    5. 如果存在条件语句分支，分析是否条件为永真或永假
-    6. 如果代码中包含的条件语句是永真或永假导致拼接形成文件名的变量为固定的字符串，则可以认为不会导致路径遍历
-    如果存在则只输出1，如果不存在则只输出0，请严格按照要求输出，代码：\n{code}"""
+    prompt = f"""请你分析下面的代码是否存在漏洞，如果存在则只输出1，如果不存在则只输出0，请严格按照要求输出结果，代码：\n{code}"""
 
     openai_api_key = "EMPTY"
     openai_api_base = f"http://{ip}:8000/v1"
@@ -1214,7 +1209,7 @@ def deepseek_chat11(code):# 调别人的api
     - **CWE-494**：文件上传安全    
     - **CWE-307**：暴力破解
     - **CWE-308**：短信安全
-    - **CWE-434**：未对上传的压缩文件进行安全检查
+    - **CWE-434**：未对上传的压缩文件进行安全检查 
     - **CWE-999**：下载漏洞
     - **CWE-779**：访问控制
     # 输出规范
@@ -1470,11 +1465,11 @@ def deepseek_chat9(code):
 
     return full_response
 
-def getLLM_deepseek3(task_id, file_id, code, vultype, model_name, detection_type):  # 调用大模型进行修复/降误报
+def getLLM_deepseek3(task_id, file_id, code, vultype, model_name, detection_type, sink_line, src_line):  # 调用大模型进行修复/降误报
     """使用 vLLM 调用模型，并流式输出生成的文本。"""
     prompt = ""
     if detection_type == 'repair':
-        prompt = get_prompt2(code, vultype)
+        prompt = get_prompt2(code, vultype, sink_line, src_line)
     elif detection_type == 'mix':
         prompt = get_prompt3(code, vultype)
 

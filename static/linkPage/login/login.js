@@ -112,7 +112,7 @@ var vm = new Vue({
                 mymessage.error("存在非法输入！")
                 return
             } else {
-                this.loginLog(this.logStatus)
+                this.loginLog('')
             }
         },
         reset(){
@@ -142,7 +142,7 @@ var vm = new Vue({
 
                 },
                 error: function (err) {
-                    console.log(err)
+//                    console.log(err)
                     that.login()
                     // mymessage.error("登陆失败")
                 }
@@ -168,7 +168,6 @@ var vm = new Vue({
                         that.logStatus = '1'
                         that.loginLog(that.logStatus)
                         debugger
-                        // window.location.href = 'http://10.99.16.24:8088/static/python/index.html'
                         window.location.href = http_head + '/static/linkPage/login/index.html'
                     }
                     else if(res.code == '500'){

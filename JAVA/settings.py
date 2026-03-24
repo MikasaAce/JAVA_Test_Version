@@ -48,7 +48,20 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "app.apps.PythonConfig",
     'celery_progress',
+
+    'oauth2_provider',
+    'rest_framework', 
 ]
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'oauth2_provider.contrib.rest_framework.OAuth2Authentication',
+        # 确保这一行存在
+    ),
+    'DEFAULT_PERMISSION_CLASSES': (
+        'rest_framework.permissions.IsAuthenticated',
+    )
+}
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",

@@ -6,42 +6,92 @@
   <meta name="viewport"
         content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
   <meta http-equiv="X-UA-Compatible" content="ie=edge">
-  <!--<link rel="stylesheet" href="../../../js/element/index.css">-->
   <link rel="stylesheet" href="../../../../assets/libs/element/index.css">
-
   <title>静态代码安全扫描系统--任务列表管理</title>
   <style>
-    .title .el-form-item__label{
-      font-size: 24px;font-weight: bolder;
-    }
-    .title .el-form-item__content{
-      font-size: 24px;font-weight: bolder;
-    }
-    .el-form--inline .el-form-item{
-      margin-right: 20px;
-    }
-    .el-drawer__header {
-      margin-bottom: 15px;
-    }
-    .el-timeline {
-      padding-left: 20px;
-    }
+      .title .el-form-item__label{
+          font-size: 24px;font-weight: bolder;
+      }
+      .title .el-form-item__content{
+          font-size: 24px;font-weight: bolder;
+      }
+      .el-form--inline .el-form-item{
+          margin-right: 20px;
+      }
+      .el-drawer__header {
+          margin-bottom: 15px;
+      }
+      .el-timeline {
+          padding-left: 20px;
+      }
 
+      .batch-action-bar {
+          background: #fff;
+          padding: 10px 10px;
+          border-radius: 4px;
+          box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+          display: flex;
+          align-items: center;
+      }
+
+      .selected-count {
+          margin-left: 15px;
+          font-size: 14px;
+          color: #409EFF;
+      }
+
+      .el-table .el-table__header-wrapper .el-checkbox {
+          display: inline-block;
+      }
+      
+      /*批量上传*/
+      .batch-progress-container {
+        margin: 20px 0;
+      }
+
+      .batch-status-info {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 10px;
+        font-size: 14px;
+        color: #606266;
+      }
+
+      .git-url-table {
+        margin: 10px 0;
+      }
+
+      .status-tag {
+        margin-right: 5px;
+      }
+
+      .batch-action-buttons {
+        margin-top: 20px;
+        text-align: center;
+      }
+
+      .all-data-tip {
+        text-align: center;
+        padding: 10px;
+        color: #67C23A;
+        background-color: #f0f9eb;
+        border-radius: 4px;
+        margin: 10px 0;
+      }
+
+      .file-type-selector {
+        margin-bottom: 20px;
+        padding: 10px 0;
+      }
 
   </style>
 </head>
-<!--{% raw %}-->
+
 <body>
 
 <div id="app">
   <template>
     <el-row :gutter="20" style="margin: 20px">
-      <!--    <el-col :span="4">-->
-      <!--      <el-button  @click="goback()">返回</el-button>-->
-      <!--      <span style="font-size: 24px;font-weight: bolder;margin-top: 25px">项目名称：{{itemName}}</span>-->
-
-      <!--    </el-col>-->
-      <!--    <el-col :span="20">-->
       <div class="" style="margin-right:20px;">
         <el-form :inline="true" :model="query" class="demo-form-inline" method="post" >
           <el-form-item label="项目名称：" class="title">{{itemname}}</el-form-item>
@@ -52,16 +102,29 @@
           <el-form-item>
             <el-button type="primary" @click="checkFormData()">查询</el-button>
             <el-button type="primary" @click="getAlert = true">新建任务</el-button>
+            <!-- 移除原来的批量新建按钮 -->
           </el-form-item>
           <el-form-item label="任务ID：" class="title" v-if="ifidshowtag">{{idshowtext}}</el-form-item>
         </el-form>
       </div>
-      <!--    </el-col>-->
-      <!--    <el-col :span="1">-->
-      <!--      <el-button  circle @click="reload()">-->
-      <!--        <svg t="1703055399666" class="icon" viewBox="0 0 1029 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="4461" width="16" height="16"><path d="M1007.2 262.4c-12.8-6.4-32 0-38.4 19.2l-25.6 70.4C904.8 256 847.2 179.2 757.6 128c-108.8-64-230.4-89.6-352-57.6C232.8 108.8 104.8 236.8 60 409.6 53.6 428.8 66.4 441.6 79.2 448 98.4 448 111.2 441.6 117.6 422.4c38.4-153.6 153.6-268.8 307.2-300.8 108.8-25.6 217.6-6.4 307.2 51.2 76.8 44.8 134.4 115.2 166.4 198.4l-76.8-32c-12.8-6.4-32 0-38.4 19.2-6.4 12.8 0 32 12.8 38.4l128 51.2c6.4 6.4 12.8 6.4 19.2 6.4 0 0 6.4 0 6.4 0 0 0 0 0 0 0 0 0 0 0 6.4 0 6.4 0 12.8-6.4 12.8-12.8L1026.4 294.4C1032.8 281.6 1020 268.8 1007.2 262.4zM949.6 576c-12.8-6.4-32 6.4-32 19.2-38.4 153.6-153.6 268.8-307.2 300.8-108.8 25.6-217.6 6.4-307.2-51.2-76.8-44.8-134.4-115.2-166.4-198.4l76.8 32c12.8 6.4 32 0 38.4-19.2 6.4-12.8 0-32-12.8-38.4L104.8 576C98.4 576 92 569.6 85.6 569.6c0 0-6.4 0-6.4 0 0 0 0 0 0 0 0 0 0 0-6.4 0C66.4 576 60 582.4 60 588.8L2.4 729.6c-6.4 12.8 0 32 19.2 38.4 12.8 6.4 32 0 38.4-19.2l25.6-70.4C124 768 181.6 844.8 271.2 896c108.8 64 230.4 89.6 352 57.6 172.8-38.4 307.2-172.8 345.6-345.6C975.2 595.2 962.4 582.4 949.6 576z" fill="#d81e06" p-id="4462"></path></svg>-->
-      <!--      </el-button>-->
-      <!--    </el-col>-->
+    </el-row>
+
+    <!-- 在查询表单下方添加批量操作栏 -->
+    <el-row :gutter="20" style="margin: 20px">
+      <el-col :span="24">
+        <div class="batch-action-bar">
+          <el-button
+              type="danger"
+              :disabled="multipleSelection.length === 0"
+              @click="batchDeleteConfirm"
+              icon="el-icon-delete">
+            批量删除
+          </el-button>
+          <span class="selected-count" v-if="multipleSelection.length > 0">
+                已选择 {{multipleSelection.length}} 个任务
+            </span>
+        </div>
+      </el-col>
     </el-row>
 
     <el-card style="margin: 20px">
@@ -69,9 +132,11 @@
         任务列表
       </div>
       <template>
-        <el-table  :data="tableData" class="table" :header-cell-style="{textAlign:'center'}" :cell-style="{textAlign:'center'}" tooltip-effect="dark" style="width: 100%"  :default-sort = "{prop: 'startTime', order: 'descending'}">
+        <!-- 表格内容保持不变 -->
+        <el-table  :data="tableData" class="table" :header-cell-style="{textAlign:'center'}" :cell-style="{textAlign:'center'}" tooltip-effect="dark" style="width: 100%"  :default-sort = "{prop: 'startTime', order: 'descending'}" @selection-change="handleSelectionChange">>
+          <!-- 添加多选列 -->
+          <el-table-column type="selection" width="55"></el-table-column>
           <el-table-column prop="taskname" label="任务名称" ></el-table-column>
-          <!--        <el-table-column prop="description" label="任务" width="400" show-overflow-tooltip></el-table-column>-->
           <el-table-column prop="status" label="检测状态" width="100">
             <template slot-scope="scope">
               <el-tag effect="dark" v-if="scope.row.statues === '检测完成'" type="success">已完成</el-tag>
@@ -81,13 +146,12 @@
             </template>
           </el-table-column>
           <el-table-column prop="language" label="扫描语言" ></el-table-column>
-          <!--        <el-table-column prop="type" label="扫描策略" width="150"></el-table-column>-->
           <el-table-column prop="file_num" label="文件数量" width=""></el-table-column>
           <el-table-column prop="account" label="缺陷统计(高中低)" width="250">
             <template slot-scope="scope">
               <el-tag effect="dark" type="danger">{{scope.row.high_risk}}</el-tag>
               <el-tag effect="dark" type="warning">{{scope.row.med_risk}}</el-tag>
-              <el-tag effect="dark" type="success">{{scope.row.low_risk}}</el-tag>
+              <el-tag effect="dark" type="primary">{{scope.row.low_risk}}</el-tag>
             </template>
           </el-table-column>
 
@@ -103,117 +167,153 @@
               <el-button size="mini" type="text" @click="view(scope.row)">任务详情</el-button>
               <el-button size="mini" type="text" @click="result(scope.row)">结果审核</el-button>
               <el-button size="mini" type="text" @click="doubleScan(scope.row)">重新扫描</el-button>
-              <el-button size="mini" type="text" @click="gotoCCN(scope.row)">圈复杂度</el-button>
               <el-button size="mini" type="text" @click="delopen(scope.row)">删除</el-button>
               <el-button size="mini" type="text" @click="clickLog(scope.row)">任务日志</el-button>
             </template>
           </el-table-column>
         </el-table>
         <el-pagination
-                background
-                layout="total, sizes, prev, pager, next, jumper"
-                :total="count"
-                @current-change="handleCurrentChange"
-                @size-change="handleSizeChange"
-                :page-sizes="[5,10,20]"
-                :current-page="currentPage"
-                :page-size="pageSize"
-                style="text-align: center">
+            background
+            layout="total, sizes, prev, pager, next, jumper"
+            :total="count"
+            @current-change="handleCurrentChange"
+            @size-change="handleSizeChange"
+            :page-sizes="[5,10,20]"
+            :current-page="currentPage"
+            :page-size="pageSize"
+            style="text-align: center">
         </el-pagination>
       </template>
-      <!--任务日志-->
-      <el-drawer
-              title="任务日志"
-              :visible.sync="logVisible"
-              direction="rtl"
-              size="50%">
-        <hr>
-        <el-form :inline="true" :model="logQuery" style="margin: 20px" size="mini">
-          <el-form-item label="文件名称：" >
-            <el-input  v-model="logQuery.filename" placeholder="请输入关键字"></el-input>
-          </el-form-item>
-          <el-form-item label="风险路径：">
-            <el-input  v-model="logQuery.filepath" placeholder="请输入关键字"></el-input>
-          </el-form-item>
-          <el-form-item label="时间范围：">
-            <el-date-picker
-                    v-model="logQuery.logtime"
-                    type="datetimerange"
-                    range-separator="至"
-                    start-placeholder="开始日期"
-                    end-placeholder="结束日期"
-                    value-format="yyyy-MM-dd HH:mm:ss"
-            >
-            </el-date-picker>
-          </el-form-item>
-          <el-form-item>
-            <el-button type="primary" @click="getLog">查询</el-button>
-            <!--          <el-button type="primary" @click="">重置</el-button>-->
-          </el-form-item>
-        </el-form>
+    
+    <!-- 任务日志 -->
+    <el-drawer
+        title="任务日志"
+        :visible.sync="logVisible"
+        direction="rtl"
+        size="50%">
+      <hr>
+      <el-form :inline="true" :model="logQuery" style="margin: 20px" size="mini">
+        <el-form-item label="文件名称：" >
+          <el-input v-model="logQuery.filename" placeholder="请输入关键字"></el-input>
+        </el-form-item>
+        <el-form-item label="风险路径：">
+          <el-input v-model="logQuery.filepath" placeholder="请输入关键字"></el-input>
+        </el-form-item>
+        <el-form-item label="时间范围：">
+          <el-date-picker
+              v-model="logQuery.logtime"
+              type="datetimerange"
+              range-separator="至"
+              start-placeholder="开始日期"
+              end-placeholder="结束日期"
+              value-format="yyyy-MM-dd HH:mm:ss">
+          </el-date-picker>
+        </el-form-item>
+        <el-form-item>
+          <el-button type="primary" @click="getLog">查询</el-button>
+          <el-button @click="resetQuery">重置</el-button>
+        </el-form-item>
+      </el-form>
+      
+      <div class="log-timeline">
         <el-timeline :reverse="true">
-          <el-timeline-item :timestamp="item.update_time" placement="top" v-for="(item,index) in auditLog" :key="index" color="#1077BD">
-            <el-card>
-              <el-descriptions  :column="2">
+          <el-timeline-item 
+              v-for="(item,index) in auditLog" 
+              :key="index" 
+              :timestamp="item.update_time" 
+              placement="top" 
+              color="#1077BD">
+            <el-card class="log-card">
+              <el-descriptions :column="2">
                 <el-descriptions-item label="文件名称">{{item.filename}}</el-descriptions-item>
-                <el-descriptions-item label="缺陷类型">{{item.vultype}}</el-descriptions-item>
                 <el-descriptions-item label="审核信息" :span="2">
-                  <div style="display: flex" v-if="item.new_value">
+                  <div style="display; flex" v-if="item.new_value">
                     <el-tag size="small" type="success" v-if="item.repair_status==='未修复'">{{item.repair_status}}</el-tag>
                     <el-tag size="small" type="info" v-else>{{item.repair_status}}</el-tag>
                     <span style="padding: 0 10px">|</span>
                     <el-tag size="small" type="danger" v-if="item.old_value==='高危'">{{item.old_value}}</el-tag>
                     <el-tag size="small" type="warning" v-else-if="item.old_value==='中危'">{{item.old_value}}</el-tag>
+                    <el-tag size="small" type="primary" v-else-if="item.old_value==='低危'">{{item.old_value}}</el-tag>
                     <el-tag size="small" type="info" v-else>{{item.old_value}}</el-tag>
                     <span style="padding: 0 10px">→</span>
                     <el-tag size="small" type="danger" v-if="item.new_value==='高危'">{{item.new_value}}</el-tag>
                     <el-tag size="small" type="warning" v-if="item.new_value==='中危'">{{item.new_value}}</el-tag>
-                    <el-tag size="small" type="info" v-if="item.new_value==='低危'">{{item.new_value}}</el-tag>
+                    <el-tag size="small" type="primary" v-if="item.new_value==='低危'">{{item.new_value}}</el-tag>
+                    <el-tag size="small" type="info" v-if="item.new_value==='误报'">{{item.new_value}}</el-tag>
                   </div>
                 </el-descriptions-item>
                 <el-descriptions-item label="风险路径" :span="2">{{item.filepath}}</el-descriptions-item>
                 <el-descriptions-item label="备注信息">{{item.remarks}}</el-descriptions-item>
-
               </el-descriptions>
             </el-card>
           </el-timeline-item>
         </el-timeline>
-      </el-drawer>
+      </div>
+      
+      <div class="all-data-tip">
+        <i class="el-icon-success"></i> 已加载全部 {{auditLog.length}} 条数据
+      </div>
+    </el-drawer>
 
-
-      <el-dialog title="新建任务" :visible.sync="getAlert" width="50%"  @close="resetForm">
-        <el-form ref="form" :model="form" label-width="120px" :rules="rules">
+    <!-- 统一的新建任务对话框 -->
+    <el-dialog 
+      title="新建任务"
+      :visible.sync="getAlert" 
+      width="50%"  
+      @close="resetForm"
+      :close-on-click-modal="false">
+      
+      <el-form ref="form" :model="form" label-width="120px" :rules="rules">
+        <!-- 只有在Git下载模式下才显示文件类型选择器 -->
+        <el-form-item label="待检测文件类型:" v-if="isload == 'Git下载'">
+          <el-radio-group v-model="fileType" @change="handleFileTypeChange">
+            <el-radio label="source">源代码</el-radio>
+            <el-radio label="excel">Excel清单</el-radio>
+          </el-radio-group>
+        </el-form-item>
+        <!-- 非Git下载模式或Git下载的源代码模式 -->
+        <div v-if="isload != 'Git下载' || fileType === 'source'">
           <!--本地上传-->
           <div v-if="isload == '本地上传'">
             <el-form-item label="任务名称:" prop="taskName">
               <el-input v-model="form.taskName"></el-input>
             </el-form-item>
-            <!--        <el-form-item label="任务描述:" prop="description">-->
-            <!--          <el-input v-model="form.description"></el-input>-->
-            <!--        </el-form-item>-->
             <el-form-item label="上传文件:" prop="">
               <el-upload
-                      class="upload-demo"
-                      drag
-                      :limit="1"
-                      :action="uploadURL"
-                      :data="uploadURLData"
-                      :on-preview="handlePreview"
-                      :on-remove="handleRemove"
-                      :on-success="uploadSuccess"
-                      :before-remove="beforeRemove"
-                      :file-list="uploadFileList"
+                  class="upload-demo"
+                  drag
+                  :limit="1"
+                  :action="uploadURL"
+                  :data="uploadURLData"
+                  :on-preview="handlePreview"
+                  :on-remove="handleRemove"
+                  :on-success="uploadSuccess"
+                  :before-remove="beforeRemove"
+                  :file-list="uploadFileList"
               >
                 <i class="el-icon-upload"></i>
                 <div class="el-upload__text" >将文件拖到此处，或<em>点击上传</em>（限一个）</div>
                 <div class="el-upload__tip" slot="tip">（只支持zip, tar, rar, 7z, jar,war格式，不要在压缩包里嵌套压缩包）</div>
               </el-upload>
             </el-form-item>
-            <div style="height:10px"></div>
+            <el-form-item label="扫描模式:">
+              <el-radio-group v-model="scanMode">
+                <el-radio 
+                  v-for="option in scanModeOptions" 
+                  :key="option.value" 
+                  :label="option.value"
+                  :title="option.desc">
+                  {{option.label}}
+                </el-radio>
+              </el-radio-group>
+              <div style="margin-top: 5px; color: #909399; font-size: 12px;">
+                {{getScanModeDesc(scanMode)}}
+              </div>
             </el-form-item>
           </div>
+          
           <!--git上传-->
-          <div v-else-if="isload == 'Git下载'" >
+          <div v-if="isload == 'Git下载'">
             <el-form-item label="URL:" prop="url_git">
               <el-input v-model="form.url_git" placeholder="示例：http://10.99.16.24:8083/mlight/java_vulnerabilities.git"></el-input>
             </el-form-item>
@@ -223,24 +323,30 @@
             <el-form-item label="密码:" prop="password_git">
               <el-input v-model="form.password_git"></el-input>
             </el-form-item>
-            <el-form-item label="密钥:">
-              <el-input v-model="form.key_git"></el-input>
-            </el-form-item>
+<!--            <el-form-item label="密钥:">-->
+<!--              <el-input v-model="form.key_git"></el-input>-->
+<!--            </el-form-item>-->
             <el-form-item label="branch:">
               <el-input v-model="form.branch"></el-input>
             </el-form-item>
-            <el-form-item>
-              <el-button type="primary" v-loading="loading" @click="pull_git()">拉取</el-button>
+            <el-form-item label="扫描模式:">
+              <el-radio-group v-model="scanMode">
+                <el-radio 
+                  v-for="option in scanModeOptions" 
+                  :key="option.value" 
+                  :label="option.value"
+                  :title="option.desc">
+                  {{option.label}}
+                </el-radio>
+              </el-radio-group>
+              <div style="margin-top: 5px; color: #909399; font-size: 12px;">
+                {{getScanModeDesc(scanMode)}}
+              </div>
             </el-form-item>
-            <el-form-item label="任务名称:"  prop="taskName"  v-if="pullSuccess">
-              <el-input v-model="form.taskName"></el-input>
-            </el-form-item>
-            <!--        <el-form-item label="任务描述:" v-if="pullSuccess">-->
-            <!--          <el-input v-model="form2.description"></el-input>-->
-            <!--        </el-form-item>-->
           </div>
+          
           <!--SVN上传-->
-          <div v-else-if="isload == 'SVN下载'">
+          <div v-if="isload == 'SVN下载'">
             <el-form-item label="URL:" prop="url_svn">
               <el-input v-model="form.url_svn" placeholder="示例：http://10.99.16.24:8083/mlight/java_vulnerabilities.git"></el-input>
             </el-form-item>
@@ -257,7 +363,8 @@
               <el-input v-model="form.taskName"></el-input>
             </el-form-item>
           </div>
-          <!--        FTP下载-->
+          
+          <!--FTP下载-->
           <div v-if="isload == 'FTP下载'">
             <el-form-item label="原主机" ></el-form-item>
             <el-form-item label="主机:" prop="source_ftp_host">
@@ -295,13 +402,128 @@
               <el-input v-model="form.taskName"></el-input>
             </el-form-item>
           </div>
-          <el-form-item  v-if="pullSuccess || pullSvnSuccess || pullFtpSuccess || isload == '本地上传'">
-            <el-button type="primary" @click="clickCreate">开始扫描</el-button>
-            <el-button @click="getAlert = false">取消</el-button>
+        </div>
+        
+        <!-- Excel清单模式（仅Git下载时显示） -->
+        <div v-else-if="isload == 'Git下载' && fileType === 'excel'">
+          <el-form-item label="上传Excel文件:" prop="excelFile">
+            <el-upload
+                class="upload-demo"
+                drag
+                :limit="1"
+                :action="batchUploadURL"
+                :data="uploadBatchURLData"
+                :on-success="handleBatchUploadSuccess"
+                :on-remove="handleBatchRemove"
+                :before-remove="beforeBatchRemove"
+                :file-list="batchFileList"
+                :before-upload="beforeBatchUpload"
+                accept=".xlsx,.xls"
+            >
+              <i class="el-icon-upload"></i>
+              <div class="el-upload__text">将Excel文件拖到此处，或<em>点击上传</em></div>
+              <div class="el-upload__tip" slot="tip">支持Excel文件(.xlsx, .xls)，文件应包含Git地址列表</div>
+            </el-upload>
+            <a href="${http_head}/static/plugin/Excel模板.xlsx"  download="Excel模板.xlsx"><h5>下载Excel模板</h5></a>
           </el-form-item>
-        </el-form>
-      </el-dialog>
-
+          <el-form-item label="扫描模式:">
+            <el-radio-group v-model="scanMode">
+              <el-radio 
+                v-for="option in scanModeOptions" 
+                :key="option.value" 
+                :label="option.value"
+                :title="option.desc">
+                {{option.label}}
+              </el-radio>
+            </el-radio-group>
+            <div style="margin-top: 5px; color: #909399; font-size: 12px;">
+              {{getScanModeDesc(scanMode)}}
+            </div>
+          </el-form-item>
+          <!-- <el-form-item label="Git账号:" prop="username_git">
+            <el-input v-model="form.username_git"></el-input>
+          </el-form-item>
+          
+          <el-form-item label="Git密码:" prop="password_git">
+            <el-input v-model="form.password_git" type="password"></el-input>
+          </el-form-item>
+          
+          <el-form-item label="密钥:">
+            <el-input v-model="form.key_git"></el-input>
+          </el-form-item>
+          
+          <el-form-item label="branch:">
+            <el-input v-model="form.branch"></el-input>
+          </el-form-item> -->
+          
+          <!-- Git地址列表显示 -->
+          <el-form-item label="Git地址列表:" v-if="gitUrlList.length > 0">
+            <el-card>
+              <div slot="header">
+                <span>共 {{gitUrlList.length}} 个Git地址</span>
+                <el-button style="float: right; padding: 3px 0" type="text" @click="clearGitUrlList">清空列表</el-button>
+              </div>
+              <el-table :data="gitUrlList" height="200" border style="width: 100%">
+                <el-table-column prop="url" label="Git地址" show-overflow-tooltip></el-table-column>
+                <!-- 添加分支列 -->
+                <el-table-column prop="branch" label="分支" width="120" show-overflow-tooltip>
+                  <template slot-scope="scope">
+                    <span v-if="scope.row.branch">{{ scope.row.branch }}</span>
+                    <span v-else style="color: #909399;">默认分支</span>
+                  </template>
+                </el-table-column>
+                <el-table-column prop="status" label="状态" width="100">
+                  <template slot-scope="scope">
+                    <el-tag v-if="scope.row.status === '等待中'" type="info">等待中</el-tag>
+                    <el-tag v-else-if="scope.row.status === '处理中'" type="warning">处理中</el-tag>
+                    <el-tag v-else-if="scope.row.status === '成功'" type="success">成功</el-tag>
+                    <el-tag v-else-if="scope.row.status === '失败'" type="danger">失败</el-tag>
+                  </template>
+                </el-table-column>
+                <el-table-column label="进度" width="80">
+                  <template slot-scope="scope">
+                    <span v-if="scope.row.progress !== undefined">{{scope.row.progress}}%</span>
+                    <span v-else>-</span>
+                  </template>
+                </el-table-column>
+                <el-table-column label="消息" width="120">
+                  <template slot-scope="scope">
+                    <span v-if="scope.row.message">{{scope.row.message}}</span>
+                    <span v-else>-</span>
+                  </template>
+                </el-table-column>
+              </el-table>
+            </el-card>
+          </el-form-item>
+          
+          <!-- 总体进度条 -->
+          <el-form-item label="总体进度:" v-if="totalProgress > 0">
+            <div style="display: flex; align-items: center;">
+              <el-progress 
+                :percentage="totalProgress" 
+                :status="batchStatus === 'completed' ? 'success' : batchStatus === 'error' ? 'exception' : ''"
+                style="flex: 1; margin-right: 10px;">
+              </el-progress>
+              <span>{{processedCount}}/{{gitUrlList.length}}</span>
+            </div>
+          </el-form-item>
+        </div>
+        
+        <!-- 操作按钮 -->
+        <el-form-item>
+          <el-button 
+            type="primary" 
+            @click="handleSubmit" 
+            :loading="batchLoading"
+            :disabled="(isload == '本地上传' && !isUploadCompleted) ||
+             (isload == 'Git下载' && fileType === 'excel' && gitUrlList.length === 0) ||
+             batchLoading">
+            开始扫描
+          </el-button>
+          <el-button @click="getAlert = false">取消</el-button>
+        </el-form-item>
+      </el-form>
+    </el-dialog>
 
     </el-card>
 
@@ -315,7 +537,5 @@
 <script src="../../../../assets/js/mainData.js"></script>
 <script src="markList.js" ></script>
 
-
 </body>
-<!--{% endraw %}-->
 </html>

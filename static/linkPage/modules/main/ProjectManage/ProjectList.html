@@ -6,7 +6,7 @@
     <meta name="viewport"
           content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
-<!--    <link rel="stylesheet" href="../../../../assets/libs/layui/css/layui.css" />-->
+    <!--    <link rel="stylesheet" href="../../../../assets/libs/layui/css/layui.css" />-->
     <!--<link rel="stylesheet" href="../../../js/element/index.css">-->
     <link rel="stylesheet" href="../../../../assets/libs/element/index.css">
 
@@ -62,6 +62,26 @@
             margin: 10px 50px 10px 0;
         }
 
+
+        .batch-action-bar {
+            background: #fff;
+            padding: 10px 10px;
+            border-radius: 4px;
+            margin-bottom: 5px;
+            box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+            display: flex;
+            align-items: center;
+        }
+
+        .selected-count {
+            margin-left: 15px;
+            font-size: 14px;
+            color: #409EFF;
+        }
+
+        .el-table .el-table__header-wrapper .el-checkbox {
+            display: inline-block;
+        }
 
     </style>
 </head>
@@ -122,13 +142,33 @@
             </el-form>
         </div>
     </el-row>
+    <!-- 在查询表单下方添加批量操作区 -->
+    <el-row :gutter="20" style="margin: 20px">
+        <el-col :span="24">
+            <div class="batch-action-bar">
+                <el-button
+                    type="danger"
+                    :disabled="multipleSelection.length === 0"
+                    @click="batchDeleteConfirm"
+                    icon="el-icon-delete">
+                    批量删除
+                </el-button>
+                <span class="selected-count" v-if="multipleSelection.length > 0">
+                已选择 {{multipleSelection.length}} 个项目
+            </span>
+            </div>
+        </el-col>
+    </el-row>
+
 
     <el-card style="margin: 20px">
         <div class="head">
             项目列表
         </div>
         <template>
-            <el-table  :data="tableData" class="table" :header-cell-style="{textAlign:'center'}" :cell-style="{textAlign:'center'}" tooltip-effect="dark" style="width: 100%"  :default-sort = "{prop: 'createTime', order: 'descending'}">
+            <el-table  :data="tableData" class="table" :header-cell-style="{textAlign:'center'}" :cell-style="{textAlign:'center'}" tooltip-effect="dark" style="width: 100%"  :default-sort = "{prop: 'createTime', order: 'descending'}" @selection-change="handleSelectionChange">
+                <!-- 添加多选列 -->
+                <el-table-column type="selection" width="55"></el-table-column>
                 <el-table-column prop="itemname" label="项目名称" ></el-table-column>
                 <el-table-column prop="description" label="项目描述" width="400" show-overflow-tooltip></el-table-column>
                 <el-table-column prop="language" label="扫描语言" ></el-table-column>
@@ -137,7 +177,7 @@
                     <template slot-scope="scope">
                         <el-tag effect="dark" type="danger">{{scope.row.high}}</el-tag>
                         <el-tag effect="dark" type="warning">{{scope.row.med}}</el-tag>
-                        <el-tag effect="dark" type="success">{{scope.row.low}}</el-tag>
+                        <el-tag effect="dark" type="primary">{{scope.row.low}}</el-tag>
                     </template>
                 </el-table-column>
 
@@ -151,15 +191,15 @@
                 </el-table-column>
             </el-table>
             <el-pagination
-                    background
-                    layout="total, sizes, prev, pager, next, jumper"
-                    :total="count"
-                    @current-change="handleCurrentChange"
-                    @size-change="handleSizeChange"
-                    :page-sizes="[5,10,20]"
-                    :current-page="currentPage"
-                    :page-size="pageSize"
-                    style="text-align: center">
+                background
+                layout="total, sizes, prev, pager, next, jumper"
+                :total="count"
+                @current-change="handleCurrentChange"
+                @size-change="handleSizeChange"
+                :page-sizes="[5,10,20]"
+                :current-page="currentPage"
+                :page-size="pageSize"
+                style="text-align: center">
             </el-pagination>
         </template>
 
@@ -174,17 +214,27 @@
                 </el-form-item>
                 <el-form-item label="代码语言:" prop="language">
                     <el-radio-group v-model="form.language">
-<!--                        <el-radio label="java"></el-radio>-->
-<!--                        <el-radio label="android"></el-radio>-->
-<!--                        <el-radio label="javascript"></el-radio>-->
-<!--                        <el-radio label="objective-c" ></el-radio>-->
-<!--                        <el-radio label="go"></el-radio>-->
-<!--                        <el-radio label="python"></el-radio>-->
-<!--                        <el-radio label="c/c++" ></el-radio>-->
-<!--                        <el-radio label="php" ></el-radio>-->
-<!--                        <el-radio label="ruby" ></el-radio>-->
-<!--                        <el-radio label="SQL" ></el-radio>-->
- 					<el-radio v-for="(language, index) in languages" :key="index" :label="language">{{language}}</el-radio>
+                        <!--                        <el-radio label="java"></el-radio>
+                        -->
+                        <!--                        <el-radio label="android"></el-radio>
+                        -->
+                        <!--                        <el-radio label="javascript"></el-radio>
+                        -->
+                        <!--                        <el-radio label="objective-c" ></el-radio>
+                        -->
+                        <!--                        <el-radio label="go"></el-radio>
+                        -->
+                        <!--                        <el-radio label="python"></el-radio>
+                        -->
+                        <!--                        <el-radio label="c/c++" ></el-radio>
+                        -->
+                        <!--                        <el-radio label="php" ></el-radio>
+                        -->
+                        <!--                        <el-radio label="ruby" ></el-radio>
+                        -->
+                        <!--                        <el-radio label="SQL" ></el-radio>
+                        -->
+                        <el-radio v-for="(language, index) in languages" :key="index" :label="language">{{language}}</el-radio>
                     </el-radio-group>
                 </el-form-item>
                 <el-form-item label="下载来源:" prop="source">
@@ -204,7 +254,7 @@
 
     </el-card>
 
-<!--    <router-view></router-view>-->
+    <!--    <router-view></router-view>-->
 </div>
 
 <script src="../../../../assets/libs/vue/vue.js"></script>

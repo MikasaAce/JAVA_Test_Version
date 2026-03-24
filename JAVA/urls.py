@@ -8,7 +8,10 @@ from app.api.access_log import access_log
 from app.api.muti_model_api import model_api
 from app.api.default_model_api import default_model_api
 from app.api.create_process import create_process
-from app.api.ccn import getCCN
+
+from oauth2_provider import urls as oauth2_urls
+from django.contrib import admin
+from oauth2_provider.decorators import protected_resource
 
 urlpatterns = [
     path('', views.index, name='index'),
@@ -20,7 +23,8 @@ urlpatterns = [
     path('access_log/', access_log.index, name='access_log'),
     path('Muti/', M_app.index, name='Muti'),
     path('rules/', a.index, name='rules'),
-    path('ccn/', getCCN.index, name='ccn'),
     path('celery-progress/', include('celery_progress.urls')),
 
+    path("o/", include(oauth2_urls)),
+    path('admin/', admin.site.urls),
 ]

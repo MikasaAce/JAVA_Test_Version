@@ -10,6 +10,7 @@ def get_knowledge_base(req):
 
     # 获取参数，如果参数不存在则设置为空
     cwe_name = req.POST.get('name', '')  # 使用 get 方法，如果不存在则返回空字符串
+    cwe_level = req.POST.get('level', '')  # 获取漏洞等级参数
     page = int(req.POST.get('page', 1))  # 默认值为 1
     results_per_page = int(req.POST.get('rows', 10))  # 默认值为 10
 
@@ -17,11 +18,14 @@ def get_knowledge_base(req):
     offset = (page - 1) * results_per_page
 
     # 查询总结果数量
-    count_sql = """SELECT COUNT(*)  FROM subVulList"""
+    count_sql = """SELECT COUNT(*) FROM subVulList"""
     conditions = []
 
     if cwe_name:
         conditions.append("subVulList.name_CN like '%%%s%%'" % cwe_name)
+
+    if cwe_level:
+        conditions.append("subVulList.level = '%s'" % cwe_level)
 
     if conditions:
         count_sql += " WHERE " + " AND ".join(conditions)
@@ -29,7 +33,8 @@ def get_knowledge_base(req):
     cursor.execute(count_sql)
     total_count = cursor.fetchone()[0]
 
-    sql = """ SELECT subVulList.id,subVulList.name_CN as name,subVulList.description,subVulList.level FROM subVulList """
+    sql = """SELECT subVulList.id, subVulList.name_CN as name, 
+             subVulList.description, subVulList.level FROM subVulList """
 
     if conditions:
         sql += " WHERE " + " AND ".join(conditions)
@@ -55,6 +60,7 @@ def get_knowledge_base(req):
     cursor.close()
     conn.close()
     return HttpResponse(json.dumps(jsondata, ensure_ascii=False))
+
 
 def insert_knowledge(req):
     """

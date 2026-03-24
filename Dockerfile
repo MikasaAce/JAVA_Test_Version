@@ -12,7 +12,7 @@ RUN apt-get update && \
     pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple/
 
 # 暴露端口
-EXPOSE 8088
+EXPOSE 8089
 
 # 添加启动脚本
 COPY start.sh .

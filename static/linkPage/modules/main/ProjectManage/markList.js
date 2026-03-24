@@ -28,6 +28,8 @@ var vm = new Vue({
     this.getTableData()
     this.getConfig()
     this.getUpload()
+    // 初始化文件类型
+    this.fileType = 'source';
   },
   data() {
     return {
@@ -37,6 +39,9 @@ var vm = new Vue({
         project_name:''
       },
       isload :'本地上传',
+      // 新增：上传完成状态
+      isUploadCompleted: false, // 上传和解压是否完成
+      fileType: 'source', // 文件类型：source-源代码, excel-Excel清单
       tableData: [],
       currentPage: 1, //当前页 刷新后默认显示第一页
       oldcurrentPage: 1,
@@ -51,7 +56,14 @@ var vm = new Vue({
       getAlert:false,
       pullSuccess:false,
       pullFtpSuccess:false,
-
+      // 扫描模式选择
+      scanMode: 'rule5', // 默认快速扫描
+      defaultScanMode: 'rule5', // 存储从get_Pol获取的默认模式
+      scanModeOptions: [
+        { label: '快速扫描', value: 'rule5', desc: '扫描速度快，适合常规检测' },
+        { label: '降误报模型', value: 'rule6', desc: '降低误报率，结果更准确' },
+        { label: '思考模式', value: 'rule7', desc: '深度分析，检测更全面' }
+      ],
       form:{
         taskName:'',
         description:'',
@@ -81,8 +93,16 @@ var vm = new Vue({
       isShowList: true,
       fileListTrain: [],
       rules:{
+        // 修改任务名称验证规则，只在非Git下载源代码模式下必填
         taskName: [
-          { required: true, message: '请输入任务名称', trigger: 'blur' },
+          { 
+            required: function() {
+              // 只在非Git下载源代码模式下要求必填
+              return !(this.isload == 'Git下载' && this.fileType === 'source');
+            }, 
+            message: '请输入任务名称', 
+            trigger: 'blur' 
+          },
         ],
         // language: [
         //   { required: true, message: '请选择代码语言', trigger: 'blur' },
@@ -152,9 +172,201 @@ var vm = new Vue({
       existingItem:[],
       ifDeepSeek:'false',
       delFlag:false,
+
+      // 新增数据
+      multipleSelection: [], // 存储选中的任务
+      batchDeleteLoading: false, // 批量删除加载状态
+
+      // 批量新建相关数据
+      batchDialogVisible: false,
+      batchForm: {
+        username_git: '',
+        password_git: '',
+        key_git: '',
+        branch: ''
+      },
+      batchFileList: [],
+      // batchUploadURL: http_head + '/process_excel_and_extract_git_urls/',
+      batchUploadURL:http_head + '/Muti/',
+      uploadBatchURLData:{method:'decompression_excel'},
+      gitUrlList: [], // 存储从Excel中提取的Git地址
+      batchLoading: false,
+      totalProgress: 0, // 总体进度
+      processedCount: 0, // 已处理数量
+      batchStatus: '', // 批量处理状态: processing, completed, error
+      currentProcessingIndex: 0, // 当前处理的索引
     }
   },
   methods: {
+    // 获取扫描模式描述
+    getScanModeDesc(mode) {
+      const option = this.scanModeOptions.find(opt => opt.value === mode);
+      return option ? option.desc : '';
+    },
+
+    // 添加文件类型切换处理方法
+    handleFileTypeChange() {
+      // 当文件类型改变时重置相关表单
+      if (this.fileType === 'source') {
+        // 切换到源代码模式时重置批量相关数据
+        this.gitUrlList = [];
+        this.totalProgress = 0;
+        this.processedCount = 0;
+        this.batchStatus = '';
+      } else {
+        // 切换到Excel模式时重置单个任务相关数据
+        this.pullSuccess = false;
+      }
+    },
+
+    // 修改handleSubmit方法，处理Git下载的提交逻辑
+    handleSubmit() {
+      if (this.isload == 'Git下载' && this.fileType === 'excel') {
+        // Excel清单模式 - 批量处理
+        this.batchPullGit();
+      } else if (this.isload == 'Git下载' && this.fileType === 'source') {
+        // Git下载的源代码模式 - 调用pull_git_and_scan（包含拉取和扫描）
+        this.pull_git_and_scan();
+      } else {
+        // 其他模式 - 直接开始扫描
+        this.clickCreate();
+      }
+    },
+
+    // 新增方法 - Git拉取和扫描集成
+    pull_git_and_scan() {
+      this.loading = true;
+      var that = this;
+      
+      this.$refs.form.validate((valid) => {
+        if (valid) {
+          // 先执行Git拉取
+          var folder_path = this.getPath();
+          $.ajax({
+            url: (http_head + '/Muti/'),
+            data: {
+              method: 'clone_git_repository',
+              url: that.form.url_git,
+              folder_path: folder_path,
+              token: that.form.key_git,
+              branch: that.form.branch,
+              username: that.form.username_git,
+              password: that.form.password_git,
+              item_name: that.itemname,
+            },
+            type: 'post',
+            dataType: 'JSON',
+            success: function(res) {
+              console.log('Git拉取响应:', res);
+              
+              if (res.code === '200') {
+                // 使用后端返回的project_name作为任务名称
+                that.form.taskName = res.project_name;
+                that.folder_name_git = res.folder_name;
+                that.url_git = res.url_git;
+                
+                mymessage.success("代码拉取成功，开始扫描...");
+                
+                // 拉取成功后立即开始扫描
+                var strategy = that.policy.split(',');
+                if (strategy[0] === 'Muti_transformer') {
+                  that.Muti_detection();
+                } else {
+                  that.Muti_cus_detection(strategy[0]);
+                }
+              } else {
+                that.loading = false;
+                mymessage.error(res.msg || "拉取失败");
+              }
+            },
+            error: function(err) {
+              console.log(err);
+              that.loading = false;
+              mymessage.error("拉取失败");
+            }
+          });
+        } else {
+          this.loading = false;
+          mymessage.error("请先填写必要信息");
+        }
+      });
+    },
+
+    // 新增方法 - 处理表格选择项变化
+    handleSelectionChange(val) {
+      this.multipleSelection = val;
+    },
+
+    // 新增方法 - 批量删除确认
+    batchDeleteConfirm() {
+      if (this.multipleSelection.length === 0) {
+        this.$message.warning('请至少选择一个任务');
+        return;
+      }
+
+      this.$confirm(`确定要删除选中的 ${this.multipleSelection.length} 个任务吗?`, '提示', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning',
+        beforeClose: (action, instance, done) => {
+          if (action === 'confirm') {
+            instance.confirmButtonLoading = true;
+            this.batchDeleteTasks().finally(() => {
+              instance.confirmButtonLoading = false;
+              done();
+            });
+          } else {
+            done();
+          }
+        }
+      }).catch(() => {
+        this.$message.info('已取消删除');
+      });
+    },
+
+    // 新增方法 - 执行批量删除
+    batchDeleteTasks() {
+      this.batchDeleteLoading = true;
+      const taskIds = this.multipleSelection.map(item => item.taskid).join(',');
+
+      return new Promise((resolve, reject) => {
+        $.ajax({
+          url: (http_head + '/login/'),
+          type: 'post',
+          data: {
+            method: 'tasks_batch_delete',
+            taskid_list: taskIds
+          },
+          dataType: 'JSON',
+          success: (res) => {
+            if (res.code === '200') {
+              this.$message.success(res.msg);
+              this.getTableData(); // 刷新列表
+              this.multipleSelection = []; // 清空选择
+
+              // 清除本地存储中的进度
+              const savedProgress = JSON.parse(localStorage.getItem("taskProgress") || "{}");
+              this.multipleSelection.forEach(task => {
+                delete savedProgress[task.taskid];
+              });
+              localStorage.setItem("taskProgress", JSON.stringify(savedProgress));
+            } else {
+              this.$message.error(res.msg || '删除失败');
+            }
+            resolve();
+          },
+          error: (err) => {
+            console.error(err);
+            this.$message.error('批量删除请求失败');
+            reject(err);
+          },
+          complete: () => {
+            this.batchDeleteLoading = false;
+          }
+        });
+      });
+    },
+
     goback(){
       sessionStorage.removeItem('config');
       sessionStorage.removeItem('itemname');
@@ -190,6 +402,25 @@ var vm = new Vue({
           console.log('policy:',res)
           if(res) {
             that.policy = res.policy
+            
+            // 根据后端返回的policy设置默认扫描模式
+            let defaultMode = 'rule5'; // 默认值
+            
+            // 解析policy字符串，设置对应的扫描模式
+            if (res.policy.includes('rule7')) {
+              defaultMode = 'rule7'; // 思考模式
+            } else if (res.policy.includes('rule6')) {
+              defaultMode = 'rule6'; // 降误报模型
+            } else if (res.policy.includes('rule5')) {
+              defaultMode = 'rule5'; // 快速扫描
+            }
+            // 如果有其他策略映射关系，可以在这里添加
+            
+            // 设置默认扫描模式
+            that.defaultScanMode = defaultMode;
+            that.scanMode = defaultMode;
+            
+            console.log('根据策略设置默认扫描模式为:', defaultMode);
           }
         },
         error: function (err) {
@@ -198,15 +429,23 @@ var vm = new Vue({
       })
     },
     //上传成功时的钩子函数
-    uploadSuccess(response,file,fileList){
-      // console.log(fileList)
+    uploadSuccess(response, file, fileList){
       console.log(response)
       this.folder_name = response.folder_name
+      // 根据接口返回判断是否完成
+      if (response.code === '200') {
+        this.isUploadCompleted = true;
+        this.$message.success('文件上传并解压成功');
+      } else {
+        this.isUploadCompleted = false;
+        this.$message.error(response.msg || '上传失败');
+      }
     },
     handleRemove(file, fileList) {
       console.log(fileList);
-      // this.uploadFileList = fileList
-      // this.dataForm.file = fileList
+      // 文件被移除时重置上传完成状态
+      this.isUploadCompleted = false;
+      this.folder_name = '';
     },
     handlePreview(file) {
       console.log(file);
@@ -231,6 +470,11 @@ var vm = new Vue({
     },
     // 点击“立即创建”
     clickCreate(){
+      // 如果是本地上传模式，检查上传是否完成
+      if (this.isload == '本地上传' && !this.isUploadCompleted) {
+        this.$message.warning('请先上传并解压文件');
+        return;
+      }
       var folder_path = this.getPath()
       console.log(folder_path)
       var strategy = this.policy.split(',')
@@ -238,7 +482,7 @@ var vm = new Vue({
         this.Muti_detection()
       } else {
         // console.log(this.language)
-          this.Muti_cus_detection(strategy[0])
+        this.Muti_cus_detection(strategy[0])
       }
     },
 
@@ -386,29 +630,48 @@ var vm = new Vue({
     async Muti_cus_detection(type) {
       var folder_path = this.getPath();
       var that = this;
-      if (this.form.taskName == '') {
+
+      // 只在非Git下载源代码模式下检查任务名称
+      if (!(this.isload == 'Git下载' && this.fileType === 'source') && this.form.taskName == '') {
         mymessage.error("尚未填写任务名！");
         return false;
       }
 
       let model = '';
       let deepseek = 'false';
-      if (type === 'rule3') {
-        model = 'fortify';
-      } else
-      if (type === 'rule5') {
-        deepseek = 'false';
-        model = 'rule'
-      } else if (type === 'rule6') {
-        deepseek = 'true';
-        model = 'rule'
-      } else if (type === 'Muti_transformer') {
-        model = 'small_model'
-        deepseek = 'false'
-      } else if (type === 'rule7') {
-        model = 'r4'
-        deepseek = 'true'
+      switch (this.scanMode) {
+        case 'rule5': // 快速扫描
+          deepseek = 'false';
+          model = 'rule';
+          break;
+        case 'rule6': // 降误报模型
+          deepseek = 'true';
+          model = 'rule';
+          break;
+        case 'rule7': // 思考模式
+          deepseek = 'true';
+          model = 'r4';
+          break;
+        default:
+          deepseek = 'false';
+          model = 'rule';
       }
+      // if (type === 'rule3') {
+      //   model = 'fortify';
+      // } else
+      // if (type === 'rule5') {
+      //   deepseek = 'false';
+      //   model = 'rule'
+      // } else if (type === 'rule6') {
+      //   deepseek = 'true';
+      //   model = 'rule'
+      // } else if (type === 'Muti_transformer') {
+      //   model = 'small_model'
+      //   deepseek = 'false'
+      // } else if (type === 'rule7') {
+      //   model = 'r4'
+      //   deepseek = 'true'
+      // }
 
       this.$refs.form.validate(async (valid) => {
         if (valid) {
@@ -434,16 +697,19 @@ var vm = new Vue({
                 branch: that.form.branch ? that.form.branch : '',
                 deepseek: deepseek,
                 model: model,
+                url_git: that.url_git
               },
               type: 'post',
               dataType: 'JSON',
             });
 
             console.log(res);
-            if (res.code === '500') {
+            if (res.code === '500'|| res.code === '400') {
               that.ifSuccess = false;
               mymessage.error(res.msg);
             }
+            // 扫描成功后重置为默认模式
+            that.scanMode = that.defaultScanMode;
           } catch (err) {
             console.log(err);
             mymessage.error("创建失败");
@@ -482,6 +748,7 @@ var vm = new Vue({
           mymessage.success("拉取成功！")
           that.folder_name_git = res.folder_name
           that.url_git = res.url_git
+          console.log(that.url_git)
         },
         error: function (err) {
           console.log(err)
@@ -585,13 +852,15 @@ var vm = new Vue({
         target_ftp_password:'',
         target_remote_directory:'',
       }
-      this.uploadFileList = []
-      this.pullSuccess = false
-
+      this.uploadFileList = [];
+      this.pullSuccess = false;
+      // 重置上传完成状态
+      this.isUploadCompleted = false;
+      // 重置文件类型为默认值
+      this.fileType = 'source';
+      // 重置扫描模式为默认值
+      this.scanMode = this.defaultScanMode;
     },
-
-
-    //deepSeekdeepSeekdeepSeekdeepSeekdeepSeekdeepSeekdeepSeekdeepSeekdeepSeekdeepSeekdeepSeekdeepSeekdeepSeekdeepSeek
 
     // deepSeek扫描 svn
     deepScansvn(){
@@ -786,7 +1055,7 @@ var vm = new Vue({
             // if (JSON.stringify(newData) !== JSON.stringify(that.tableData)) {
             // 浅比较
             if (!that.tableData || that.tableData.length !== newData.length || that.delFlag === true || that.oldcurrentPage != that.currentPage ||
-                that.tableData.some((item, index) => item.statues !== newData[index].statues)) {
+              that.tableData.some((item, index) => item.statues !== newData[index].statues)) {
               // console.log("数据发生变化，更新表格");
               that.tableData = newData; // 只有在数据变化时更新
               that.count = res.count;
@@ -824,7 +1093,7 @@ var vm = new Vue({
             });
             // 检查是否有未完成的任务
             const hasIncompleteTasks = newData.some(
-                (item) => item.statues !== "检测完成" && item.statues !== "检测失败"
+              (item) => item.statues !== "检测完成" && item.statues !== "检测失败"
             );
             // console.log('是否有正在检测', hasIncompleteTasks);
 
@@ -889,12 +1158,28 @@ var vm = new Vue({
 
     //删除
     delopen(row) {
+      const that = this;
       this.$confirm('此操作将删除该任务, 是否继续?', '提示', {
         confirmButtonText: '确定',
         cancelButtonText: '取消',
-        type: 'warning'
-      }).then(() => {
-        this.del(row)
+        type: 'warning',
+        beforeClose: (action, instance, done) => {
+          if (action === 'confirm') {
+            instance.confirmButtonLoading = true;
+            that.del(row)
+              .then(() => {
+                done();
+              })
+              .catch(() => {
+                done();
+              })
+              .finally(() => {
+                instance.confirmButtonLoading = false;
+              });
+          } else {
+            done();
+          }
+        }
       }).catch(() => {
         this.$message({
           type: 'info',
@@ -902,37 +1187,42 @@ var vm = new Vue({
         });
       });
     },
-    del(row){
+    del(row) {
       console.log(row)
       var that = this;
-      $.ajax({
-        url:  (http_head + '/login/'),
-        data:{
-          method : 'task_delete',
-          taskid : row.taskid,
-        },
-        type : 'post',
-        dataType : 'JSON',
-        success : function (res){
-          console.log(res);
-          if (res.code == '200'){
-            mymessage.success(res.msg)
-            //删除之后下一个新增的任务,任务id和上一个一样，会保持删掉的任务的进度，所以得置0
-            const savedProgress = JSON.parse(localStorage.getItem("taskProgress") || "{}");
-            savedProgress[row.taskid] = 0;
-            localStorage.setItem("taskProgress", JSON.stringify(savedProgress));
-          }else{
-            mymessage.error(res.msg)
-          }
-          that.delFlag = true
-          that.getTableData()
+      return new Promise((resolve, reject) => {
+        $.ajax({
+          url: (http_head + '/login/'),
+          data: {
+            method: 'task_delete',
+            taskid: row.taskid,
+          },
+          type: 'post',
+          dataType: 'JSON',
+          success: function(res) {
+            console.log(res);
+            if (res.code == '200') {
+              mymessage.success(res.msg)
+              //删除之后下一个新增的任务,任务id和上一个一样，会保持删掉的任务的进度，所以得置0
+              const savedProgress = JSON.parse(localStorage.getItem("taskProgress") || "{}");
+              savedProgress[row.taskid] = 0;
+              localStorage.setItem("taskProgress", JSON.stringify(savedProgress));
 
-        },
-        error: function (err) {
-          console.log(err)
-          mymessage.error("删除失败")
-        }
-      })
+              that.delFlag = true
+              that.getTableData()
+              resolve(); // 成功时resolve
+            } else {
+              mymessage.error(res.msg)
+              reject(res.msg); // 失败时reject
+            }
+          },
+          error: function(err) {
+            console.log(err)
+            mymessage.error("删除失败")
+            reject(err); // 出错时reject
+          }
+        });
+      });
     },
 
     // 重新扫描
@@ -983,9 +1273,10 @@ var vm = new Vue({
           template: 'Developer Workbook',
           version: 'Developer Workbook',
           language: row.language,
-          branch: '',
+          branch: row.branch,
           model: md,
           deepseek: ds,
+          url_git: row.url_git || ''  // 如果 row.url_git 存在就传递，否则传空字符串
         },
         type: 'post',
         dataType: 'JSON',
@@ -1029,7 +1320,8 @@ var vm = new Vue({
         type : 'post',
         dataType : 'JSON',
         success : function (res){
-          // console.log(res);
+          console.log(111);
+          console.log(res);
           if(res.data){
             res.data.forEach(item => {
               const date = new Date(item.update_time);
@@ -1054,14 +1346,327 @@ var vm = new Vue({
       })
     },
 
-  },
   beforeDestroy() {
     if (this.pollingInterval) {
       clearInterval(this.pollingInterval);
     }
-  }
+  },
 
+  // 批量上传前的验证
+  beforeBatchUpload(file) {
+    const isExcel = file.type === 'application/vnd.ms-excel' || 
+                   file.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+    const isLt10M = file.size / 1024 / 1024 < 10;
+    
+    if (!isExcel) {
+      this.$message.error('只能上传Excel文件!');
+      return false;
+    }
+    if (!isLt10M) {
+      this.$message.error('文件大小不能超过10MB!');
+      return false;
+    }
+    return true;
+  },
+  
+  // 批量上传成功处理方法
+  handleBatchUploadSuccess(response, file, fileList) {
+    console.log('批量上传响应:', response);
+    if (response.code === '200') {
+      this.$message.success(response.msg || `成功提取 ${response.count} 个Git仓库信息`);
+      // 使用后端返回的git_repos数据，适配新的字段名
+      this.gitUrlList = response.git_repos.map(item => ({
+        url: item.git_url,  // 使用git_url字段
+        username: item.username || '',
+        password: item.password || '',
+        key: item.key || '',
+        branch: item.branch || '',  // 确保分支信息被正确映射
+        row_number: item.row_number, // 保留行号信息
+        status: '等待中',
+        progress: 0,
+        message: ''
+      }));
+    } else {
+      this.$message.error(response.msg || '文件处理失败');
+    }
+  },
+  
+  // 批量文件移除
+  handleBatchRemove(file, fileList) {
+    this.gitUrlList = [];
+    this.totalProgress = 0;
+    this.processedCount = 0;
+  },
+  
+  beforeBatchRemove(file, fileList) {
+    return this.$confirm(`确定移除 ${file.name}？这将清空Git地址列表`);
+  },
+  
+  // 清空Git地址列表
+  clearGitUrlList() {
+    this.$confirm('确定要清空Git地址列表吗？', '提示', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    }).then(() => {
+      this.gitUrlList = [];
+      this.totalProgress = 0;
+      this.processedCount = 0;
+    });
+  },
+  
+  // 重置批量表单
+  resetBatchForm() {
+    this.batchForm = {
+      username_git: '',
+      password_git: '',
+      key_git: '',
+      branch: ''
+    };
+    this.batchFileList = [];
+    this.gitUrlList = [];
+    this.totalProgress = 0;
+    this.processedCount = 0;
+    this.batchStatus = '';
+    this.currentProcessingIndex = 0;
+  },
+  
+  // 批量拉取Git仓库
+  async batchPullGit() {
+    if (this.gitUrlList.length === 0) {
+      this.$message.warning('请先上传Excel文件');
+      return;
+    }
+    
+    this.batchLoading = true;
+    this.batchStatus = 'processing';
+    this.processedCount = 0;
+    this.totalProgress = 0;
+    
+    // 依次处理每个Git地址
+    for (let i = 0; i < this.gitUrlList.length; i++) {
+      this.currentProcessingIndex = i;
+      const gitItem = this.gitUrlList[i];
+      
+      try {
+        // 更新状态为处理中
+        gitItem.status = '处理中';
+        gitItem.progress = 0;
+        
+        // 模拟进度更新（实际调用接口时会根据实际情况更新）
+        const progressInterval = setInterval(() => {
+          if (gitItem.progress < 90) {
+            gitItem.progress += 10;
+          }
+        }, 500);
+        
+        // 调用单个Git仓库处理接口
+        const result = await this.processSingleGitRepository(gitItem, i);
+        
+        clearInterval(progressInterval);
+        
+        if (result.success) {
+          gitItem.status = '成功';
+          gitItem.progress = 100;
+          gitItem.message = '处理完成';
+        } else {
+          gitItem.status = '失败';
+          gitItem.progress = 100;
+          gitItem.message = result.message || '处理失败';
+        }
+        
+      } catch (error) {
+        gitItem.status = '失败';
+        gitItem.progress = 100;
+        gitItem.message = '请求失败';
+        console.error(`处理Git地址失败: ${gitItem.url}`, error);
+      }
+      
+      // 更新总体进度
+      this.processedCount++;
+      this.totalProgress = Math.round((this.processedCount / this.gitUrlList.length) * 100);
+      
+      // 短暂延迟，避免请求过于频繁
+      await this.delay(1000);
+    }
+    
+    this.batchLoading = false;
+    this.batchStatus = 'completed';
+    this.$message.success('批量处理完成');
+    // 批量扫描完成后重置为默认模式
+    this.scanMode = this.defaultScanMode;
+    
+    // 处理完成后刷新任务列表
+    setTimeout(() => {
+      this.getTableData();
+    }, 1000);
+  },
+  
+  // 处理单个Git仓库
+  processSingleGitRepository(gitItem, index) {
+    return new Promise((resolve) => {
+      const that = this;
+      
+      // 使用从Excel中获取的认证信息
+      const username = gitItem.username;
+      const password = gitItem.password;
+      const key = gitItem.key;
+      const branch = gitItem.branch;
+      
+      // 构建认证URL
+      let authUrl = gitItem.url;
+      if (username && password) {
+        if (gitItem.url.startsWith('http://')) {
+          authUrl = gitItem.url.replace('http://', `http://${username}:${password}@`);
+        } else if (gitItem.url.startsWith('https://')) {
+          authUrl = gitItem.url.replace('https://', `https://${username}:${password}@`);
+        }
+      }
+      
+      // 生成任务名称，使用行号来区分相同URL
+      const baseName = gitItem.url.split('/').pop().replace('.git', '') || `repo_${gitItem.row_number}`;
+      const taskName = `${baseName}_batch_${getCurrentDate(2)}`;
+      
+      // 调用批量克隆接口
+      $.ajax({
+        url: http_head + '/Muti/',
+        data: {
+          method: 'clone_git_repositories',
+          urls: gitItem.url, 
+          token: key,  // 使用Excel中的密钥
+          item_name: this.itemname,
+          username: username,  // 使用Excel中的用户名
+          password: password,  // 使用Excel中的密码
+          branch: branch,      // 使用Excel中的分支
+        },
+        type: 'post',
+        dataType: 'JSON',
+        success: function(res) {
+          console.log(`Git仓库 ${index + 1} 处理结果:`, res);
+          if (res.code === '200') {
+            // 查找当前URL对应的结果
+            const result = res.results.find(r => r.url === gitItem.url);
+            if (result && result.success) {
+              // 克隆成功后创建扫描任务
+              that.createScanTask(result.folder, taskName, gitItem.url, branch)
+                .then(scanRes => {
+                  resolve({
+                    success: true,
+                    message: '扫描任务创建成功'
+                  });
+                })
+                .catch(error => {
+                  resolve({
+                    success: false,
+                    message: '扫描任务创建失败'
+                  });
+                });
+            } else {
+              resolve({
+                success: false,
+                message: result ? result.message : '克隆失败'
+              });
+            }
+          } else {
+            resolve({
+              success: false,
+              message: res.msg || '克隆失败'
+            });
+          }
+        },
+        error: function(err) {
+          console.error(`Git仓库 ${index + 1} 请求失败:`, err);
+          resolve({
+            success: false,
+            message: '请求失败'
+          });
+        }
+      });
+    });
+  },
+  
+  // 创建扫描任务
+  createScanTask(folderPath, taskName, gitUrl, branch) {
+    return new Promise((resolve, reject) => {
+      const that = this;
+      
+      // 使用与单个任务相同的扫描逻辑
+      const strategy = this.policy.split(',');
+      let model = '';
+      let deepseek = 'false';
+      switch (this.scanMode) {
+        case 'rule5': // 快速扫描
+          deepseek = 'false';
+          model = 'rule';
+          break;
+        case 'rule6': // 降误报模型
+          deepseek = 'true';
+          model = 'rule';
+          break;
+        case 'rule7': // 思考模式
+          deepseek = 'true';
+          model = 'r4';
+          break;
+        default:
+          deepseek = 'false';
+          model = 'rule';
+      }
+      
+      // if (strategy[0] === 'rule3') {
+      //   model = 'fortify';
+      // } else if (strategy[0] === 'rule5') {
+      //   deepseek = 'false';
+      //   model = 'rule';
+      // } else if (strategy[0] === 'rule6') {
+      //   deepseek = 'true';
+      //   model = 'rule';
+      // } else if (strategy[0] === 'Muti_transformer') {
+      //   model = 'small_model';
+      //   deepseek = 'false';
+      // } else if (strategy[0] === 'rule7') {
+      //   model = 'r4';
+      //   deepseek = 'true';
+      // }
+      
+      $.ajax({
+        url: http_head + '/create_process/',
+        data: {
+          method: 'create_queue',
+          folder_path: folderPath,
+          item_id: that.itemid,
+          task_name: `${taskName}_${getCurrentDate(2)}`,
+          template: 'Developer Workbook',
+          version: 'Developer Workbook',
+          language: that.language,
+          branch: branch || that.batchForm.branch,  // 使用传入的分支参数，如果没有则传空字符串
+          deepseek: deepseek,
+          model: model,
+          url_git: gitUrl
+        },
+        type: 'post',
+        dataType: 'JSON',
+        success: function(res) {
+          if (res.code === '200') {
+            resolve(res);
+          } else {
+            reject(res);
+          }
+          // 扫描成功后重置为默认模式
+          that.scanMode = that.defaultScanMode;
+        },
+        error: function(err) {
+          reject(err);
+        }
+      });
+    });
+  },
+  
+  // 延迟函数
+  delay(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  },
 
+  },
 });
 
 

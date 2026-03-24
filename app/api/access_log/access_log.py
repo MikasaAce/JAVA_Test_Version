@@ -48,6 +48,8 @@ import logging
 from django.http import HttpResponse  
 from django.views.decorators.http import require_http_methods  
 from datetime import datetime  
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
   
 # 获取Django的logger  
 logger = logging.getLogger("django")  
@@ -77,6 +79,7 @@ def log_user_access(request, status):
         return HttpResponse("Error logging user access", status=500)  
   
 @require_http_methods(["POST"])  # 确保只接受 POST 请求  
+@permission_classes([IsAuthenticated])
 def index(request):  
     method = request.POST.get("method", '')  
     status = request.POST.get("status", '')  

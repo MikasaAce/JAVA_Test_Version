@@ -60,12 +60,12 @@
 
       .box {
           width: 94%;
-          height: 800px; /* 将高度改为固定值 1000px */;
+          height: 720px; /* 将高度改为固定值 1000px */;
           background: #ffffff;
           border: 1px solid #EBEEF5;
           border-radius: 5px;
           position: absolute;
-          margin-top: 50px;
+          margin-top: 20px;
           left: 50%;
           transform: translate(-50%,0); /*向左向上分别平移自身的一半*/
       }
@@ -109,7 +109,7 @@
 
       .buttonSave {
           text-align: center; /* 按钮居中 */
-          margin-top: 50px; /* 固定在列表下方 50px */
+          margin-top: 20px; /* 固定在列表下方 50px */
           padding-bottom: 20px;
       }
       .el-input__inner {
@@ -124,8 +124,50 @@
 
       /* 给表格设置最大高度，并且启用滚动条 */
       .el-table {
-          max-height: 410px;
+          max-height: 400px;
           overflow: auto;
+      }
+
+
+      .send-method-container {
+          display: flex;
+          align-items: center;
+          justify-content: flex-start;  /* 改为左对齐 */
+          padding: 10px 30px;
+          border-bottom: 1px solid #EBEEF5;
+          margin-top: 10px;
+          margin-bottom: 10px;
+      }
+
+      .send-method-title {
+          font-size: 18px;
+          /*font-weight: bold;*/
+          white-space: nowrap;
+      }
+      .send-options {
+          display: flex;
+          gap: 30px;
+          margin-left: 100px;
+          flex-wrap: wrap;
+      }
+      .el-radio {
+          margin: 10px 50px;
+      }
+      .alert-content-header {
+          display: flex;
+          align-items: center;
+          padding: 10px 30px;
+          border-bottom: 1px solid #EBEEF5;
+          justify-content: space-between;
+      }
+      .alert-content-title {
+          font-size: 18px;
+          /*font-weight: bold;*/
+      }
+      .alert-content-controls {
+          display: flex;
+          align-items: center;
+          gap: 15px;
       }
 
 
@@ -140,16 +182,28 @@
   <template>
     <div class="box">
       <span class="title">告警配置选择</span>
-      <div>
-          <span class="title1" style="margin-top: 20px;">
-            发送途径
-            <el-button type="primary" @click="openContactDialog" style="margin-left: 70px;">添加联系人</el-button>
-          </span>
-        <el-radio-group v-model="config2" @change="handleSendMethodChange">
-          <el-radio label="value1" width="200px">企业微信</el-radio>
-          <el-radio label="value2">邮箱</el-radio>
-          <el-radio label="value3">站内信</el-radio>
-        </el-radio-group>
+<!--      <div>-->
+<!--          <span class="title1" style="margin-top: 20px;">-->
+<!--            发送途径-->
+<!--            <el-button type="primary" @click="openContactDialog" style="margin-left: 70px;">添加联系人</el-button>-->
+<!--          </span>-->
+<!--        <el-radio-group v-model="config2" @change="handleSendMethodChange">-->
+<!--          <el-radio label="value1" width="200px">企业微信</el-radio>-->
+<!--          <el-radio label="value2">邮箱</el-radio>-->
+<!--          <el-radio label="value3">站内信</el-radio>-->
+<!--        </el-radio-group>-->
+<!--      </div>-->
+      <!-- 发送途径区域 -->
+      <div class="send-method-container">
+        <span class="send-method-title">发送途径</span>
+        <div class="send-options">
+          <el-radio-group v-model="config2" @change="handleSendMethodChange">
+            <el-radio label="value1">企业微信</el-radio>
+            <el-radio label="value2">邮箱</el-radio>
+            <el-radio label="value3">站内信</el-radio>
+          </el-radio-group>
+        </div>
+<!--        <el-button type="primary" @click="openContactDialog">添加联系人</el-button>-->
       </div>
 
 
@@ -181,7 +235,7 @@
               <el-tag effect="dark" type="warning" class="inline-tag">
                 {{ scope.row.med }}
               </el-tag>
-              <el-tag effect="dark" type="success" class="inline-tag">
+              <el-tag effect="dark" type="primary" class="inline-tag">
                 {{ scope.row.low }}
               </el-tag>
             </template>
@@ -265,65 +319,65 @@
         </span>
       </el-dialog>
 
-<!--      &lt;!&ndash; 原新建联系人弹窗 &ndash;&gt;-->
-<!--      <el-dialog-->
-<!--          title="新建联系人"-->
-<!--          :visible.sync="contactDialogVisible"-->
-<!--          width="60%"-->
-<!--          :modal="false"-->
-<!--      >-->
-<!--        <div>-->
-<!--          &lt;!&ndash; 单选框：选择联系人类型 &ndash;&gt;-->
-<!--          <el-radio-group v-model="contactType">-->
-<!--            <el-radio label="wechat">企业微信</el-radio>-->
-<!--            <el-radio label="email">邮箱</el-radio>-->
-<!--          </el-radio-group>-->
+      <!--      &lt;!&ndash; 原新建联系人弹窗 &ndash;&gt;-->
+      <!--      <el-dialog-->
+      <!--          title="新建联系人"-->
+      <!--          :visible.sync="contactDialogVisible"-->
+      <!--          width="60%"-->
+      <!--          :modal="false"-->
+      <!--      >-->
+      <!--        <div>-->
+      <!--          &lt;!&ndash; 单选框：选择联系人类型 &ndash;&gt;-->
+      <!--          <el-radio-group v-model="contactType">-->
+      <!--            <el-radio label="wechat">企业微信</el-radio>-->
+      <!--            <el-radio label="email">邮箱</el-radio>-->
+      <!--          </el-radio-group>-->
 
-<!--          &lt;!&ndash; 动态录入组件 &ndash;&gt;-->
-<!--          <div style="margin-top: 20px;">-->
-<!--            &lt;!&ndash; 微信联系人录入 &ndash;&gt;-->
-<!--            <div v-if="contactType === 'wechat'">-->
-<!--              <el-input-->
-<!--                  v-model="wechatName"-->
-<!--                  placeholder="请输入企业微信群名"-->
-<!--                  style="margin-bottom: 10px;"-->
-<!--              ></el-input>-->
-<!--              <el-input-->
-<!--                  v-model="webhookUrl"-->
-<!--                  placeholder="请输入微信url地址（示例：https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=e81933fa-651a-4d4c-a7e0-a7c25997db59）"-->
-<!--              ></el-input>-->
-<!--              &lt;!&ndash; 添加小字提示 &ndash;&gt;-->
-<!--              <div style="font-size: 14px; color: #999; margin-top: 10px;margin-left: 10px;">-->
-<!--                进入需要发送消息的群聊，点击右上角的群设置。<br>-->
-<!--                找到「群机器人」，点击「添加机器人」。<br>-->
-<!--                设置机器人名称，创建后会生成一个 Webhook URL。-->
-<!--              </div>-->
-<!--            </div>-->
+      <!--          &lt;!&ndash; 动态录入组件 &ndash;&gt;-->
+      <!--          <div style="margin-top: 20px;">-->
+      <!--            &lt;!&ndash; 微信联系人录入 &ndash;&gt;-->
+      <!--            <div v-if="contactType === 'wechat'">-->
+      <!--              <el-input-->
+      <!--                  v-model="wechatName"-->
+      <!--                  placeholder="请输入企业微信群名"-->
+      <!--                  style="margin-bottom: 10px;"-->
+      <!--              ></el-input>-->
+      <!--              <el-input-->
+      <!--                  v-model="webhookUrl"-->
+      <!--                  placeholder="请输入微信url地址（示例：https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=e81933fa-651a-4d4c-a7e0-a7c25997db59）"-->
+      <!--              ></el-input>-->
+      <!--              &lt;!&ndash; 添加小字提示 &ndash;&gt;-->
+      <!--              <div style="font-size: 14px; color: #999; margin-top: 10px;margin-left: 10px;">-->
+      <!--                进入需要发送消息的群聊，点击右上角的群设置。<br>-->
+      <!--                找到「群机器人」，点击「添加机器人」。<br>-->
+      <!--                设置机器人名称，创建后会生成一个 Webhook URL。-->
+      <!--              </div>-->
+      <!--            </div>-->
 
-<!--            &lt;!&ndash; 邮箱联系人录入 &ndash;&gt;-->
-<!--            <div v-if="contactType === 'email'">-->
-<!--              <el-input-->
-<!--                  v-model="emailName"-->
-<!--                  placeholder="请输入邮箱用户名"-->
-<!--                  style="margin-bottom: 10px;"-->
-<!--              ></el-input>-->
-<!--              <el-input-->
-<!--                  v-model="receiverEmail"-->
-<!--                  placeholder="请输入邮箱地址（示例：1500861482@qq.com）"-->
-<!--              ></el-input>-->
-<!--            </div>-->
-<!--          </div>-->
-<!--        </div>-->
+      <!--            &lt;!&ndash; 邮箱联系人录入 &ndash;&gt;-->
+      <!--            <div v-if="contactType === 'email'">-->
+      <!--              <el-input-->
+      <!--                  v-model="emailName"-->
+      <!--                  placeholder="请输入邮箱用户名"-->
+      <!--                  style="margin-bottom: 10px;"-->
+      <!--              ></el-input>-->
+      <!--              <el-input-->
+      <!--                  v-model="receiverEmail"-->
+      <!--                  placeholder="请输入邮箱地址（示例：1500861482@qq.com）"-->
+      <!--              ></el-input>-->
+      <!--            </div>-->
+      <!--          </div>-->
+      <!--        </div>-->
 
-<!--        <span slot="footer" class="dialog-footer">-->
-<!--          <el-button @click="contactDialogVisible = false">取消</el-button>-->
-<!--          <el-button type="primary" @click="saveContact">保存</el-button>-->
-<!--        </span>-->
-<!--      </el-dialog>-->
+      <!--        <span slot="footer" class="dialog-footer">-->
+      <!--          <el-button @click="contactDialogVisible = false">取消</el-button>-->
+      <!--          <el-button type="primary" @click="saveContact">保存</el-button>-->
+      <!--        </span>-->
+      <!--      </el-dialog>-->
 
       <!-- 弹窗：新建联系人及显示历史联系人 -->
       <el-dialog
-          title="新建联系人"
+          title="添加联系人"
           :visible.sync="contactDialogVisible"
           width="60%"
           :modal="false"

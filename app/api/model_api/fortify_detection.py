@@ -37,32 +37,32 @@ def run_fortify(target_folder_fortify, template, version):
     command_clean = f"sourceanalyzer {memory_limit} -b {file_name_fortify_2} -Dcom.fortify.sca.ThreadCount={thread_count} --clean"
     command_build = f"sourceanalyzer {memory_limit} -b {file_name_fortify_2} -Dcom.fortify.sca.ThreadCount={thread_count} -incremental ."
     command_scan = f"sourceanalyzer {memory_limit} -b {file_name_fortify_2} -Dcom.fortify.sca.ThreadCount={thread_count} -scan -f {file_name_fortify_2}.fpr"
-    command_report = f'BIRTReportGenerator -template "{template}" -format pdf -source "{file_name_fortify_2}.fpr" -output "{file_name_fortify_2}.pdf" --SecurityIssueDetails --version "{version}"'
+    command_report = f'xvfb-run -a BIRTReportGenerator -template "{template}" -format pdf -source "{file_name_fortify_2}.fpr" -output "{file_name_fortify_2}.pdf" --SecurityIssueDetails --version "{version}"'
 
     if c_flag == 1:
         command_clean = f"sourceanalyzer {memory_limit} -b {file_name_fortify_2} -Dcom.fortify.sca.ThreadCount={thread_count} --clean"
         command_build = f"sourceanalyzer {memory_limit} -b {file_name_fortify_2} -Dcom.fortify.sca.ThreadCount={thread_count} -incremental gcc -c {target_folder_fortify}/*.c"
         command_scan = f"sourceanalyzer {memory_limit} -b {file_name_fortify_2} -Dcom.fortify.sca.ThreadCount={thread_count} -scan -f {file_name_fortify_2}.fpr"
-        command_report = f'BIRTReportGenerator -template "{template}" -format pdf -source "{file_name_fortify_2}.fpr" -output "{file_name_fortify_2}.pdf" --SecurityIssueDetails --version "{version}"'
+        command_report = f'xvfb-run -a BIRTReportGenerator -template "{template}" -format pdf -source "{file_name_fortify_2}.fpr" -output "{file_name_fortify_2}.pdf" --SecurityIssueDetails --version "{version}"'
 
     if cpp_flag == 1:
         command_clean = f"sourceanalyzer {memory_limit} -b {file_name_fortify_2} -Dcom.fortify.sca.ThreadCount={thread_count} --clean"
         command_build = f"sourceanalyzer {memory_limit} -b {file_name_fortify_2}  -Dcom.fortify.sca.ThreadCount={thread_count} -incremental g++ -c {target_folder_fortify}/*.cpp"
         command_scan = f"sourceanalyzer {memory_limit} -b {file_name_fortify_2} -Dcom.fortify.sca.ThreadCount={thread_count} -scan -f {file_name_fortify_2}.fpr"
-        command_report = f'BIRTReportGenerator -template "{template}" -format pdf -source "{file_name_fortify_2}.fpr" -output "{file_name_fortify_2}.pdf" --SecurityIssueDetails --version "{version}"'
+        command_report = f'xvfb-run -a BIRTReportGenerator -template "{template}" -format pdf -source "{file_name_fortify_2}.fpr" -output "{file_name_fortify_2}.pdf" --SecurityIssueDetails --version "{version}"'
 
     '''SQL检测分Oracle数据库的PLSQL以及SQL Server和Azure SQL数据库的TSQL,这里build时有待区分'''
     if sql_flag == 1:
         command_clean = f"sourceanalyzer {memory_limit} -b {file_name_fortify_2} -Dcom.fortify.sca.ThreadCount={thread_count} --clean"
         command_build = f"sourceanalyzer {memory_limit} -b {file_name_fortify_2} -Dcom.fortify.sca.ThreadCount={thread_count} -incremental -Dcom.fortify.sca.fileextensions.sql=TSQL *.sql"
         command_scan = f"sourceanalyzer {memory_limit} -b {file_name_fortify_2} -Dcom.fortify.sca.ThreadCount={thread_count} -scan -f {file_name_fortify_2}.fpr"
-        command_report = f'BIRTReportGenerator -template "{template}" -format pdf -source "{file_name_fortify_2}.fpr" -output "{file_name_fortify_2}.pdf" --SecurityIssueDetails --version "{version}"'
+        command_report = f'xvfb-run -a BIRTReportGenerator -template "{template}" -format pdf -source "{file_name_fortify_2}.fpr" -output "{file_name_fortify_2}.pdf" --SecurityIssueDetails --version "{version}"'
 
     if objc_flag == 1:
         command_clean = f"sourceanalyzer {memory_limit} -b {file_name_fortify_2} -Dcom.fortify.sca.ThreadCount={thread_count} --clean"
         command_build = f"sourceanalyzer {memory_limit} -b {file_name_fortify_2} clang -ObjC {target_folder_fortify}/*.m -Dcom.fortify.sca.ThreadCount={thread_count} -incremental ."
         command_scan = f"sourceanalyzer {memory_limit} -b {file_name_fortify_2} -Dcom.fortify.sca.ThreadCount={thread_count} -scan -f {file_name_fortify_2}.fpr"
-        command_report = f'BIRTReportGenerator -template "{template}" -format pdf -source "{file_name_fortify_2}.fpr" -output "{file_name_fortify_2}.pdf" --SecurityIssueDetails --version "{version}"'
+        command_report = f'xvfb-run -a BIRTReportGenerator -template "{template}" -format pdf -source "{file_name_fortify_2}.fpr" -output "{file_name_fortify_2}.pdf" --SecurityIssueDetails --version "{version}"'
 
     try:
         # 进入代码所在文件路径
@@ -106,7 +106,7 @@ def run_custom_fortify(target_folder_fortify, template, version, custom_flag, cu
     command_clean = f"sourceanalyzer {memory_limit} -b {file_name_fortify_2} -Dcom.fortify.sca.ThreadCount={thread_count} --clean"
     command_build = f"sourceanalyzer {memory_limit} -b {file_name_fortify_2} -Dcom.fortify.sca.ThreadCount={thread_count} -incremental ."
     command_scan = f"sourceanalyzer {memory_limit} -b {file_name_fortify_2} -Dcom.fortify.sca.ThreadCount={thread_count} -scan -f {file_name_fortify_2}.fpr"
-    command_report = f'BIRTReportGenerator -template "{template}" -format pdf -source "{file_name_fortify_2}.fpr" -output "{file_name_fortify_2}.pdf" --SecurityIssueDetails --version "{version}"'
+    command_report = f'xvfb-run -a BIRTReportGenerator -template "{template}" -format pdf -source "{file_name_fortify_2}.fpr" -output "{file_name_fortify_2}.pdf" --SecurityIssueDetails --version "{version}"'
 
     if filter_flag == 1:
         filter_file = open(filter_path, mode='w')
