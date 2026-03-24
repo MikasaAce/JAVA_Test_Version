@@ -1,0 +1,6 @@
+host=0.0.0.0
+port=3307
+database=vul_test
+charset=utf8
+user=root
+passwd=Li@123456

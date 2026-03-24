@@ -1,0 +1,21 @@
+# 忽略版本控制和环境缓存
+.svn/
+.venv/
+.idea/
+
+# 忽略超大压缩包
+packages.tar.gz
+temp_py310.tar.gz
+
+# 忽略日志文件
+nohup.out
+server.log
+
+# 忽略 Python 缓存
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# 忽略数据库文件
+db.sqlite3

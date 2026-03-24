@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <!--<link rel="stylesheet" href="../../../js/element/index.css">-->
+    <link rel="stylesheet" href="../../../../assets/libs/element/index.css">
+
+    <title>文件圈复杂度</title>
+    <style>
+        .title .el-form-item__label{
+            font-size: 24px;font-weight: bolder;
+        }
+        .title .el-form-item__content{
+            font-size: 24px;font-weight: bolder;
+        }
+        .el-form--inline .el-form-item{
+            margin-right: 20px;
+        }
+
+    </style>
+</head>
+<!--{% raw %}-->
+<body>
+
+<div id="app">
+    <template>
+        <el-row :gutter="20" style="margin: 20px">
+            <div class="" style="margin-right:20px;">
+                <el-form :inline="true" class="demo-form-inline" >
+                    <el-form-item label="项目名称：" class="title">{{itemname}}</el-form-item>
+<!--                    <el-form-item label="文件名：">-->
+<!--                        <el-input v-model="query.fileName" placeholder="请输入关键字"></el-input>-->
+<!--                    </el-form-item>-->
+
+<!--                    <el-form-item>-->
+<!--                        <el-button type="primary" @click="check">查询</el-button>-->
+<!--                    </el-form-item>-->
+                    <el-form-item>
+                        <el-button type="primary" @click="goto">返回</el-button>
+                    </el-form-item>
+                </el-form>
+
+            </div>
+        </el-row>
+
+        <el-card style="margin: 20px">
+            <div class="head">
+                文件列表
+            </div>
+            <template>
+                <el-table  :data="tableData" class="table" :header-cell-style="{textAlign:'center'}" :cell-style="{textAlign:'center'}" tooltip-effect="dark" style="width: 100%"  >
+                    <el-table-column prop="filename" label="文件名称" ></el-table-column>
+                    <!--        <el-table-column prop="description" label="任务" width="400" show-overflow-tooltip></el-table-column>-->
+                    <el-table-column prop="avgCCN" label="函数平均圈复杂度" width="" sortable>
+<!--                        </template>-->
+                    </el-table-column>
+                    <el-table-column prop="max_ccn" label="最大圈复杂度" sortable></el-table-column>
+                    <el-table-column prop="function_count" label="函数个数" sortable></el-table-column>
+                    <!--        <el-table-column prop="type" label="扫描策略" width="150"></el-table-column>-->
+                    <el-table-column prop="avg_ncss" label="函数平均行数" width="" sortable></el-table-column>
+<!--                    <el-table-column  fixed='right' label="操作" width="">-->
+<!--                        <template v-slot="scope">-->
+<!--                            <el-button size="mini" type="text" @click="view(scope.row)">任务详情</el-button>-->
+<!--                        </template>-->
+<!--                    </el-table-column>-->
+                </el-table>
+<!--                <el-pagination-->
+<!--                        background-->
+<!--                        layout="total, sizes, prev, pager, next, jumper"-->
+<!--                        :total="count"-->
+<!--                        @current-change="handleCurrentChange"-->
+<!--                        @size-change="handleSizeChange"-->
+<!--                        :page-sizes="[5,10,20]"-->
+<!--                        :current-page="currentPage"-->
+<!--                        :page-size="pageSize"-->
+<!--                        style="text-align: center">-->
+<!--                </el-pagination>-->
+            </template>
+
+        </el-card>
+
+    </template>
+</div>
+
+<script src="../../../../assets/libs/vue/vue.js"></script>
+<script src="../../../../assets/libs/vue/vue-router.js"></script>
+<script src="../../../../assets/libs/element/index.js"></script>
+<script src="../../../../assets/libs/jquery-1.11.3.min.js"></script>
+<script src="../../../../assets/js/mainData.js"></script>
+<script src="taskCCN.js" ></script>
+
+
+</body>
+<!--{% endraw %}-->
+</html>

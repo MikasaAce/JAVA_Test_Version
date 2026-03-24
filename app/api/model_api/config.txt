@@ -1,0 +1,4 @@
+openai_api_key = EMPTY
+openai_api_base = http://10.99.16.24:8000/v1
+security_model = qwen3-4b
+general_model = deepseek

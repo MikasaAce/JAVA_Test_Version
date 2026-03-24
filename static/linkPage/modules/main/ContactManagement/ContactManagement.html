@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport"
+        content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>联系人管理</title>
+  <link rel="stylesheet" href="../../../../assets/libs/element/index.css">
+  <style>
+      * {
+          margin: 0;
+          padding: 0;
+          box-sizing: border-box;
+          font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      }
+
+      body {
+          background-color: #f5f7fa;
+          padding: 20px;
+          color: #333;
+      }
+
+      .container {
+          width: 80%;
+
+          position: absolute;
+          margin-top: 50px;
+          left: 50%;
+          transform: translate(-50%,0); /*向左向上分别平移自身的一半*/
+      }
+
+      .header {
+          text-align: center;
+          margin-bottom: 30px;
+          padding: 20px 0;
+      }
+
+      .header h1 {
+          font-size: 28px;
+          color: #2c3e50;
+          margin-bottom: 10px;
+      }
+
+      .header p {
+          color: #7f8c8d;
+          font-size: 16px;
+      }
+
+      .config-card {
+          background: #fff;
+          border-radius: 8px;
+          box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+          overflow: hidden;
+          margin-bottom: 30px;
+      }
+
+      .card-title {
+          font-size: 18px;
+          padding: 18px 25px;
+          border-bottom: 1px solid #ebeef5;
+          background-color: #f8fafc;
+          font-weight: 600;
+          color: #2c3e50;
+          display: flex;
+          align-items: center;
+      }
+
+      .card-title i {
+          margin-right: 10px;
+          color: #409eff;
+      }
+
+      .card-content {
+          padding: 25px;
+      }
+
+      /* 发送途径区域样式 */
+      .send-method-container {
+          display: flex;
+          align-items: center;
+          margin-bottom: 30px;
+      }
+
+      .method-title {
+          font-size: 16px;
+          font-weight: 600;
+          min-width: 100px;
+          color: #606266;
+      }
+
+      .method-options {
+          display: flex;
+          gap: 30px;
+          margin: 0 30px;
+          flex-wrap: wrap;
+      }
+
+      .el-radio {
+          margin: 0 50px;
+      }
+
+      .el-radio__label {
+          font-size: 15px;
+      }
+
+      /* 联系人列表样式 */
+      .contact-list {
+          margin-top: 20px;
+      }
+
+      .list-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 20px;
+      }
+
+      .section-title {
+          font-size: 16px;
+          font-weight: 600;
+          color: #606266;
+      }
+
+      /* 表格样式 */
+      .el-table {
+          border: 1px solid #ebeef5;
+          border-radius: 4px;
+          box-shadow: 0 0 8px rgba(0, 0, 0, 0.03);
+      }
+
+      .el-table th {
+          background-color: #f5f7fa;
+          color: #606266;
+          font-weight: 600;
+      }
+
+      .action-cell {
+          text-align: center;
+      }
+
+      .no-contacts {
+          text-align: center;
+          padding: 40px 0;
+          color: #909399;
+      }
+
+      .no-contacts i {
+          font-size: 50px;
+          margin-bottom: 15px;
+          color: #c0c4cc;
+      }
+
+      .no-contacts p {
+          font-size: 16px;
+      }
+
+      .table-wrapper {
+          max-height: 360px;  /* 设置你希望的固定高度 */
+          overflow-y: auto;   /* 当内容超出时显示垂直滚动条 */
+      }
+
+      /* 弹窗样式 */
+      .contact-dialog .el-dialog__body {
+          padding: 20px 25px;
+      }
+
+      .dialog-section {
+          margin-bottom: 20px;
+      }
+
+      .dialog-section-title {
+          font-size: 16px;
+          font-weight: 600;
+          margin-bottom: 15px;
+          color: #606266;
+      }
+
+      .input-row {
+          margin-bottom: 15px;
+      }
+
+      .input-label {
+          display: block;
+          margin-bottom: 8px;
+          font-size: 14px;
+          color: #606266;
+      }
+
+      .info-tip {
+          font-size: 14px;
+          color: #909399;
+          margin-top: 10px;
+          line-height: 1.5;
+      }
+  </style>
+</head>
+<body>
+<div id="app">
+  <div class="container">
+
+    <div class="config-card">
+      <div class="card-title">
+        <i class="el-icon-user"></i>联系人管理
+      </div>
+      <div class="card-content">
+        <div class="send-method-container">
+          <span class="method-title">发送途径</span>
+          <div class="method-options">
+            <el-radio-group v-model="contactType" @change="fetchContacts">
+              <el-radio label="wechat">企业微信</el-radio>
+              <el-radio label="email">邮箱</el-radio>
+            </el-radio-group>
+          </div>
+
+        </div>
+        <el-button style="margin-top: 20px;margin-bottom: 20px;" type="primary" icon="el-icon-plus" @click="openContactDialog">新增联系人</el-button>
+
+        <div class="contact-list">
+          <div class="list-header">
+            <span class="section-title">{{ contactType === 'wechat' ? '企业微信' : '邮箱' }}联系人列表</span>
+          </div>
+          <div class="table-wrapper">
+            <el-table :data="contacts" v-if="contacts.length > 0">
+              <el-table-column prop="name" :label="contactType === 'wechat' ? '群名称' : '联系人'" width="200"></el-table-column>
+              <el-table-column prop="address" :label="contactType === 'wechat' ? 'Webhook地址' : '邮箱地址'"></el-table-column>
+              <el-table-column label="操作" width="180" align="center">
+                <template slot-scope="scope">
+                  <el-button size="mini" @click="openEditDialog(scope.row)">编辑</el-button>
+                  <el-button size="mini" type="danger" @click="handleDelete(scope.row)">删除</el-button>
+                </template>
+              </el-table-column>
+            </el-table>
+          </div>
+
+          <div class="no-contacts" v-else>
+            <i class="el-icon-user-solid"></i>
+            <p>暂无{{ contactType === 'wechat' ? '企业微信' : '邮箱' }}联系人</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 新增联系人弹窗 -->
+  <el-dialog
+      :title="'新增联系人'"
+      :visible.sync="contactDialogVisible"
+      width="600px"
+      custom-class="contact-dialog"
+  >
+    <div class="dialog-section">
+      <div class="dialog-section-title">联系人类型</div>
+      <el-radio-group v-model="newContactType">
+        <el-radio label="wechat">企业微信</el-radio>
+        <el-radio label="email">邮箱</el-radio>
+      </el-radio-group>
+    </div>
+
+    <div class="dialog-section">
+      <div class="dialog-section-title">联系人信息</div>
+
+      <div v-if="newContactType === 'wechat'">
+        <div class="input-row">
+          <div class="input-label">企业微信群名称</div>
+          <el-input v-model="newWechatName" placeholder="请输入企业微信群名"></el-input>
+        </div>
+
+        <div class="input-row">
+          <div class="input-label">Webhook地址</div>
+          <el-input v-model="newWebhookUrl" placeholder="请输入微信url地址"></el-input>
+        </div>
+
+        <div class="info-tip">
+          进入需要发送消息的群聊，点击右上角的群设置。<br>
+          找到「消息推送」，点击「添加」。<br>
+          输入消息推送名称，创建后会生成一个 Webhook URL。
+        </div>
+      </div>
+
+      <div v-else>
+        <div class="input-row">
+          <div class="input-label">联系人名称</div>
+          <el-input v-model="newEmailName" placeholder="请输入邮箱用户名"></el-input>
+        </div>
+
+        <div class="input-row">
+          <div class="input-label">邮箱地址</div>
+          <el-input v-model="newReceiverEmail" placeholder="请输入邮箱地址"></el-input>
+        </div>
+      </div>
+    </div>
+
+    <span slot="footer" class="dialog-footer">
+        <el-button @click="contactDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="saveContact">保存</el-button>
+      </span>
+  </el-dialog>
+
+  <!-- 编辑联系人弹窗 -->
+  <el-dialog
+      :title="'编辑联系人'"
+      :visible.sync="editDialogVisible"
+      width="600px"
+      custom-class="contact-dialog"
+      v-if="currentContact"
+  >
+    <div class="dialog-section">
+      <div class="dialog-section-title">联系人信息</div>
+
+      <div v-if="currentContact.type === 'wechat'">
+        <div class="input-row">
+          <div class="input-label">企业微信群名称</div>
+          <el-input v-model="currentContact.name" placeholder="请输入企业微信群名"></el-input>
+        </div>
+
+        <div class="input-row">
+          <div class="input-label">Webhook地址</div>
+          <el-input v-model="currentContact.address" placeholder="请输入微信url地址"></el-input>
+        </div>
+      </div>
+
+      <div v-else>
+        <div class="input-row">
+          <div class="input-label">联系人名称</div>
+          <el-input v-model="currentContact.name" placeholder="请输入邮箱用户名"></el-input>
+        </div>
+
+        <div class="input-row">
+          <div class="input-label">邮箱地址</div>
+          <el-input v-model="currentContact.address" placeholder="请输入邮箱地址"></el-input>
+        </div>
+      </div>
+    </div>
+
+    <span slot="footer" class="dialog-footer">
+    <el-button @click="editDialogVisible = false">取消</el-button>
+    <el-button type="primary" @click="updateContact">保存</el-button>
+  </span>
+  </el-dialog>
+</div>
+
+<script src="../../../../assets/libs/vue/vue.js"></script>
+<script src="../../../../assets/libs/vue/vue-router.js"></script>
+<script src="../../../../assets/libs/element/index.js"></script>
+<script src="../../../../assets/libs/jquery-1.11.3.min.js"></script>
+<script src="../../../../assets/js/mainData.js"></script>
+<script src="ContactManagement.js" ></script>
+</body>
+</html>

@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>知识库权限管理</title>
+  <link rel="stylesheet" href="../../../../../assets/libs/element/index.css">
+  <link rel="stylesheet" href="index.css">
+  <style>
+      body {
+          margin: 0;
+          padding: 20px;
+          background-color: #f5f7fa;
+          font-family: "Helvetica Neue", Helvetica, "PingFang SC", "Hiragino Sans GB", Arial, sans-serif;
+      }
+
+      .container {
+          width: 95%;
+          /*max-width: 1400px;*/
+          margin: 0 auto;
+          padding: 20px;
+          background: white;
+          border-radius: 8px;
+          box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+      }
+
+      .page-title {
+          font-size: 24px;
+          margin-bottom: 20px;
+          color: #303133;
+          font-weight: 500;
+          padding-bottom: 15px;
+          border-bottom: 1px solid #ebeef5;
+      }
+
+      .permission-tag {
+          margin-right: 8px;
+          margin-bottom: 5px;
+          font-size: 13px;
+          border-radius: 4px;
+      }
+
+      .el-table {
+          width: 100%;
+          margin-top: 20px;
+          border-radius: 8px;
+          overflow: hidden;
+      }
+
+      .el-table th {
+          background-color: #f8f9fa;
+          color: #606266;
+          font-weight: 600;
+      }
+
+      .el-dialog {
+          width: 90%;
+          max-width: 500px;
+          border-radius: 8px;
+      }
+
+      .permission-checkbox-group {
+          margin-top: 10px;
+      }
+
+      .no-permission {
+          color: #c0c4cc;
+          font-style: italic;
+      }
+
+      .el-button--mini {
+          padding: 7px 12px;
+      }
+  </style>
+</head>
+
+<body>
+<div id="app">
+  <div class="container">
+    <h1 class="page-title">知识库权限管理</h1>
+
+    <el-table
+        :data="knowledgeBases"
+        border
+        v-loading="loading"
+    >
+      <el-table-column
+          label="序号"
+          type="index"
+          width="80"
+          align="center"
+      ></el-table-column>
+
+      <el-table-column
+          prop="kb_name"
+          label="知识库名称"
+          min-width="200"
+      ></el-table-column>
+
+      <el-table-column
+          label="权限"
+          min-width="250"
+      >
+        <template slot-scope="scope">
+          <div v-if="scope.row.visible_users && scope.row.visible_users.length > 0">
+            <el-tag
+                v-for="user in scope.row.visible_users"
+                :key="user"
+                class="permission-tag"
+                :type="getPermissionTagType(user)"
+            >
+              {{ user }}
+            </el-tag>
+          </div>
+          <span v-else style="color: #999">未设置权限</span>
+        </template>
+      </el-table-column>
+
+      <el-table-column
+          label="操作"
+          width="120"
+          align="center"
+      >
+        <template slot-scope="scope">
+          <el-button
+              size="mini"
+              @click="showEditDialog(scope.row)"
+          >编辑</el-button>
+        </template>
+      </el-table-column>
+    </el-table>
+  </div>
+
+  <!-- 编辑权限弹窗 -->
+  <el-dialog
+      :title="dialogTitle"
+      :visible.sync="dialogVisible"
+      @close="resetForm"
+  >
+    <el-form label-width="100px">
+      <el-form-item label="知识库名称">
+        <el-input v-model="currentKnowledgeBase.kb_name" disabled></el-input>
+      </el-form-item>
+
+      <el-form-item label="权限设置">
+        <el-checkbox-group
+            v-model="currentKnowledgeBase.visible_users"
+            class="permission-checkbox-group"
+        >
+          <el-checkbox label="管理员"></el-checkbox>
+          <el-checkbox label="普通用户"></el-checkbox>
+        </el-checkbox-group>
+      </el-form-item>
+    </el-form>
+
+    <span slot="footer">
+      <el-button @click="dialogVisible = false">取消</el-button>
+      <el-button
+          type="primary"
+          @click="savePermission"
+          :loading="saving"
+      >保存</el-button>
+    </span>
+  </el-dialog>
+</div>
+
+
+<script src="../../../../assets/libs/vue/vue.js"></script>
+<script src="../../../../assets/libs/element/index.js"></script>
+<script src="../../../../assets/libs/jquery-1.11.3.min.js"></script>
+<script src="../../../../assets/js/mainData.js"></script>
+<script src="knowmanage.js"></script>
+
+</body>
+</html>

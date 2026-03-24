@@ -1,0 +1,44 @@
+export NCCL_SOCKET_IFNAME=enp7s0
+
+CUDA_VISIBLE_DEVICES=0,1 python -m vllm.entrypoints.openai.api_server \
+    --model /home/public/model/deepseek-R1-qwen-14B \
+    --served-model-name deepseek \
+    --max-model-len=16392 \
+    --dtype=float16 \
+    --tensor-parallel-size=2 \
+
+
+CUDA_VISIBLE_DEVICES=0,1 python -m vllm.entrypoints.openai.api_server \
+    --model /home/public/model/deepseek-R1-qwen-14B \
+    --served-model-name deepseek \
+    --max-model-len=16392 \
+    --dtype=bfloat16 \
+    --tensor-parallel-size=2
+    --quantization bitsandbytes
+    --load-format bitsandbytes
+    --load-in-8bitexport NCCL_SOCKET_IFNAME=enp7s0
+
+CUDA_VISIBLE_DEVICES=0,1 python -m vllm.entrypoints.openai.api_server \
+    --model /home/public/.cache/modelscope/hub/models/Qwen/Qwen3-4B \
+    --served-model-name qwen3-4b \
+    --max-model-len=35000 \
+    --dtype=bfloat16 \
+    --tensor-parallel-size=2
+
+
+CUDA_VISIBLE_DEVICES=0,1 python -m vllm.entrypoints.openai.api_server \
+    --model /home2/model/qwen3-4b \
+    --served-model-name qwen3-4b \
+    --max-model-len=35000 \
+    --dtype=bfloat16 \
+    --tensor-parallel-size=2
+
+CUDA_VISIBLE_DEVICES=0 python -m vllm.entrypoints.openai.api_server \
+    --model /home2/model/gjxmodels \
+    --served-model-name qwen3-4b \
+    --max-model-len=35000 \
+    --dtype=bfloat16 \
+    --tensor-parallel-size=1
+
+export NCCL_SOCKET_IFNAME=enp7s0
+CUDA_VISIBLE_DEVICES=0,1 python -m vllm.entrypoints.openai.api_server --model /home/public/model/deepseek-R1-qwen-14B --served-model-name deepseek --max-model-len 16392 --dtype float16 --tensor-parallel-size 2 --host 0.0.0.0

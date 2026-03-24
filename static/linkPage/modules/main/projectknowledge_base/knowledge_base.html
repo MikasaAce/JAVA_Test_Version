@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>知识库管理与对话系统</title>
+  <link rel="stylesheet" href="index.css">
+  <link rel="stylesheet" href="../../../../../assets/libs/element/index.css">
+  <link rel="stylesheet" type="text/css" href="{% static 'python/assets/libs/layui/css/layui.css' %}">
+  <link rel="stylesheet" type="text/css" href="{% static 'python/assets/libs/layui/css/theme-red.css' %}">
+  <link rel="stylesheet" type="text/css" href="{% static 'python/assets/module/admin.css' %}">
+  <style>
+      * {
+          margin: 0;
+          padding: 0;
+          box-sizing: border-box;
+      }
+
+      body {
+          font-family: "Helvetica Neue", Helvetica, "PingFang SC", "Hiragino Sans GB", Arial, sans-serif;
+          background-color: #f5f7fa;
+          color: #333;
+      }
+
+      #app {
+          display: flex;
+          min-height: 100vh;
+          padding: 20px;
+      }
+
+      .sidebar {
+          width: 280px;
+          background-color: #fff;
+          border-radius: 8px;
+          box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+          margin-right: 20px;
+          display: flex;
+          flex-direction: column;
+          height: calc(100vh - 40px);
+      }
+
+      .main-content {
+          flex: 1;
+          background-color: #fff;
+          border-radius: 8px;
+          box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+          display: flex;
+          flex-direction: column;
+          height: calc(100vh - 40px);
+          overflow: hidden;
+      }
+
+      .mode-card {
+          padding: 20px;
+          border-bottom: 1px solid #ebeef5;
+      }
+
+      .mode-buttons {
+          display: flex;
+          justify-content: space-between;
+      }
+
+      .config-card {
+          padding: 20px;
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+      }
+
+      .config-title {
+          font-size: 14px;
+          color: #909399;
+          margin-bottom: 15px;
+      }
+
+      .chat-container {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          padding: 50px;
+          overflow: hidden;
+      }
+
+      .chat-messages {
+          flex: 1;
+          overflow-y: auto;
+          padding: 10px;
+          margin-bottom: 20px;
+      }
+
+      .message-item {
+          margin-bottom: 20px;
+      }
+
+      .question {
+          background-color: #f2f6fc;
+          padding: 12px 16px;
+          border-radius: 8px;
+          margin-bottom: 8px;
+          word-break: break-word;
+      }
+
+      .answer {
+          padding: 12px 16px;
+          border-radius: 8px;
+          background-color: #ecf5ff;
+          word-break: break-word;
+      }
+
+      .input-area {
+          display: flex;
+          padding: 10px;
+          border-top: 1px solid #ebeef5;
+      }
+
+      .input-area .el-input {
+          flex: 1;
+          margin-right: 10px;
+      }
+
+      .knowledge-management {
+          padding: 20px;
+          flex: 1;
+          overflow-y: auto;
+      }
+
+      .section-title {
+          font-size: 16px;
+          color: #303133;
+          margin-bottom: 15px;
+          font-weight: 500;
+      }
+
+      .upload-card, .file-list {
+          margin-bottom: 20px;
+      }
+
+      .divider {
+          height: 1px;
+          background-color: #ebeef5;
+          margin: 20px 0;
+      }
+
+      .file-table {
+          width: 100%;
+          border-collapse: collapse;
+      }
+
+      .file-table th, .file-table td {
+          padding: 12px 15px;
+          text-align: left;
+          border-bottom: 1px solid #ebeef5;
+      }
+
+      .file-table th {
+          background-color: #f5f7fa;
+          color: #909399;
+          font-weight: 500;
+      }
+
+      .create-knowledge {
+          margin-top: 20px;
+          padding: 20px;
+          background-color: #f5f7fa;
+          border-radius: 8px;
+      }
+
+      .form-item {
+          margin-bottom: 20px;
+      }
+
+      .form-item .el-input, .form-item .el-textarea {
+          width: 100%;
+      }
+
+      .scroll-container {
+          max-height: 500px;
+          overflow-y: auto;
+          border: 1px solid #ebeef5;
+          border-radius: 4px;
+          padding: 10px;
+      }
+      /* 替换下拉箭头 */
+      .el-select .el-input__suffix .el-icon-arrow-up:before {
+          content: "△";
+          font-family: inherit;
+          font-size: 14px;
+      }
+
+      /* 上传区域样式 */
+      .upload-card {
+          margin-bottom: 20px;
+          padding: 20px;
+          border: 1px solid #ebeef5;
+          border-radius: 4px;
+          background-color: #f5f7fa;
+      }
+
+      /* 上传按钮样式 */
+      .upload-demo {
+          text-align: center;
+      }
+
+      /* 文件列表样式 */
+      .file-list-item {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 8px 0;
+          border-bottom: 1px solid #f5f5f5;
+      }
+
+      .file-list-item:last-child {
+          border-bottom: none;
+      }
+      .loading-container {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 20px;
+          color: #909399;
+      }
+
+      .is-loading {
+          animation: rotating 2s linear infinite;
+          margin-right: 10px;
+      }
+
+      @keyframes rotating {
+          0% {
+              transform: rotate(0deg);
+          }
+          100% {
+              transform: rotate(360deg);
+          }
+      }
+
+
+
+  </style>
+</head>
+<body>
+<div id="app">
+  <!-- 左侧边栏 -->
+  <div class="sidebar">
+    <!-- 模式选择卡片 -->
+    <div class="mode-card">
+      <div class="mode-buttons">
+        <el-button
+            :type="activeMode === 'chat' ? 'primary' : 'text'"
+            @click="switchMode('chat')"
+            size="medium"
+        >
+          对话
+        </el-button>
+        <el-button
+            :type="activeMode === 'knowledge' ? 'primary' : 'text'"
+            @click="switchMode('knowledge')"
+            size="medium"
+        >
+          知识库管理
+        </el-button>
+      </div>
+    </div>
+
+    <!-- 知识库配置卡片（仅在对话模式下显示） -->
+    <div class="config-card" v-if="activeMode === 'chat'">
+      <div class="config-title">知识库配置</div>
+      <el-select
+          v-model="selectedKnowledgeBase"
+          placeholder="请选择知识库"
+          style="margin-bottom: 20px;"
+          @change="onKnowledgeBaseChange"
+      >
+        <el-option
+            v-for="item in knowledgeBases"
+            :key="item.name"
+            :label="item.name"
+            :value="item.name"
+        >
+        </el-option>
+      </el-select>
+
+      <el-button
+          type="danger"
+          plain
+          @click="clearChat"
+          style="margin-top: auto;"
+      >
+        清空对话
+      </el-button>
+    </div>
+  </div>
+
+  <!-- 右侧主内容区 -->
+  <div class="main-content">
+    <!-- 对话模式 -->
+    <div class="chat-container" v-if="activeMode === 'chat'">
+      <div class="chat-messages" ref="messagesContainer">
+        <div class="message-item" v-for="(message, index) in chatMessages" :key="index">
+          <div class="question">
+            <strong>问题：</strong>{{ message.question }}
+          </div>
+          <div class="answer">
+            <strong>回答：</strong>
+            <div v-html="formatAnswer(message.answer)"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="input-area">
+        <el-input
+            v-model="inputQuestion"
+            placeholder="请输入您的问题"
+            @keyup.enter.native="sendQuestion"
+            clearable
+        ></el-input>
+        <el-button type="primary" @click="sendQuestion" :loading="isLoading"> ➢ </el-button>
+      </div>
+    </div>
+
+    <!-- 知识库管理模式 -->
+    <div class="knowledge-management" v-if="activeMode === 'knowledge'">
+      <h3 class="section-title">请选择或者新建知识库</h3>
+
+      <el-select
+          v-model="selectedKnowledgeBaseForManage"
+          placeholder="请选择知识库"
+          style="margin-bottom: 20px; width: 100%;"
+          @change="onKnowledgeBaseForManageChange"
+      >
+        <el-option
+            v-for="item in knowledgeBases"
+            :key="item.name"
+            :label="item.name"
+            :value="item.name"
+        >
+        </el-option>
+        <el-option
+            label="新建知识库"
+            value="new"
+        >
+        </el-option>
+      </el-select>
+
+      <!-- 新建知识库卡片 -->
+      <div class="create-knowledge" v-if="selectedKnowledgeBaseForManage === 'new'">
+        <h4 class="section-title">新建知识库</h4>
+
+        <div class="form-item">
+          <div class="config-title">知识库名称</div>
+          <el-input v-model="newKnowledgeBase.name" placeholder="请输入知识库名称"></el-input>
+        </div>
+        <div class="form-item">
+          <div class="config-title">知识库可见性</div>
+          <el-switch
+              v-model="newKnowledgeBase.is_public"
+              active-text="公开"
+              inactive-text="私有">
+          </el-switch>
+        </div>
+        <div class="form-item">
+          <div class="config-title">知识库简介</div>
+          <el-input
+              type="textarea"
+              v-model="newKnowledgeBase.description"
+              placeholder="请输入知识库简介"
+              :rows="3"
+          ></el-input>
+        </div>
+
+        <el-button type="primary" @click="createKnowledgeBase">新建</el-button>
+      </div>
+
+      <!-- 知识库编辑卡片 -->
+      <div v-else-if="selectedKnowledgeBaseForManage">
+        <div v-if="isLoading" class="loading-container">
+          <el-icon class="is-loading">
+            <loading />
+          </el-icon>
+          正在加载知识库数据...
+        </div>
+        <template v-else>
+        <div class="upload-card">
+          <h4 class="section-title">上传文件</h4>
+          <el-upload
+              class="upload-demo"
+              drag
+              :action="uploadURL"
+              :data="uploadData"
+              :on-success="uploadSuccess"
+              :on-remove="handleRemove"
+              :file-list="uploadFileList"
+              :auto-upload="true"
+              :multiple="true"
+              accept=".xlsx, .xls, .csv, .txt,.docx,.pptx,.pdf,.md,.doc">
+            <span style="font-size: 40px; color: #c0c4cc; margin: 20px 0; display: block;">📤</span>
+            <div class="el-upload__text">将文件拖到此处，或<em>点击上传</em></div>
+            <div class="el-upload__tip" slot="tip">
+              支持pdf/docx/txt/xlsx/xls/csv/pptx/md/doc格式文件，单个文件不超过20MB
+            </div>
+          </el-upload>
+        </div>
+
+<!--        <div class="form-item">-->
+<!--          <div class="config-title">知识库介绍</div>-->
+<!--          <el-input-->
+<!--              type="textarea"-->
+<!--              v-model="currentKnowledgeBase.description"-->
+<!--              placeholder="请输入知识库简介"-->
+<!--              :rows="3"-->
+<!--          ></el-input>-->
+<!--        </div>-->
+
+        <el-button
+            type="primary"
+            @click="addFilesToKnowledgeBase"
+            :loading="isAddingToKB"
+            :disabled="uploadedFiles.length === 0">
+          添加到知识库
+        </el-button>
+
+        <div class="divider"></div>
+
+        <div class="file-list">
+          <h4 class="section-title">知识库已有文件</h4>
+          <div class="scroll-container">
+            <table class="file-table">
+              <thead>
+              <tr>
+                <th>序号</th>
+                <th>文件名</th>
+<!--                <th>大小</th>-->
+<!--                <th>上传时间</th>-->
+                <th>操作</th>
+              </tr>
+              </thead>
+              <tbody>
+              <tr v-for="(file, index) in currentKnowledgeBase.files" :key="file.id">
+                <td>{{ index + 1 }}</td>  <!-- 显示行号作为序号 -->
+                <td>{{ file.name }}</td>
+<!--                <td>{{ formatFileSize(file.size) }}</td>-->
+<!--                <td>{{ file.uploadTime }}</td>-->
+                <td>
+                  <el-button
+                      type="text"
+                      @click="deleteFile(file)"
+                      style="color: #F56C6C;"
+                  >
+                    <i class="layui-icon layui-icon-delete"></i> 删除
+                  </el-button>
+                </td>
+              </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        </template>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="../../../../assets/libs/vue/vue.js"></script>
+<script src="../../../../assets/libs/element/index.js"></script>
+<script src="../../../../assets/libs/jquery-1.11.3.min.js"></script>
+<script src="../../../../assets/js/mainData.js"></script>
+<script src="knowledge_base.js" ></script>
+
+</body>
+</html>
