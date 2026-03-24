@@ -4,14 +4,7 @@
     <content url="file://$MODULE_DIR$">
       <excludeFolder url="file://$MODULE_DIR$/.venv" />
     </content>
-    <orderEntry type="jdk" jdkName="Remote Python 3.10.14 (sftp://public@10.99.16.24:22/home/public/.conda/envs/java_ax/bin/python3.10) (6)" jdkType="Python SDK" />
+    <orderEntry type="jdk" jdkName="Python 3.14 virtualenv at C:\Users\root\Downloads\LLM_Detect_master (2)\LLM_Detect_master\.venv" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
-  </component>
-  <component name="PyNamespacePackagesService">
-    <option name="namespacePackageFolders">
-      <list>
-        <option value="$MODULE_DIR$/app/api/muti_model_api" />
-      </list>
-    </option>
   </component>
 </module>
