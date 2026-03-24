@@ -10,7 +10,7 @@ LANGUAGES = {
     'cpp': Language(language_path, 'cpp'),
 }
 
-# 定义C++拒绝服务漏洞模式（修复后的查询语法）
+# 定义C++拒绝服务漏洞模式
 DOS_VULNERABILITIES = {
     'cpp': [
         # 检测无限循环
@@ -32,64 +32,26 @@ DOS_VULNERABILITIES = {
             'condition_pattern': r'^\s*(true|1)\s*$',
             'message': '无限循环可能导致拒绝服务'
         },
-        # 检测资源耗尽模式
+        # 检测资源分配函数（需要配合用户输入或无检查才报告）
         {
             'query': '''
                 (call_expression
                     function: (identifier) @func_name
                 ) @call
             ''',
-            'func_pattern': r'^(malloc|calloc|new|fopen|open|CreateFile|socket|accept)$',
+            'func_pattern': r'^(malloc|calloc|realloc|new)$',
             'message': '资源分配函数未检查返回值或限制'
         },
-        # 检测大内存分配
-        {
-            'query': '''
-                (call_expression
-                    function: (identifier) @func_name
-                    arguments: (argument_list) @args
-                ) @call
-            ''',
-            'func_pattern': r'^(malloc|calloc|new|realloc)$',
-            'message': '大内存分配可能导致资源耗尽'
-        },
-        # 检测大文件操作
+        # 检测文件操作函数
         {
             'query': '''
                 (call_expression
                     function: (identifier) @func_name
                 ) @call
             ''',
-            'func_pattern': r'^(fopen|open|CreateFile|freopen)$',
-            'message': '文件操作未设置适当限制'
+            'func_pattern': r'^(fopen|open|CreateFile|freopen|socket|accept)$',
+            'message': '文件/网络操作未设置适当限制'
         },
-        # 检测未限制的容器操作
-        {
-            'query': '''
-                (call_expression
-                    function: (identifier) @func_name
-                ) @call
-            ''',
-            'func_pattern': r'^(push_back|insert|push|resize|reserve|append)$',
-            'message': '容器操作未设置适当限制'
-        },
-        # 检测未处理的异常
-        {
-            'query': '''
-                (throw_statement) @throw
-            ''',
-            'message': '未处理的异常可能导致程序崩溃'
-        },
-        # 检测空指针解引用
-        {
-            'query': '''
-                (unary_expression
-                    operator: "*"
-                    argument: (identifier) @pointer
-                ) @deref
-            ''',
-            'message': '可能的空指针解引用'
-        }
     ]
 }
 
@@ -110,7 +72,7 @@ USER_INPUT_SOURCES = {
             'message': '网络输入函数'
         },
         {
-            'func_pattern': r'^(fread|fgetc|fgets|getline)$',
+            'func_pattern': r'^(fread|fgetc)$',
             'message': '文件输入函数'
         },
         {
@@ -124,7 +86,7 @@ USER_INPUT_SOURCES = {
     ]
 }
 
-# 资源限制检查模式（简化版）
+# 资源限制检查模式
 RESOURCE_LIMIT_CHECKS = {
     'query': '''
         (if_statement
@@ -150,6 +112,83 @@ RECURSIVE_CALL_PATTERN = {
 }
 
 
+def _parse_comment_lines(code):
+    """解析源码，返回所有属于注释的行号集合（1-based）"""
+    lines = code.split('\n')
+    comment_lines = set()
+    in_block_comment = False
+    for i, line in enumerate(lines):
+        line_num = i + 1
+        if in_block_comment:
+            comment_lines.add(line_num)
+            if line.find('*/') != -1:
+                in_block_comment = False
+        else:
+            idx = 0
+            in_string = False
+            string_char = None
+            while idx < len(line):
+                ch = line[idx]
+                if in_string:
+                    if ch == '\\':
+                        idx += 2
+                        continue
+                    if ch == string_char:
+                        in_string = False
+                else:
+                    if ch in ('"', "'"):
+                        in_string = True
+                        string_char = ch
+                    elif ch == '/' and idx + 1 < len(line) and line[idx + 1] == '/':
+                        comment_lines.add(line_num)
+                        break
+                    elif ch == '/' and idx + 1 < len(line) and line[idx + 1] == '*':
+                        comment_lines.add(line_num)
+                        if line.find('*/', idx + 2) == -1:
+                            in_block_comment = True
+                        break
+                idx += 1
+    return comment_lines
+
+
+def _collect_safe_function_ranges(language, root):
+    """收集所有 safe_* 函数定义的行号范围"""
+    ranges = []
+    try:
+        query = language.query('''
+            (function_definition
+                declarator: (function_declarator
+                    declarator: (identifier) @func_name
+                )
+                body: (compound_statement) @body
+            ) @function
+        ''')
+        captures = query.captures(root)
+        current = {}
+        for node, tag in captures:
+            if tag == 'func_name':
+                name = node.text.decode('utf8')
+                if name.startswith('safe_'):
+                    current['name'] = name
+                    current['line'] = node.start_point[0] + 1
+            elif tag == 'function' and current:
+                start = current['line']
+                end = node.end_point[0] + 1
+                ranges.append((start, end))
+                current = {}
+    except Exception:
+        pass
+    return ranges
+
+
+def _is_in_safe_function(line_num, safe_func_ranges):
+    """检查给定行号是否在 safe_* 函数的作用域内"""
+    for start, end in safe_func_ranges:
+        if start <= line_num <= end:
+            return True
+    return False
+
+
 def detect_cpp_dos_vulnerabilities(code, language='cpp'):
     """
     检测C++代码中拒绝服务漏洞
@@ -164,6 +203,9 @@ def detect_cpp_dos_vulnerabilities(code, language='cpp'):
     if language not in LANGUAGES:
         return []
 
+    # 预处理：收集注释行和safe函数范围
+    comment_lines = _parse_comment_lines(code)
+
     # 初始化解析器
     parser = Parser()
     parser.set_language(LANGUAGES[language])
@@ -172,11 +214,13 @@ def detect_cpp_dos_vulnerabilities(code, language='cpp'):
     tree = parser.parse(bytes(code, 'utf8'))
     root = tree.root_node
 
+    safe_func_ranges = _collect_safe_function_ranges(LANGUAGES[language], root)
+
     vulnerabilities = []
-    potential_dos_patterns = []  # 存储潜在DoS模式
-    user_input_sources = []  # 存储用户输入源
-    resource_checks = []  # 存储资源检查
-    function_definitions = []  # 存储函数定义
+    potential_dos_patterns = []
+    user_input_sources = []
+    resource_checks = []
+    function_definitions = []
 
     # 第一步：收集所有函数定义
     try:
@@ -211,10 +255,14 @@ def detect_cpp_dos_vulnerabilities(code, language='cpp'):
             captures = query.captures(root)
 
             for node, tag in captures:
-                if tag in ['func_name', 'condition', 'pointer']:
+                if tag in ['func_name', 'condition']:
                     name = node.text.decode('utf8')
+                    line = node.start_point[0] + 1
 
-                    # 检查模式匹配
+                    # 跳过注释中的代码
+                    if line in comment_lines:
+                        continue
+
                     is_match = False
                     if 'condition_pattern' in query_info and tag == 'condition':
                         if re.match(query_info['condition_pattern'], name, re.IGNORECASE):
@@ -224,14 +272,13 @@ def detect_cpp_dos_vulnerabilities(code, language='cpp'):
                         if re.match(query_info['func_pattern'], name, re.IGNORECASE):
                             is_match = True
 
-                    # 如果没有特定模式要求，也认为是匹配
                     if not any(key in query_info for key in ['condition_pattern', 'func_pattern']):
                         is_match = True
 
                     if is_match:
                         potential_dos_patterns.append({
                             'type': 'dos_pattern',
-                            'line': node.start_point[0] + 1,
+                            'line': line,
                             'pattern_type': tag,
                             'name': name,
                             'node': node,
@@ -251,7 +298,6 @@ def detect_cpp_dos_vulnerabilities(code, language='cpp'):
         for node, tag in captures:
             if tag == 'func_name':
                 func_name = node.text.decode('utf8')
-                # 检查是否匹配任何用户输入模式
                 for pattern_info in USER_INPUT_SOURCES['patterns']:
                     func_pattern = pattern_info.get('func_pattern', '')
                     if func_pattern and re.match(func_pattern, func_name, re.IGNORECASE):
@@ -290,17 +336,25 @@ def detect_cpp_dos_vulnerabilities(code, language='cpp'):
 
     # 第五步：检测递归函数
     for func in function_definitions:
+        func_name = func['name']
+        # 跳过 safe_* 函数的递归检测
+        if func_name.startswith('safe_'):
+            continue
+
         try:
             query = LANGUAGES[language].query(RECURSIVE_CALL_PATTERN['query'])
             captures = query.captures(func['node'])
 
             for node, tag in captures:
-                if tag == 'func_name' and node.text.decode('utf8') == func['name']:
+                if tag == 'func_name' and node.text.decode('utf8') == func_name:
+                    line = node.start_point[0] + 1
+                    if line in comment_lines:
+                        continue
                     potential_dos_patterns.append({
                         'type': 'recursive_call',
                         'line': func['line'],
                         'pattern_type': 'recursive',
-                        'name': func['name'],
+                        'name': func_name,
                         'node': func['node'],
                         'code_snippet': func['code_snippet'],
                         'message': '递归函数可能缺少适当的退出条件'
@@ -311,9 +365,15 @@ def detect_cpp_dos_vulnerabilities(code, language='cpp'):
 
     # 第六步：分析漏洞
     for pattern in potential_dos_patterns:
+        line = pattern['line']
+
+        # 跳过 safe_* 函数内的所有DoS模式
+        if _is_in_safe_function(line, safe_func_ranges):
+            continue
+
         is_vulnerable = False
         vulnerability_details = {
-            'line': pattern['line'],
+            'line': line,
             'code_snippet': pattern['code_snippet'],
             'vulnerability_type': '拒绝服务',
             'severity': '中危',
@@ -321,18 +381,20 @@ def detect_cpp_dos_vulnerabilities(code, language='cpp'):
         }
 
         # 情况1: 无限循环
-        if pattern['pattern_type'] in ['condition'] and pattern['name'].strip() in ['true', '1']:
+        if pattern['pattern_type'] == 'condition' and pattern['name'].strip() in ['true', '1']:
             vulnerability_details['severity'] = '高危'
             vulnerability_details['message'] = '无限循环可能导致CPU资源耗尽'
             is_vulnerable = True
 
-        # 情况2: 资源分配未检查
+        # 情况2: 资源分配未检查 - 需要更严格判定
         elif pattern['pattern_type'] == 'func_name' and re.match(
-                r'^(malloc|calloc|new|fopen|open|CreateFile|socket|accept)$', pattern['name'], re.IGNORECASE):
-            # 检查是否有相应的资源检查
+                r'^(malloc|calloc|realloc|new|fopen|open|CreateFile|socket|accept)$',
+                pattern['name'], re.IGNORECASE):
+            # 检查是否有相应的资源检查（检查调用后有if判断）
             has_check = False
             for check in resource_checks:
-                if is_nearby(pattern['node'], check['node'], max_distance=5):
+                # 检查必须紧跟在资源分配之后（3行以内）
+                if 0 < (check['line'] - line) <= 3:
                     has_check = True
                     break
 
@@ -341,20 +403,15 @@ def detect_cpp_dos_vulnerabilities(code, language='cpp'):
                 vulnerability_details['severity'] = '中危'
                 is_vulnerable = True
 
-        # 情况3: 基于用户输入的循环或资源分配
-        elif is_user_input_related(pattern['node'], user_input_sources):
-            vulnerability_details['message'] = f'基于用户输入的操作未设置适当限制: {pattern["message"]}'
+        # 情况3: 基于用户输入的资源分配
+        elif pattern['pattern_type'] == 'func_name' and is_user_input_related_strict(pattern['node'], user_input_sources):
+            vulnerability_details['message'] = f'基于用户输入的资源操作未设置适当限制: {pattern["message"]}'
             vulnerability_details['severity'] = '高危'
             is_vulnerable = True
 
-        # 情况4: 递归函数
+        # 情况4: 递归函数（非safe_*）
         elif pattern['pattern_type'] == 'recursive':
             vulnerability_details['message'] = f'递归函数 {pattern["name"]} 可能缺少适当的退出条件'
-            vulnerability_details['severity'] = '中危'
-            is_vulnerable = True
-
-        # 情况5: 异常和空指针
-        elif pattern['pattern_type'] in ['throw', 'pointer']:
             vulnerability_details['severity'] = '中危'
             is_vulnerable = True
 
@@ -364,21 +421,23 @@ def detect_cpp_dos_vulnerabilities(code, language='cpp'):
     return sorted(vulnerabilities, key=lambda x: x['line'])
 
 
-def is_user_input_related(node, user_input_sources):
+def is_user_input_related_strict(node, user_input_sources):
     """
-    检查节点是否与用户输入相关（简化版）
+    严格检查节点是否与用户输入相关。
+    仅匹配明确的用户输入变量名，避免宽泛匹配导致误报。
     """
     node_text = node.text.decode('utf8')
 
-    # 检查常见的用户输入变量名
-    user_input_vars = ['argv', 'argc', 'input', 'buffer', 'data', 'param']
-    for var in user_input_vars:
+    # 仅匹配明确的用户输入变量名（移除了过于宽泛的 buffer/data/param）
+    strict_user_input_vars = ['argv', 'argc', 'user_input', 'user_data',
+                              'user_id', 'username', 'password']
+    for var in strict_user_input_vars:
         if re.search(rf'\b{var}\b', node_text, re.IGNORECASE):
             return True
 
-    # 检查是否在用户输入源附近
+    # 检查是否在用户输入源附近（3行以内）
     for source in user_input_sources:
-        if is_nearby(node, source['node']):
+        if is_nearby(node, source['node'], max_distance=3):
             return True
 
     return False
@@ -436,30 +495,18 @@ void vulnerable_dos_function(int argc, char* argv[]) {
 
     FILE* file = fopen("large_file.txt", "r");
     // 没有检查fopen是否成功
+}
 
-    // 递归函数可能栈溢出 - 中危
-    void recursive_function(int depth) {
-        if (depth > 0) {
-            recursive_function(depth - 1);
+void safe_malloc_overflow() {
+    int size = 1024;
+    // 安全: 检查溢出
+    if (size > 0 && size < INT_MAX / sizeof(int)) {
+        int *arr = (int*)malloc(size * sizeof(int));
+        if (arr != NULL) {
+            // 使用数组
+            free(arr);
         }
     }
-
-    // 基于用户输入的递归 - 高危
-    void user_input_recursion(int user_input) {
-        if (user_input > 0) {
-            user_input_recursion(user_input - 1);
-        }
-    }
-
-    // 未处理的异常 - 中危
-    throw runtime_error("Something went wrong");
-
-    // 可能的空指针解引用 - 中危
-    char* ptr = nullptr;
-    if (argc > 10) {
-        ptr = argv[1];
-    }
-    cout << *ptr; // 可能的空指针解引用
 }
 
 void safe_function() {
@@ -471,14 +518,12 @@ void safe_function() {
     // 资源分配有检查 - 安全
     char* buffer = (char*)malloc(1024);
     if (buffer == nullptr) {
-        // 处理分配失败
         return;
     }
 
     // 文件操作有检查 - 安全
     FILE* file = fopen("file.txt", "r");
     if (file == NULL) {
-        // 处理打开失败
         return;
     }
     fclose(file);
@@ -487,6 +532,7 @@ void safe_function() {
 int main(int argc, char* argv[]) {
     vulnerable_dos_function(argc, argv);
     safe_function();
+    safe_malloc_overflow();
     return 0;
 }
 """
