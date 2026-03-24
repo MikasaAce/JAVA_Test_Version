@@ -35,6 +35,12 @@ from .cpp_module.cpp_xss_ref import detect_cpp_xss_reflected
 from .cpp_module.cpp_XStream import detect_cpp_xstream_deserialization
 from .cpp_module.cpp_dos_fs import detect_cpp_format_string_vulnerabilities
 
+# 导入GJB 8114-2013检测函数
+from .cpp_module.cpp_gjb_memory import detect_cpp_gjb_memory_violations
+from .cpp_module.cpp_gjb_type import detect_cpp_gjb_type_violations
+from .cpp_module.cpp_gjb_coding import detect_cpp_gjb_coding_violations
+from .cpp_module.cpp_gjb_checker import detect_cpp_gjb_violations, generate_gjb_report
+
 # 导入所有JavaScript检测函数
 from .js_module.js_mybatis import detect_mybatis_sql_injection as detect_js_mybatis_sql_injection
 from .js_module.js_cmdin import detect_js_command_injection
@@ -214,6 +220,24 @@ CPP_VULNERABILITY_DETECTORS = {
         'description': '检测拒绝服务：格式字符串漏洞',
         'detector': detect_cpp_format_string_vulnerabilities,
         'severity': '高危'
+    },
+    'gjb_memory_safety': {
+        'name': 'GJB内存安全',
+        'description': '检测GJB 8114-2013内存安全规则违规',
+        'detector': detect_cpp_gjb_memory_violations,
+        'severity': '中危'
+    },
+    'gjb_type_safety': {
+        'name': 'GJB类型安全',
+        'description': '检测GJB 8114-2013类型安全规则违规',
+        'detector': detect_cpp_gjb_type_violations,
+        'severity': '中危'
+    },
+    'gjb_coding_standard': {
+        'name': 'GJB编码规范',
+        'description': '检测GJB 8114-2013编码规范规则违规',
+        'detector': detect_cpp_gjb_coding_violations,
+        'severity': '低危'
     }
 }
 
